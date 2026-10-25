@@ -181,6 +181,17 @@ body{background:linear-gradient(135deg,#3b1fa3 0%,#1f5fe0 58%,#12b5cb 100%) fixe
 body.wbm .cb:not(.big){width:92px;height:92px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 0 rgba(0,0,0,.3),0 0 0 3px #ff4d9d}
 body.wbm .cb:not(.big) span{right:50%;transform:translateX(50%);bottom:4px;font-size:10px;max-width:80px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 5px}
 body.wbm .cb:not(.big) button{display:none}
+
+/* ===== v2026.10.25-b ===== */
+.ib{width:34px;height:34px;border-radius:50%;font-size:16px;padding:0;display:inline-flex;align-items:center;justify-content:center;position:relative;box-shadow:0 3px 0 rgba(0,0,0,.28);color:#fff;border:2px solid rgba(255,255,255,.35)}
+.ib:active{transform:translateY(2px);box-shadow:none}
+.ib .bd{position:absolute;top:-6px;right:-6px;background:#ff3b4a;border-radius:9px;font-size:10px;min-width:16px;padding:0 3px;line-height:16px}
+body[data-role=s] #bsw{display:none}
+body.cs #bs{opacity:1;pointer-events:auto}
+body.pfs{overflow:hidden}
+body.pfs #stage{position:fixed;inset:0;z-index:25;border-radius:0;border:0;min-height:0;height:auto}
+body.pfs .bar{position:fixed;bottom:4px;left:0;right:0;z-index:36;gap:8px;pointer-events:none;padding:0}
+body.pfs .bar .c{pointer-events:auto;width:40px;height:40px;font-size:17px}
 </style>
 </head>
 <body data-role="">
@@ -193,7 +204,7 @@ body.wbm .cb:not(.big) button{display:none}
   <input id="nm" data-i18n-p="name" placeholder="اسمك">
   <input id="room" type="hidden">
   <input id="tpin" inputmode="numeric" maxlength="6" placeholder="كود المعلم (من السكرتارية)" hidden>
-  <div id="jlink" hidden><div id="jrole" style="margin-bottom:8px;font-weight:700"></div><small id="jrecn" hidden style="display:block;margin-bottom:8px;line-height:1.8;color:#fbbf24">⚠️ قد يتم تسجيل الحصة (صوت وفيديو) لأغراض تعليمية. بدخولك توافق على ذلك.</small><button class="w" style="background:#ff4d9d;width:100%;font-weight:700;padding:12px" onclick="join(LK.r)">دخول</button></div>
+  <div id="jlink" hidden><div id="jrole" style="margin-bottom:8px;font-weight:700"></div><small id="jrecn" hidden style="display:block;margin-bottom:8px;line-height:1.8;color:#fbbf24">⚠️ قد يتم تسجيل الحصة (صوت وفيديو) وتفريغ الكلام نصياً لأغراض تعليمية. بدخولك توافق على ذلك.</small><button class="w" style="background:#ff4d9d;width:100%;font-weight:700;padding:12px" onclick="join(LK.r)">دخول</button></div>
   <div id="jnone"><small style="line-height:1.9">للدخول افتح الرابط الذي أرسلته لك السكرتارية.<br>لا يمكن الدخول بدون رابط الدعوة.</small><button class="w" onclick="secOpen()">🗂️ دخول السكرتارية</button></div>
   <button class="w" id="lgb" onclick="toggleLang()">English</button>
   
@@ -237,7 +248,8 @@ body.wbm .cb:not(.big) button{display:none}
   <div class="bar">
    <button class="c st" id="bm" onclick="mic()" data-i18n-t="mic" title="الميكروفون">🎤</button>
    <button class="c st" id="bc" onclick="cam()" data-i18n-t="cam" title="الكاميرا">📷</button>
-   <button class="c tonly st" id="bs" onclick="tScr()" title="مشاركة الشاشة">🖥</button>
+   <button class="c tonly st" id="bs" onclick="scrBtn()" title="مشاركة الشاشة">🖥</button>
+   <button class="c tonly" id="bsw" onclick="tSwap()" title="تبديل بين السبورة والشاشة">🔀</button>
    <button class="c tonly" id="bdl" onclick="wbSave()" data-i18n-t="saveBoard" title="حفظ صورة السبورة">📥</button>
    <button class="c st" id="bt" onclick="toolsMenu(this)" data-i18n-t="tools" title="الأدوات">🖍</button>
    <button class="c" id="bh" onclick="hand()" data-i18n-t="hand" title="رفع اليد">✋</button>
@@ -270,8 +282,8 @@ body.wbm .cb:not(.big) button{display:none}
  <div class="ais"><h4>1) مصادر الملخص</h4>
   <div><label><input type="checkbox" id="ai_chat" checked> الشات</label><label><input type="checkbox" id="ai_att" checked> الحضور</label><label><input type="checkbox" id="ai_tr" checked> التفريغ الصوتي</label></div>
   <div class="row"><button id="ai_sr" onclick="srToggle()">🎙 بدء التفريغ الصوتي</button>
-   <select id="ai_lang" style="width:auto"><option value="ar-EG">عربي (مصر)</option><option value="ar-SA">عربي (السعودية)</option><option value="en-US">English</option></select><small id="ai_trc"></small></div>
-  <small>التفريغ الصوتي يسجّل كلامك أنت فقط (ميكروفون المعلم) ويعمل في Chrome وEdge على الكمبيوتر.</small>
+   <select id="ai_lang" style="width:auto"><option value="auto">تلقائي (حسب لغة الحديث)</option><option value="ar-EG">عربي (مصر)</option><option value="ar-SA">عربي (السعودية)</option><option value="en-US">English</option></select><small id="ai_trc"></small></div>
+  <small>التفريغ الصوتي يبدأ تلقائياً ويتعرّف على لغة الحديث (عربي / English) ويسجّل كلام المعلم والطلاب على أجهزة الكمبيوتر (Chrome أو Edge). على الموبايل اكتب ملاحظاتك.</small>
   <textarea id="ai_notes" placeholder="ملاحظات إضافية أو نص الحصة (اختياري)"></textarea></div>
  <div class="ais"><h4>2) خدمة الذكاء الاصطناعي</h4>
   <select id="ai_prov" onchange="aiProv()"><option value="gemini">Google Gemini (مفتاح مجاني من AI Studio)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic Claude</option><option value="webhook">سكريبت خاص (رابط Webhook)</option></select>
@@ -287,7 +299,7 @@ body.wbm .cb:not(.big) button{display:none}
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.25-a';
+const VER='2026.10.25-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال (مهمة لربط معلم وطلاب من دول وشبكات مختلفة) =====
    TURN لازم لما الطالب والمعلم يبقوا على شبكات مختلفة (خصوصاً شبكات الموبايل).
@@ -408,7 +420,7 @@ async function tReq(pin){
   if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');setTimeout(go,4000)}
   else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');setTimeout(go,4000)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();mailTeacherIn();sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();mailTeacherIn();sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
@@ -452,9 +464,14 @@ async function startTPeer(){
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
-  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
+  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
  });
  peer.on('call',c=>{c.answer();
+  if(c.metadata&&c.metadata.k=='scr'){
+   c.on('stream',s=>{const o=conns[c.peer],t=s.getVideoTracks()[0];if(!o||!o.adm||!o.sp||!t){c.close();return}
+    if(scrT||(stuS&&stuS.k!==c.peer)){try{o.c.send({t:'ssd'})}catch(e){}c.close();return}
+    stuS={k:c.peer,call:c,t,n:o.name};t.onended=()=>ssDrop(c.peer);sys('🖥 '+o.name+' بدأ مشاركة الشاشة');refresh()});
+   c.on('close',()=>{if(stuS&&stuS.call===c){stuS=null;refreshSoon()}});return}
   if(c.metadata&&c.metadata.k=='cam'){
    c.on('stream',s=>{const o=conns[c.peer];if(!o||!o.adm||!o.cp){c.close();return}o.sc=c;if(!boxes['s:'+c.peer])sys('📷 '+o.name+' فتح الكاميرا');showCam('s:'+c.peer,s,o.name)});
    c.on('close',()=>hideCam('s:'+c.peer));return}
@@ -477,12 +494,13 @@ function tData(c,d){
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
  else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='tr'&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
  mailStu(o.name);o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
-function deny(k,kick){const o=conns[k];if(!o)return;if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
+function deny(k,kick){const o=conns[k];if(!o)return;if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
 function tCamBan(){camBanAll=camBanAll?0:1;Object.values(conns).filter(o=>o.adm).forEach(o=>{o.cp=camBanAll?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+o.c.peer)}});render();sys(camBanAll?'تم منع كاميرات الطلاب':'تم السماح بكاميرات الطلاب')}
 function cycleGm(){gm=(gm+1)%3;if(gm==1)admitAll();sys('وضع الدخول: '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}
@@ -492,7 +510,7 @@ function roster2(){
  bc({t:'roster',...roster});render();
 }
 function tuneCall(call,br,pref){try{const pc=call&&call.peerConnection;if(!pc)return;pc.getSenders().forEach(se=>{if(!se.track||se.track.kind!='video')return;const q=se.getParameters();if(!q.encodings||!q.encodings.length)q.encodings=[{}];q.encodings[0].maxBitrate=br;q.degradationPreference=pref;se.setParameters(q).catch(()=>{})})}catch(e){}}
-function tune(o){const n=Object.values(conns).filter(x=>x.adm).length;tuneCall(o.call,n<=4?3e6:n<=10?1.8e6:1e6,scrT?'maintain-resolution':'balanced')}
+function tune(o){const n=Object.values(conns).filter(x=>x.adm).length;tuneCall(o.call,n<=4?3e6:n<=10?1.8e6:1e6,(scrT||stuS)?'maintain-resolution':'balanced')}
 function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,4e5,'balanced'),900)}
 function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream(stream.getTracks().filter(t=>t!==o.mt)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
@@ -535,12 +553,12 @@ function sendMic(){
  if(!myCall){const c=myCall=peer.call('itqan-'+room,new MediaStream([micS]));c.on('close',()=>{if(myCall===c)myCall=null});watchCall(c,'الميكروفون')}
  ui()}
 function dropCall(){if(micS)micS.enabled=false;if(myCall){const c=myCall;myCall=null;try{c.close()}catch(e){}}ui()}
-function stopMic(){if(micS){const t=micS;micS=null;t.stop()}dropCall()}
+function stopMic(){if(micS){const t=micS;micS=null;t.stop()}if(sSr){sSr.stop();sSr=null}stopSScr();dropCall()}
 function refresh(){
  stream.getVideoTracks().forEach(t=>stream.removeTrack(t));
- stream.addTrack(scrT||dummy);
+ stream.addTrack(scrT||(stuS&&stuS.t)||dummy);
  $('#v').srcObject=stream;
- st.cam=camT?1:0;st.scr=scrT?1:0;
+ st.cam=camT?1:0;st.scr=(scrT||stuS)?1:0;
  Object.values(conns).filter(o=>o.adm).forEach(o=>{callOne(o);callCam(o)});coMedia();camT?showCam('T',new MediaStream([camT]),'أنت',1):hideCam('T');bst();ui();
 }
 async function tMic(){
@@ -567,9 +585,10 @@ async function tScr(){
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
  refresh();
 }
-function tWb(){st.wb=st.wb?0:1;if(st.wb)st.bg=scrT?0:1;bst();ui()}
-function wclr(){strokes=[];rebuild();bc({t:'wbclear'})}
-function undo(){strokes.pop();rebuild();bc({t:'undo'})}
+function tWb(){st.wb=st.wb?0:1;if(st.wb)st.bg=(scrT||stuS)?0:1;bst();ui()}
+const CLR=[];
+function wclr(){if(!strokes.length)return;CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];rebuild();bc({t:'wbclear'})}
+function undo(){if(strokes.length){strokes.pop();rebuild();bc({t:'undo'})}else if(CLR.length){strokes=CLR.pop();rebuild();bc({t:'restore',s:strokes})}}
 function tBg(){st.bg=st.bg?0:1;bst();ui()}
 function tPoll(){
  if(poll){
@@ -637,7 +656,7 @@ function sData(d){
  if(d.t=='recon'){$('#recb').hidden=!d.on;return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
  else if(d.t=='denied'||d.t=='kicked'){final=1;stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
- else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')})}
+ else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){chat.push(d)}
  else if(d.t=='roster'){roster=d}
  else if(d.t=='st'){st=d.st;ui()}
@@ -651,6 +670,9 @@ function sData(d){
  else if(d.t=='sh'){strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}
  else if(d.t=='undo'){strokes.pop();rebuild()}
  else if(d.t=='wbclear'){strokes=[];rebuild()}
+ else if(d.t=='restore'&&Array.isArray(d.s)){strokes=d.s;rebuild()}
+ else if(d.t=='ssp'){canScr=d.on?1:0;document.body.classList.toggle('cs',!!canScr);if(!canScr)stopSScr();sys(canScr?'🖥 سمح لك المعلم بمشاركة شاشتك — اضغط 🖥':'🚫 أوقف المعلم مشاركة الشاشة لك')}
+ else if(d.t=='ssd'){stopSScr();sys('🖥 لا يمكن مشاركة شاشتك الآن (هناك مشاركة أخرى)')}
  else if(d.t=='ins'){ins=d.ins;redraw()}
  render();
 }
@@ -693,12 +715,19 @@ function render(){
  if(tab=='chat')L.innerHTML=chat.map(x=>x.sys?'<div class="m s">'+esc(x.m)+'</div>':'<div class="m"><b>'+U(x.n)+'</b>'+U(x.m)+'</div>').join('')||'<div class="m s">لا توجد رسائل بعد</div>';
  else if(role=='t'&&tab=='stu'){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
   E=Object.entries(conns),W=E.filter(([k,x])=>!x.adm),A=E.filter(([k,x])=>x.adm),
-  row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span>'+i+U(n)+'</span><span style="display:flex;gap:4px">'+b+'</span></div>';
+  row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span>'+i+U(n)+'</span><span style="display:flex;gap:5px;flex-wrap:wrap">'+b+'</span></div>';
   L.innerHTML='<button class="m" style="background:#5b49d0;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
   (W.length?'<div class="m s">⏳ في غرفة الانتظار ('+W.length+')</div><button class="m" '+B('#19c37d')+' onclick="admitAll()">قبول الجميع</button>'+W.map(([k,x])=>row('⏳ ',x.name,'<button '+B('#19c37d')+' onclick="admit(\''+k+'\')">قبول</button><button '+B('#ff5a5f')+' onclick="deny(\''+k+'\')">رفض</button>')).join(''):'')+
   '<button class="m" style="background:#ff4d9d;color:#fff;text-align:center" onclick="tMuteAll()">'+(allMuted?'🎤 إلغاء كتم الجميع':'🔇 كتم صوت جميع الطلاب')+'</button>'+
   '<button class="m" style="background:#5b49d0;color:#fff;text-align:center" onclick="tCamBan()">'+(camBanAll?'📷 السماح بكاميرات الطلاب':'🚫 منع كاميرات الطلاب')+'</button>'+
-  (A.map(([k,x])=>row(stIc(x),x.name,'<button '+B('#ff4d9d')+' onclick="allow(\''+k+'\')">'+(x.can?'كتم':'إلغاء الكتم')+'</button><button '+B('#5b49d0')+' title="كاميرا الطالب" onclick="camAllow(\''+k+'\')">'+(x.cp?'📷':'🚫')+'</button><button '+B('#5b49d0')+' title="'+T('pm')+'" onclick="pmOpen(\''+k+'\')">💬'+(pmU[k]?' '+pmU[k]:'')+'</button><button '+B('#5b49d0')+' title="🔔" onclick="nudge(\''+k+'\')">🔔</button><button '+B('#5b49d0')+' title="⭐" onclick="stkPick(\''+k+'\')">⭐</button><button '+B('#ff5a5f')+' onclick="deny(\''+k+'\',1)">طرد</button>')).join('')||'<div class="m s">لا يوجد طلاب متصلون</div>')}
+  (A.map(([k,x])=>row(stIc(x),x.name,
+  ib(x.can?'#ff8a3d':'#ff5a5f',x.can?'🔇':'🎙️',x.can?'كتم':'إلغاء الكتم','allow(\''+k+'\')')+
+  ib(x.cp?'#12b6d6':'#ff5a5f',x.cp?'📷':'📵','كاميرا الطالب','camAllow(\''+k+'\')')+
+  ib(x.sp?'#19c37d':'#6b59e2','🖥️','مشاركة الشاشة','ssp(\''+k+'\')')+
+  ib('#7b6aeb','💬'+(pmU[k]?'<b class="bd">'+pmU[k]+'</b>':''),T('pm'),'pmOpen(\''+k+'\')')+
+  ib('#f5b301','🔔','تنبيه','nudge(\''+k+'\')')+
+  ib('#ff4d9d','⭐','استيكر','stkPick(\''+k+'\')')+
+  ib('#e5484d','🚪','طرد','deny(\''+k+'\',1)'))).join('')||'<div class="m s">لا يوجد طلاب متصلون</div>')}
  else{const arr=tab=='stu'?stu:hd;L.innerHTML=arr.map(n=>'<div class="m">'+(tab=='hand'?'✋ ':'🟢 ')+U(n)+'</div>').join('')||'<div class="m s">'+(tab=='stu'?'لا يوجد طلاب متصلون':'لا توجد أيدٍ مرفوعة')+'</div>'}
  if(tab=='chat')L.scrollTop=L.scrollHeight;
  if(role=='t')pushCo();
@@ -893,24 +922,20 @@ function aiProv(keep){const p=$('#ai_prov').value,m=$('#ai_model'),w=p=='webhook
  if(!keep&&(!m.value||Object.values(AIDEF).includes(m.value)))m.value=AIDEF[p];if(keep&&!m.value)m.value=AIDEF[p];
  $('#ai_key').hidden=w;m.hidden=w;$('#ai_url').hidden=!w}
 function aiUi(){$('#ai_trc').textContent=LOG.tr.length?LOG.tr.length+' مقطع مفرَّغ':'';$('#ai_sr').textContent=srOn?'⏹ إيقاف التفريغ الصوتي':'🎙 بدء التفريغ الصوتي'}
-function srToggle(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR)return aiSt('هذا المتصفح لا يدعم التفريغ الصوتي — استخدم Chrome أو Edge على الكمبيوتر، أو اكتب ملاحظاتك في الخانة',1);
- if(srOn){srOn=0;try{sr.stop()}catch(e){}aiUi();return}
- sr=new SR();sr.lang=$('#ai_lang').value;sr.continuous=true;sr.interimResults=false;
- sr.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();if(t){LOG.tr.push({ts:Date.now(),t});aiUi()}}};
- sr.onend=()=>{if(srOn)setTimeout(()=>{try{sr.start()}catch(e){}},300)};
- sr.onerror=e=>{if(e.error=='not-allowed'||e.error=='service-not-allowed'){srOn=0;aiSt('لم يُسمح بالتفريغ الصوتي — اسمح بالميكروفون للموقع',1);aiUi()}};
- srOn=1;try{sr.start()}catch(e){}aiSt('');aiUi()}
+function srToggle(){if(srOn){srOn=0;sr&&sr.stop();sr=null;aiUi();return}srBegin(1)}
+function srBegin(m){if(srOn)return;if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){m&&aiSt('هذا المتصفح لا يدعم التفريغ الصوتي — استخدم Chrome أو Edge على الكمبيوتر، أو اكتب ملاحظاتك في الخانة',1);return}
+ if(!m&&MOB)return;const l=$('#ai_lang').value,fx=l!='auto';
+ sr=srMake(fx?l:'ar-EG',t=>{LOG.tr.push({ts:Date.now(),t,n:name});if(LOG.tr.length>6000)LOG.tr.shift();aiUi()},null,fx);srOn=1;aiSt('');aiUi()}
 function aiData(){const fm=t=>new Date(t).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
  return{title:'حصة '+room,date:new Date(LOG.start||Date.now()).toLocaleDateString('ar-EG'),minutes:Math.round((Date.now()-(LOG.start||Date.now()))/60000),teacher:name,
   attendance:$('#ai_att').checked?LOG.att.map(a=>fm(a.ts)+' — '+a.n+' '+a.ev):[],
   chat:$('#ai_chat').checked?chat.filter(x=>!x.sys).map(x=>(x.ts?fm(x.ts)+' ':'')+x.n+': '+x.m):[],
   polls:chat.filter(x=>x.sys&&String(x.m).startsWith('نتيجة الاستفتاء')).map(x=>x.m),
-  transcript:$('#ai_tr').checked?LOG.tr.map(x=>fm(x.ts)+' '+x.t):[],notes:$('#ai_notes').value.trim()}}
+  transcript:$('#ai_tr').checked?LOG.tr.map(x=>fm(x.ts)+' '+(x.n?x.n+': ':'')+x.t):[],notes:$('#ai_notes').value.trim()}}
 function aiPrompt(d){const cut=(a,n)=>a.join('\n').slice(-n);
  return 'أنت مساعد تعليمي. لخّص الحصة الدراسية التالية بالعربية الفصحى المبسطة بصيغة منظمة تتضمن: عنوان الحصة، ملخص قصير (3 إلى 5 أسطر)، النقاط والمفاهيم الرئيسية، الأمثلة أو التمارين التي نُوقشت، أسئلة الطلاب وإجاباتها، الواجبات أو المهام المطلوبة، وتوصيات للمعلم للحصة القادمة. اعتمد فقط على المعلومات الواردة، ولا تخترع معلومات غير موجودة، وإن كان قسم بلا بيانات فاكتب «لا يوجد».\n\n'+
  'المعلم: '+d.teacher+'\nالتاريخ: '+d.date+'\nالمدة التقريبية: '+d.minutes+' دقيقة\n\n'+
- '## الحضور\n'+(cut(d.attendance,4000)||'لا يوجد')+'\n\n## نص كلام المعلم (تفريغ صوتي)\n'+(cut(d.transcript,60000)||'لا يوجد')+'\n\n## رسائل الشات\n'+(cut(d.chat,20000)||'لا يوجد')+'\n\n## نتائج الاستفتاءات\n'+(cut(d.polls,3000)||'لا يوجد')+'\n\n## ملاحظات المعلم\n'+(d.notes||'لا يوجد')}
+ '## الحضور\n'+(cut(d.attendance,4000)||'لا يوجد')+'\n\n## نص كلام المعلم والطلاب (تفريغ صوتي تلقائي)\n'+(cut(d.transcript,60000)||'لا يوجد')+'\n\n## رسائل الشات\n'+(cut(d.chat,20000)||'لا يوجد')+'\n\n## نتائج الاستفتاءات\n'+(cut(d.polls,3000)||'لا يوجد')+'\n\n## ملاحظات المعلم\n'+(d.notes||'لا يوجد')}
 async function aiHttp(url,opt){const r=await fetch(url,opt),t=await r.text();if(!r.ok)throw new Error('HTTP '+r.status+' '+t.slice(0,160));let j=null;try{j=JSON.parse(t)}catch(e){}return{t,j}}
 async function aiCall(p,key,model,url,d){const prompt=aiPrompt(d);
  if(p=='webhook'){const o=await aiHttp(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,prompt})});return o.j&&(o.j.summary||o.j.text||o.j.result)||o.t}
@@ -1081,11 +1106,13 @@ window.addEventListener('pagehide',()=>mailEnd(1));
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
+function pfsSet(on){document.body.classList.toggle('pfs',!!on);const b=$('#fs');if(b)b.textContent=on?'🗗':'⛶';setTimeout(()=>{try{fit();relayout()}catch(e){}},150)}
 function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitFullscreenElement;
  if(on){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return}
+ if(el.classList.contains('pfs'))return pfsSet(0);
  const rq=el.requestFullscreen||el.webkitRequestFullscreen,en=d.fullscreenEnabled!==undefined?d.fullscreenEnabled:d.webkitFullscreenEnabled;
- if(!rq||en===false)return alert(T('fsNo'));
- try{const p=rq.call(el);if(p&&p.catch)p.catch(()=>alert(T('fsNo')))}catch(e){alert(T('fsNo'))}}
+ if(!rq||en===false)return pfsSet(1);
+ try{const p=rq.call(el);if(p&&p.catch)p.catch(()=>pfsSet(1))}catch(e){pfsSet(1)}}
 if(!('onfullscreenchange' in document))document.addEventListener('webkitfullscreenchange',()=>document.dispatchEvent(new Event('fullscreenchange')));
 document.addEventListener('fullscreenchange',()=>{const b=$('#fs');if(b)b.textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'🗗':'⛶'});
 /* ===== ترجمة كاملة للواجهة (عربي ⇄ English): نصوص التطبيق فقط — أسماء وكتابات المستخدمين محمية بـ translate=no ===== */
@@ -1626,7 +1653,7 @@ recRecover(recRefresh);
 function camVis(){return Object.values(boxes).some(b=>b&&!b.hide&&!b.lg)}
 function progDraw(g,W,H){
  g.fillStyle='#2a1a78';g.fillRect(0,0,W,H);
- const v=$('#v'),cm=hubCamEl(),camOn=!!(camT&&cm&&cm.videoWidth),wbOn=!!(st.wb&&wb.width&&S),scrOn=!!(scrT&&v&&v.videoWidth);
+ const v=$('#v'),cm=hubCamEl(),camOn=!!(camT&&cm&&cm.videoWidth),wbOn=!!(st.wb&&wb.width&&S),scrOn=!!((scrT||stuS)&&v&&v.videoWidth);
  const fitV=(e,x,y,w,h)=>{const r=Math.min(w/e.videoWidth,h/e.videoHeight),dw=e.videoWidth*r,dh=e.videoHeight*r;g.drawImage(e,x+(w-dw)/2,y+(h-dh)/2,dw,dh)};
  const circ=(cx,cy,r)=>{g.save();g.beginPath();g.arc(cx,cy,r,0,7);g.clip();const k=Math.max(2*r/cm.videoWidth,2*r/cm.videoHeight),dw=cm.videoWidth*k,dh=cm.videoHeight*k;g.drawImage(cm,cx-dw/2,cy-dh/2,dw,dh);g.restore();g.beginPath();g.arc(cx,cy,r,0,7);g.lineWidth=5;g.strokeStyle='#fff';g.stroke();g.beginPath();g.arc(cx,cy,r+4,0,7);g.lineWidth=4;g.strokeStyle='#ff4d9d';g.stroke()};
  if(wbOn){
@@ -1642,6 +1669,34 @@ function progEnsure(){if(PG)return PG;const c=document.createElement('canvas');c
  PG={c,tr:c.captureStream(10).getVideoTracks()[0]};const t=()=>{try{progDraw(g,1280,720)}catch(e){}};t();
  try{const w=new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},100)'])));w.onmessage=t}catch(e){setInterval(t,100)}
  return PG}
+</script>
+<script>
+/* ===== تفريغ صوتي تلقائي بلغة الحديث + مشاركة شاشة الطالب + تبديل السبورة/الشاشة ===== */
+let stuS=null,sSr=null,canScr=0,sScrT=null,sScrCall=null;
+function srLangOf(t,cur){const a=(t.match(/[\u0600-\u06FF]/g)||[]).length,l=(t.match(/[A-Za-z]/g)||[]).length;if(a+l<4)return cur;return a>=l?(cur.indexOf('ar')==0?cur:'ar-EG'):'en-US'}
+function srMake(lang,onText,gate,fixed){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;let on=1,cur=lang,r;
+ const mk=()=>{r=new SR();r.lang=cur;r.continuous=true;r.interimResults=false;
+  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();if(!t)continue;
+   if(!gate||gate())onText(t,cur);const nl=fixed?cur:srLangOf(t,cur);if(nl!==cur){cur=nl;try{r.stop()}catch(x){}}}};
+  r.onend=()=>{if(on)setTimeout(()=>{if(on)mk()},300)};
+  r.onerror=e=>{if(e.error=='not-allowed'||e.error=='service-not-allowed')on=0};
+  try{r.start()}catch(x){}};
+ mk();return{stop:()=>{on=0;try{r.stop()}catch(x){}}}}
+function sSrStart(){if(sSr||role!='s'||MOB)return;
+ sSr=srMake('ar-EG',t=>{try{conn&&conn.open&&conn.send({t:'tr',x:t.slice(0,500)})}catch(e){}},()=>!!(micS&&micS.enabled&&canTalk&&admitted),0)}
+function tSwap(){if(role!='t')return;if(!(scrT||stuS)){if(!st.wb)tWb();else alert('ابدأ مشاركة الشاشة أولاً (🖥) ثم بدّل بينها وبين السبورة');return}
+ if(st.wb)st.wb=0;else{st.wb=1;st.bg=1}bst();ui()}
+function scrBtn(){role=='t'?tScr():sScr()}
+async function sScr(){if(sScrT)return stopSScr();if(!canScr)return alert('اطلب من المعلم السماح لك بمشاركة الشاشة');
+ let t;try{t=(await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}},audio:false})).getVideoTracks()[0]}
+ catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
+ if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
+ sScrT=t;t.contentHint='detail';t.onended=stopSScr;sScrCall=peer.call('itqan-'+room,new MediaStream([t]),{metadata:{k:'scr'}});
+ setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution'),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}
+function stopSScr(){if(sScrT){const t=sScrT;sScrT=null;t.onended=null;try{t.stop()}catch(e){}sys('🖥 توقفت مشاركة شاشتك')}if(sScrCall){try{sScrCall.close()}catch(e){}sScrCall=null}}
+function ssDrop(k){if(stuS&&stuS.k==k){try{stuS.call.close()}catch(e){}stuS=null;refreshSoon()}}
+function ssp(k){const o=conns[k];if(!o||!o.adm)return;o.sp=o.sp?0:1;try{o.c.send({t:'ssp',on:o.sp})}catch(e){}if(!o.sp)ssDrop(k);render();sys((o.sp?'🖥 سمحت بمشاركة الشاشة لـ ':'🚫 أوقفت مشاركة الشاشة لـ ')+o.name)}
+function ib(bg,ic,ti,fn){return '<button class="ib" style="background:'+bg+'" title="'+ti+'" aria-label="'+ti+'" onclick="'+fn+'">'+ic+'</button>'}
 </script>
 </body>
 </html>
