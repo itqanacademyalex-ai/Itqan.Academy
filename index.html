@@ -82,6 +82,7 @@ body[data-role=s] #wclr{display:none}
 .cb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .cb span{position:absolute;bottom:3px;right:6px;font-size:11px;background:#000a;padding:1px 7px;border-radius:8px;pointer-events:none}
 .cb button{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:7px;background:#000a;font-size:12px;padding:0}
+.cb.circ{width:120px;height:120px;border-radius:50%;border-color:#fff}.cb.circ span,.cb.circ button{display:none}
 #cv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
 #cvb{position:absolute;z-index:4;top:12px;left:58px;background:rgba(0,0,0,.55);border-radius:12px;width:38px;height:38px;font-size:18px}
 #cvb[hidden]{display:none}
@@ -414,7 +415,7 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'gm':if(d.v===0||d.v===2){gm=d.v;sys('وضع الدخول (من السكرتارية): '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}break;
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
   case 'rc':{const r=recCfgOk(d.v);if(r&&!RC){RC=r;if(hubT0&&Date.now()-hubT0>12000)recPlan()}break}
-  case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
+  case 'recst':if(d.v===1){if(recSelfEng)break;recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
 function forceEnd(){Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});
  mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}alert('أنهت السكرتارية الجلسة');location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin()}
@@ -568,7 +569,7 @@ function tRec(){
   if(st.wb&&st.bg){x.fillStyle='#fff';x.fillRect(0,0,1280,720)}else if(st.scr)x.drawImage(v,0,0,1280,720);
   else if(isBigT()&&boxes.T)x.drawImage(boxes.T.v,0,0,1280,720);
   else{x.fillStyle='#5b2c50';x.beginPath();x.arc(640,360,100,0,7);x.fill();x.fillStyle='#f4a6d7';x.font='bold 100px sans-serif';x.textAlign='center';x.fillText('I',640,395)}
-  if(st.wb&&wb.width)x.drawImage(wb,OX,OY,LW*S,LH*S,0,0,1280,720);if(st.cam&&boxes.T&&!isBigT()){const r=boxes.T.el.getBoundingClientRect(),q=$('#stage').getBoundingClientRect();x.drawImage(boxes.T.v,(r.left-q.left)/q.width*1280,(r.top-q.top)/q.height*720,r.width/q.width*1280,r.height/q.height*720)}},40);
+  if(st.wb&&wb.width)x.drawImage(wb,OX,OY,LW*S,LH*S,0,0,1280,720);if(st.wb&&st.cam&&boxes.T&&boxes.T.v.videoWidth){const vv=boxes.T.v,d=170,a=1280-d/2-16,b=720-d/2-16,q=Math.min(vv.videoWidth,vv.videoHeight);x.save();x.beginPath();x.arc(a,b,d/2,0,7);x.clip();x.drawImage(vv,(vv.videoWidth-q)/2,(vv.videoHeight-q)/2,q,q,a-d/2,b-d/2,d,d);x.restore();x.beginPath();x.arc(a,b,d/2,0,7);x.lineWidth=4;x.strokeStyle='#fff';x.stroke()}else if(st.cam&&boxes.T&&!isBigT()){const r=boxes.T.el.getBoundingClientRect(),q=$('#stage').getBoundingClientRect();x.drawImage(boxes.T.v,(r.left-q.left)/q.width*1280,(r.top-q.top)/q.height*720,r.width/q.width*1280,r.height/q.height*720)}},40);
  let o;try{o=new MediaStream([...c.captureStream(25).getTracks(),...((role=='t'?stream:A.srcObject)||new MediaStream()).getAudioTracks()])}catch(e){clearInterval(i);return alert(T('recNo'))}
  let r;try{r=new MediaRecorder(o)}catch(e){clearInterval(i);return alert(T('recNo'))}const ch=[];r.ondataavailable=e=>e.data.size&&ch.push(e.data);
  r.onstop=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(ch,{type:r.mimeType||'video/webm'}));a.download='itqan-class-'+Date.now()+(/mp4/.test(r.mimeType)?'.mp4':'.webm');a.click();rec=null;ui();sys('تم حفظ التسجيل على جهازك')};
@@ -687,7 +688,7 @@ function ui(){
  $('#av').hidden=!!(st.scr||isBigT());
  $('#avt').textContent=(st.cam?'':'الكاميرا مقفولة — ')+(st.mic?'الصوت شغّال':'الصوت مكتوم');
  $('#v').style.visibility=st.scr?'visible':'hidden';
- const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
+ const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();try{layoutCams()}catch(e){}
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
  layoutCams();
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
@@ -853,7 +854,7 @@ function hideCam(id){const b=boxes[id];if(!b)return;b.el.remove();delete boxes[i
 function camMode(id){const b=boxes[id];if(!b)return;b.mode=id=='T'?(isBigT()?'small':'big'):(b.mode=='big'?'small':'big');layoutCams()}
 function layoutCams(){const big=isBigT();$('#cv').style.display=big?'block':'none';$('#cvb').hidden=!big;
  Object.entries(boxes).forEach(([id,b])=>{const hide=id=='T'&&(!st.cam||big),lg=id!='T'&&b.mode=='big';
-  b.el.hidden=hide;b.el.style.width=lg?'360px':'';b.el.style.height=lg?'203px':'';if(!hide)place(b.el,id)})}
+  b.el.classList.toggle('circ',id=='T'&&!!st.wb);b.el.hidden=hide;b.el.style.width=lg?'360px':'';b.el.style.height=lg?'203px':'';if(!hide)place(b.el,id)})}
 function relayout(){layoutCams();if(FE.tb&&!$('#tb').hidden)place($('#tb'),'tb')}
 addEventListener('resize',relayout);
 document.addEventListener('fullscreenchange',()=>{(document.fullscreenElement||document.body).appendChild($('#fl'));setTimeout(relayout,150)});
@@ -1507,8 +1508,13 @@ function recEngine(src,mime,sink){
   nodes.forEach((n,id)=>{if(!ids.has(id)){try{n.disconnect()}catch(e){}nodes.delete(id)}});
   ts.forEach(t=>{if(!nodes.has(t.id)){try{const n=ac.createMediaStreamSource(new MediaStream([t]));n.connect(dest);nodes.set(t.id,n)}catch(e){}}})};
  const fit=v=>{const r=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*r,h=v.videoHeight*r;g.drawImage(v,(W-w)/2,(H-h)/2,w,h)};
- const draw=()=>{g.fillStyle='#000';g.fillRect(0,0,W,H);const m=src.main(),c=src.cam();
-  if(src.camBig&&src.camBig()&&c&&c.videoWidth)fit(c);
+ const draw=()=>{g.fillStyle='#000';g.fillRect(0,0,W,H);const m=src.main(),c=src.cam(),bd=src.wb&&src.wb();
+  if(bd){if(bd.bg){g.fillStyle='#fff';g.fillRect(0,0,W,H)}else if(m&&m.videoWidth)fit(m);
+   if(bd.cv&&bd.cv.width&&bd.w>0)g.drawImage(bd.cv,bd.ox,bd.oy,bd.w,bd.h,0,0,W,H);
+   if(c&&c.videoWidth){const d=170,cx0=W-d/2-16,cy0=H-d/2-16,q=Math.min(c.videoWidth,c.videoHeight);
+    g.save();g.beginPath();g.arc(cx0,cy0,d/2,0,7);g.clip();g.drawImage(c,(c.videoWidth-q)/2,(c.videoHeight-q)/2,q,q,cx0-d/2,cy0-d/2,d,d);g.restore();
+    g.beginPath();g.arc(cx0,cy0,d/2,0,7);g.lineWidth=4;g.strokeStyle='#fff';g.stroke()}}
+  else if(src.camBig&&src.camBig()&&c&&c.videoWidth)fit(c);
   else{if(m&&m.videoWidth)fit(m);if(c&&c.videoWidth){const w=288,h=Math.round(w*c.videoHeight/c.videoWidth);g.drawImage(c,W-w-12,H-h-12,w,h)}}};
  const ms=new MediaStream([cv.captureStream(10).getVideoTracks()[0],dest.stream.getAudioTracks()[0]]);
  const rec=new MediaRecorder(ms,{mimeType:mime,videoBitsPerSecond:7e5,audioBitsPerSecond:48e3});
@@ -1541,10 +1547,9 @@ function hubCamEl(){if(!camT){_hcT=null;return null}
  return _hc}
 function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(o=>{try{o.c.send({t:'recon',on})}catch(e){}});if(on)sys('🔴 بدأ تسجيل الحصة (يظهر مؤشر للجميع)')}
 function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
- const c=Object.values(cohosts)[0];
- if(c){try{c.send({t:'rec',on:1})}catch(e){}coMedia();recWait=setTimeout(()=>{if(!recOwner)recSelf()},9000)}else recSelf()}
+ recSelf()}
 function recSelf(suf){if(recSelfEng||!RC||recStopped)return;
- try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{main:()=>$('#v'),cam:()=>hubCamEl(),camBig:()=>!scrT&&!!camT,audio:()=>stream.getAudioTracks()},RC.u,RC.k,recRefresh);recSet(1)}
+ try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{main:()=>$('#v'),cam:()=>hubCamEl(),camBig:()=>!scrT&&!!camT&&!st.wb,wb:()=>st.wb?{bg:!!st.bg,cv:wb,ox:OX,oy:OY,w:LW*S,h:LH*S}:null,audio:()=>stream.getAudioTracks()},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك')}}
 function coMedia(){
  Object.values(cohosts).forEach(c=>{
