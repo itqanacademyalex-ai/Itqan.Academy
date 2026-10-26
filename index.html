@@ -494,7 +494,7 @@ async function tReq(pin){
   c.on('open',()=>{c.send({t:'treq',n:name,p:TK.pub,pin});showGate('⏳','تم إرسال طلبك — في انتظار موافقة السكرتارية...')});
   c.on('data',async d=>{
    if(!d)return;
-   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;
+   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;akSet(d.ak);
     try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC}))}catch(e){}
     try{p.destroy()}catch(e){}tStart()}
    else if(d.t=='trej'){got=1;try{p.destroy()}catch(e){}showGate('⛔','رفضت السكرتارية دخولك. تواصل معها لمعرفة السبب.',1)}});
@@ -530,6 +530,7 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'muteAll':tMuteAll();break;
   case 'gm':if(d.v===0||d.v===2){gm=d.v;sys('وضع الدخول (من السكرتارية): '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}break;
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
+  case 'ak':akSet(d.v);break;
   case 'rc':{const r=recCfgOk(d.v);if(r&&!RC){RC=r;if(hubT0&&Date.now()-hubT0>12000)recPlan()}break}
   case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
@@ -1558,7 +1559,7 @@ async function sxAcc(k){const r=SX.reqs[k];if(!r)return;
  if(!r.ok&&!confirm('كود المعلم غير مطابق! هل تريد قبوله رغم ذلك؟'))return;
  if(!r.c.open){delete SX.reqs[k];sxDraw();return alert('انقطع اتصال المعلم — اطلب منه فتح الرابط من جديد')}
  const cert={r:SX.room,p:r.p,e:Date.now()+14*36e5};
- try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher()})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
+ try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher(),ak:akForTeacher()})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
  SX.acc={n:r.n};delete SX.reqs[k];sxDraw()}
 function sxRej(k){const r=SX.reqs[k];if(!r)return;try{r.c.send({t:'trej'})}catch(e){}delete SX.reqs[k];sxDraw()}
 function sxHub(){
@@ -1724,13 +1725,13 @@ function sxRecOn(on){if(!SX)return;
 function sxRecEnd(){if(SX&&SX.rec){const r=SX.rec;SX.rec=null;r.stop().then(recRefresh)}rcStatus()}
 function sxRecStop(){if(SX&&SX.rec){sxRecEnd();sxCmd('recst','',0)}}
 function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k,n:(SX&&SX.title)||'حصة'}:null}
-function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r)}
+function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r);const a=akForTeacher();if(a)sxCmd('ak','',a)}
 /* ---- واجهة الإعداد والحالة (لوحة السكرتارية) ---- */
 function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
  e.innerHTML='<div class="sxc"><h3>🎥 تسجيل الحصص على Google Drive</h3>'+
  (c&&c.u&&!rcEd?'<div class="sxr"><span>'+(c.on?'🟢 التسجيل التلقائي مفعّل':'⚪ التسجيل متوقف')+'</span><span class="bt"><button class="sxb d" onclick="rcToggle()">'+(c.on?'إيقاف':'تفعيل')+'</button><button class="sxb d" onclick="rcEdit()">تعديل</button><button class="sxb" onclick="rcTest()">اختبار</button></span></div>'
  :'<input id="rcu" dir="ltr" placeholder="رابط السكريبت (ينتهي بـ /exec)" value="'+esc(c?c.u:'')+'"><input id="rck" placeholder="كلمة سر السكريبت" value="'+esc(c?c.k:'')+'"><button class="sxb g" onclick="rcSave()">حفظ</button><small style="color:#a9bccd;line-height:1.8">خطوات إعداد السكريبت في الملف المرفق Code.gs</small>')+
- '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus()}
+ '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus();akDraw()}
 function rcSave(){const u=$('#rcu').value.trim(),k=$('#rck').value.trim();
  if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');if(!k)return alert('اكتبي كلمة سر السكريبت');
  RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();if(SX)sxRcPush()}
@@ -2011,6 +2012,59 @@ function capUi(){const b=$('#cct');if(!b)return;b.hidden=!(st.cap||CAPS.length||
 function capText(){const f=t=>new Date(t).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});return CAPS.map(c=>'['+f(c.ts)+'] '+(c.n?c.n+': ':'')+c.x).join('\n')}
 function capDl(){if(!CAPS.length)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+capText()],{type:'text/plain;charset=utf-8'}));a.download='itqan-script-'+(room||'class')+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function capCopy(){const t=capText();if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){}const e=$('#cap_st');if(e)e.textContent='✓ تم النسخ'}
+</script>
+
+<script>
+/* ===== مفتاح Gemini من السكرتارية (مرة واحدة) → المعلم في الذاكرة فقط → تشغيل السكريبت تلقائياً ===== */
+const AK={k:'',m:'',auto:1};
+function akLoad(){try{const j=JSON.parse(localStorage.getItem('itqan_ak'));return j&&typeof j.k=='string'&&j.k?j:null}catch(e){return null}}
+function akForTeacher(){const j=akLoad();return j?{k:j.k,m:j.m||'',auto:j.auto===0?0:1}:null}
+function akSet(a){if(role!='t'||!a||typeof a.k!='string'||!a.k||a.k.length>200)return;
+ AK.k=a.k.trim();AK.m=typeof a.m=='string'?a.m.trim().slice(0,80):'';AK.auto=a.auto===0?0:1;CAP.model='';
+ sys('🔑 استلمت مفتاح الذكاء الاصطناعي من السكرتارية');
+ if(AK.auto&&!CAP.on)setTimeout(()=>{if(!CAP.on)capToggle()},1500)}
+function capKey(){const c=capCfg(),a=aiLoad();return AK.k||c.key||(a.provider=='gemini'&&a.key)||''}
+function capOpen(){const c=capCfg();$('#cap_key').value=AK.k?'':(c.key||'');$('#cap_key').disabled=!!AK.k;$('#cap_key').placeholder=AK.k?'✓ المفتاح مُعدّ من السكرتارية':'مفتاح API';
+ $('#cap_model').value=AK.m?'':(c.model||'');$('#cap_model').placeholder='تلقائي (اتركه فارغاً)';if(c.stu===0)$('#cap_stu').checked=false;if(c.show===0)$('#cap_show').checked=false;$('#capp').hidden=false;capUi()}
+function capPick(names){const ok=names.filter(n=>/flash/.test(n)&&!/image|tts|live|audio|embed|thinking|robotics|computer/.test(n));
+ if(ok.includes('gemini-flash-latest'))return'gemini-flash-latest';
+ const sc=n=>{const m=n.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?(-.+)?$/);if(!m)return-1;return parseFloat(m[1])*10-(m[2]?3:0)-(m[3]?5:0)};
+ return ok.map(n=>[sc(n),n]).sort((a,b)=>b[0]-a[0]).map(x=>x[1])[0]||ok[0]||''}
+async function capList(key){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+encodeURIComponent(key));
+ if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.body=(await r.text()).slice(0,300)}catch(x){}throw e}
+ const j=await r.json();return(j.models||[]).filter(x=>(x.supportedGenerationMethods||[]).includes('generateContent')).map(x=>String(x.name).replace(/^models\//,''))}
+async function capModelFor(key){const m=(AK.m||capCfg().model||'').trim();if(m)return m;if(CAP.model)return CAP.model;
+ const n=capPick(await capList(key));if(!n){const e=new Error('لا يوجد نموذج مناسب لهذا المفتاح');e.status=404;throw e}CAP.model=n;return n}
+async function capCall(data){const key=capKey();let model=await capModelFor(key);
+ for(let t=0;t<2;t++){const gc={temperature:0};if(/gemini-2\.5/.test(model))gc.thinkingConfig={thinkingBudget:0};
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({systemInstruction:{parts:[{text:CAP_PROMPT}]},contents:[{role:'user',parts:[{inlineData:{mimeType:'audio/wav',data}},{text:'Transcribe.'}]}],generationConfig:gc})});
+  if(r.status==404&&t==0&&!(AK.m||capCfg().model)){CAP.model='';model=await capModelFor(key);continue}
+  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.body=(await r.text()).slice(0,300)}catch(x){}throw e}
+  const j=await r.json();return((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||'').join('').trim()}}
+function capErr(e){const s=e&&e.status,b=(e&&e.body)||'';
+ if(s==401||s==403||/API_KEY_INVALID|API key not valid/i.test(b)){capStop();CAP.err='مفتاح Gemini غير صالح أو غير مصرّح — تم إيقاف السكريبت'}
+ else if(s==429)CAP.err='تجاوزت حد الاستخدام المجاني لـ Gemini — بعض المقاطع تُتخطى';
+ else if(s==404)CAP.err='النموذج غير متاح لهذا المفتاح (404) — اترك خانة النموذج فارغة ليُختار تلقائياً';
+ else CAP.err='تعذر التفريغ: '+((e&&e.message)||'')+(b?' '+b.slice(0,80):'');capSt()}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(CAP.ac&&CAP.ac.state=='suspended')CAP.ac.resume().catch(()=>{})}));
+/* واجهة السكرتارية */
+function akDraw(){const e=$('#sxR');if(!e)return;const a=akLoad();
+ e.insertAdjacentHTML('beforeend','<div class="sxc"><h3>🤖 السكريبت المباشر (Gemini)</h3>'+
+ (a?'<div class="sxr"><span>🟢 مفتاح محفوظ على هذا الجهاز (••••'+esc(a.k.slice(-4))+')</span><span class="bt"><button class="sxb" onclick="akTest()">اختبار</button><button class="sxb r" onclick="akClear()">حذف</button></span></div>':'')+
+ '<input id="akk" type="password" dir="ltr" autocomplete="off" placeholder="'+(a?'مفتاح جديد (اتركه فارغاً للإبقاء على الحالي)':'مفتاح Gemini API')+'">'+
+ '<input id="akm" dir="ltr" placeholder="اسم النموذج (اختياري — الأفضل تركه فارغاً)" value="'+esc(a?a.m||'':'')+'">'+
+ '<label style="font-size:13px"><input type="checkbox" id="aka" '+(!a||a.auto!==0?'checked':'')+'> تشغيل السكريبت تلقائياً عند دخول المعلم</label>'+
+ '<button class="sxb g" onclick="akSave()">حفظ</button><div id="akst" style="min-height:20px"></div>'+
+ '<small style="color:#8a8ea5;line-height:1.8">يُدخل مرة واحدة هنا. يُرسل للمعلم المعتمد فقط عبر القناة المشفّرة ويبقى في ذاكرة متصفحه ولا يصل للطلاب.</small></div>')}
+function akMsg(m,bad){const e=$('#akst');if(e){e.textContent=m;e.style.color=bad?'#fca5a5':'#86efac'}}
+function akSave(){const old=akLoad(),k=($('#akk').value||'').trim()||(old?old.k:'');if(!k)return akMsg('اكتب المفتاح أولاً',1);
+ try{localStorage.setItem('itqan_ak',JSON.stringify({k,m:($('#akm').value||'').trim(),auto:$('#aka').checked?1:0}))}catch(e){return akMsg('تعذر الحفظ على هذا الجهاز',1)}
+ if(SX)sxRcPush();rcDraw();akMsg('✓ تم الحفظ'+(SX&&SX.hub?' وإرساله للمعلم':''))}
+function akClear(){if(!confirm('حذف المفتاح من هذا الجهاز؟'))return;try{localStorage.removeItem('itqan_ak')}catch(e){}rcDraw()}
+async function akTest(){const a=akLoad();if(!a)return;akMsg('⏳ جارٍ الاختبار...');
+ try{const n=a.m||capPick(await capList(a.k));akMsg(n?'✓ المفتاح شغّال — النموذج: '+n:'✗ المفتاح سليم لكن لا يوجد نموذج مناسب',!n)}
+ catch(e){akMsg('✗ '+(e.status==400||e.status==403?'المفتاح غير صالح أو غير مفعّل لخدمة Gemini':'تعذر الاتصال ('+(e.message||'')+')'),1)}}
 </script>
 </body>
 </html>
