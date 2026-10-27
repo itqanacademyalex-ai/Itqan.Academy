@@ -209,39 +209,6 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 .ib{box-shadow:0 3px 8px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18)}
 .sxw{color:var(--sand)}#recs{color:var(--sand)}
 .aic textarea[readonly]{opacity:.95}
-
-html,body{overscroll-behavior-y:contain}
-body button.c,body button.c.st,body button.c.off,body button.c.tr,body button.c.tp,body button.c.tg,body button.c.tz{background:#4b5060;filter:none;outline:none}
-body button.c.end{background:#d4605a}
-body button.c.lt,body button.c.on,body button.c.st.lt{background:#14b8a6;filter:none;outline:none;box-shadow:0 0 0 2px rgba(20,184,166,.35),0 0 14px rgba(20,184,166,.65)}
-.ic.lt{background:rgba(20,184,166,.4);text-shadow:0 0 8px #14b8a6}
-#tb button{background:#4b5060}
-#tb button.on:not(.sw){background:#14b8a6;outline:none}
-#tb .sw.on{outline:3px solid #14b8a6}
-body:not([data-role=t]) #capb{display:none}
-#tmp{position:fixed;inset-block-start:70px;inset-inline-start:14px;z-index:43;width:300px;background:var(--side);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 36px #0008}
-#tmp[hidden]{display:none}
-#tmp .ch{display:flex;justify-content:space-between;align-items:center}
-#tmp button{background:#4b5060;border-radius:10px;padding:8px 6px}
-#tmp button.on{background:#14b8a6}
-#tmp .tbs,#tmp .tbr{display:flex;gap:6px}#tmp .tbs button,#tmp .tbr button{flex:1}
-#tmd{font-size:42px;text-align:center;direction:ltr;font-variant-numeric:tabular-nums;font-weight:700;background:#1d2030;border-radius:12px;padding:6px}
-#tmcd{display:flex;flex-direction:column;gap:6px}
-#tmcd[hidden]{display:none}
-#tmcd .g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-#tmcd .rw{display:flex;gap:6px;align-items:center;justify-content:center;direction:ltr}
-#tmp input[type=number]{width:62px;background:#1d2030;border:1px solid #2c2f3e;border-radius:10px;padding:8px;color:#fff;text-align:center;font-family:inherit}
-#tml{max-height:90px;overflow:auto;direction:ltr;font-size:13px;color:#aab;white-space:pre}
-#tmo{position:absolute;z-index:5;top:12px;left:50%;transform:translateX(-50%);background:rgba(10,11,18,.78);border-radius:16px;padding:4px 22px;font-size:40px;font-weight:700;direction:ltr;font-variant-numeric:tabular-nums;pointer-events:none}
-#tmo[hidden]{display:none}#tmo.lo{background:#b91c1c}
-#capo{position:absolute;z-index:5;bottom:56px;left:6%;right:6%;text-align:center;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px}
-#capo[hidden]{display:none}
-#capo .cl{background:rgba(0,0,0,.75);color:#fff;border-radius:10px;padding:4px 14px;font-size:clamp(15px,2.2vw,22px);line-height:1.6;max-width:100%}
-#capo b{color:#7ee0cf;margin-inline-end:4px;font-size:.8em}
-#cct,#cdl{position:absolute;z-index:4;top:12px;border-radius:12px;width:38px;height:38px;font-size:16px;background:#4b5060}
-#cct{left:104px}#cdl{left:150px}#cct.on{background:#14b8a6}
-#capp{position:fixed;inset:0;z-index:40;background:#000b;display:flex;align-items:center;justify-content:center;padding:12px}
-#capp[hidden]{display:none}
 </style>
 </head>
 <body data-role="">
@@ -271,7 +238,7 @@ body:not([data-role=t]) #capb{display:none}
 </div></div>
 
 <div id="recb" hidden>🔴 جارٍ تسجيل الحصة</div><div id="recs" hidden></div>
-<div id="gate" hidden><div class="card"><img class="logo sm" src="data:image/png;base64,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" alt="Itqan Academy"><h2 id="gi"></h2><p id="gt" style="line-height:1.9"></p><button class="w" id="gb" hidden onclick="NOWARN=1;location.reload()">رجوع</button></div></div>
+<div id="gate" hidden><div class="card"><img class="logo sm" src="data:image/png;base64,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" alt="Itqan Academy"><h2 id="gi"></h2><p id="gt" style="line-height:1.9"></p><button class="w" id="gb" hidden onclick="location.reload()">رجوع</button></div></div>
 
 <div id="mg" hidden><div class="card"><h2>🎤 الميكروفون مطلوب</h2><p id="mgt" style="line-height:1.9"></p><button class="w" style="background:#1a9486" onclick="micRetry()">🎤 تشغيل الميكروفون الآن</button><button class="w" onclick="$('#mg').hidden=true">المتابعة بدون ميكروفون (استماع فقط)</button></div></div>
 
@@ -282,7 +249,6 @@ body:not([data-role=t]) #capb{display:none}
    
    <button class="pop" id="lgb2" onclick="toggleLang()">English</button>
    <button class="pop" id="aib" onclick="aiOpen()">🤖 ملخص الحصة</button>
-   <button class="pop" id="capb" onclick="capOpen()">📝 السكريبت المباشر</button>
    <div><span class="badge gray">👥 <span id="cnt">0</span></span><span class="badge green" id="vb">〰 صوت</span></div>
   </div>
   <div id="stage">
@@ -293,8 +259,6 @@ body:not([data-role=t]) #capb{display:none}
    <button id="cvb" hidden onclick="camMode('T')" title="تصغير الكاميرا">⤡</button>
    <button id="fs" onclick="fsToggle()" title="ملء الشاشة">⛶</button>
    <div id="tag">Itqan Academy 🎤</div>
-   <div id="tmo" hidden translate="no"></div><div id="capo" hidden translate="no"></div>
-   <button id="cct" hidden onclick="CAP.vis=CAP.vis?0:1;capUi()" title="السكريبت المباشر">📝</button><button id="cdl" hidden onclick="capDl()" title="تنزيل السكريبت">⬇</button>
    <button id="unm" hidden onclick="A.play();$('#v').play();this.hidden=true" style="position:absolute;z-index:6;top:60px;left:50%;transform:translateX(-50%);background:#1a9486;border-radius:12px;padding:10px 18px">🔊 اضغط لتفعيل الصوت</button>
    <div id="poll" hidden></div>
   </div>
@@ -321,7 +285,6 @@ body:not([data-role=t]) #capb{display:none}
    <button class="c tg" id="tw" onclick="tWb()" title="السبورة">🖍</button>
    <button class="c tp" onclick="stkPick('')" data-i18n-t="stkAll" title="استيكر للجميع">⭐</button>
    <button class="c tz" onclick="sync()" title="تحديث الاتصال">🔄</button>
-   <button class="c tz" id="btm" onclick="tmT()" title="ستوب واتش وتايمر">⏱</button>
   </div>
   <div class="tabs">
    <button data-t="chat" class="a">الشات (0)</button><button data-t="stu">الطلاب (0)</button><button data-t="hand">اليد المرفوعة (0)</button>
@@ -359,53 +322,20 @@ body:not([data-role=t]) #capb{display:none}
  <textarea id="ai_out" placeholder="سيظهر الملخص هنا..."></textarea>
  <div class="row"><button onclick="aiCopy()">📋 نسخ</button><button onclick="aiDl()">⬇ تنزيل</button><button onclick="aiShare()">💬 إرسال للطلاب في الشات</button></div>
 </div></div>
-<div id="tmp" hidden><div class="ch"><b>⏱ ستوب واتش وتايمر</b><button onclick="tmT()">✕</button></div>
- <div class="tbs"><button id="tm_sw" onclick="tmMode('sw')">⏱ ستوب واتش</button><button id="tm_cd" onclick="tmMode('cd')">⏳ تايمر تنازلي</button></div>
- <div id="tmd">00:00.00</div>
- <div id="tmcd" hidden><div class="g"><button onclick="tmSet(60000)">1 د</button><button onclick="tmSet(120000)">2 د</button><button onclick="tmSet(180000)">3 د</button><button onclick="tmSet(300000)">5 د</button><button onclick="tmSet(600000)">10 د</button><button onclick="tmSet(900000)">15 د</button></div>
-  <div class="rw"><input id="tmm" type="number" min="0" max="600" value="5"> : <input id="tms" type="number" min="0" max="59" value="0"><button onclick="tmApply()">ضبط</button></div></div>
- <div class="tbr"><button id="tmgo" onclick="tmGo()">▶ ابدأ</button><button id="tmlap" onclick="tmLap()">🚩 لفة</button><button onclick="tmReset()">↺ إعادة</button></div>
- <label style="font-size:13px"><input type="checkbox" id="tmsh" onchange="tmShowChg()"> عرض الوقت للطلاب على الشاشة</label>
- <div id="tml"></div></div>
-<div id="capp" hidden><div class="aic" style="width:min(520px,100%)">
- <div class="aih"><b>📝 السكريبت المباشر (تفريغ تلقائي)</b><button onclick="capClose()">✕</button></div>
- <div class="ais"><h4>مفتاح Gemini</h4>
-  <input type="password" id="cap_key" dir="ltr" placeholder="مفتاح API" autocomplete="off">
-  <input id="cap_model" dir="ltr" placeholder="gemini-2.5-flash">
-  <small>المفتاح يُحفظ في متصفحك أنت فقط (لا يُكتب داخل الملف ولا يصل للطلاب). اللغات المدعومة: English والعربية (اللهجة المصرية).</small></div>
- <div class="ais"><label><input type="checkbox" id="cap_stu" checked> تفريغ كلام الطلاب أيضاً (باسم كل طالب)</label>
-  <label><input type="checkbox" id="cap_show" checked onchange="capShowChg()"> عرض السكريبت للطلاب مباشرة على الشاشة</label>
-  <small>كلام المعلم والطلاب يُرسل لخدمة Gemini لتحويله لنص — أخبر الطلاب بذلك.</small></div>
- <div class="row"><button class="go" id="cap_go" onclick="capToggle()">▶ تشغيل السكريبت</button></div>
- <small id="cap_st"></small>
- <div class="row"><button onclick="capCopy()">📋 نسخ النص</button><button onclick="capDl()">⬇ تنزيل</button></div>
-</div></div>
 <div id="fl"><div id="tb" hidden></div></div>
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.26-c';
+const VER='2026.10.26-b';
 $('#ver').textContent='الإصدار '+VER;
-/* ===== إعدادات الاتصال (مهمة لربط معلم وطلاب من دول وشبكات مختلفة) =====
-   TURN لازم لما الطالب والمعلم يبقوا على شبكات مختلفة (خصوصاً شبكات الموبايل).
-   الخيار 1 (الأسهل): سجّل مجاناً في metered.ca وضع رابط الـAPI هنا:
-        https://اسم-تطبيقك.metered.live/api/v1/turn/credentials?apiKey=مفتاحك
-   الخيار 2: ضع بيانات TURN ثابتة داخل TURN_STATIC. */
-const TURN_APP='itqanacademy';   // ← اكتب هنا اسم تطبيقك على Metered (الجزء اللي قبل .metered.live)
-const TURN_API=TURN_APP?'https://'+TURN_APP+'.metered.live/api/v1/turn/credentials?apiKey=ec36bcbe293a66fdaa1428b806a44837c54e':'';
+/* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
 const EXP_HOST='free.expressturn.com',EXP_USER='000000002108147160',EXP_PASS='D7J7GfSpiCux0A+tN3gbDbZ2OW4=';
 const TURN_STATIC=EXP_USER?[{urls:['turn:'+EXP_HOST+':3478?transport=udp','turn:'+EXP_HOST+':3478?transport=tcp','turns:'+EXP_HOST+':443?transport=tcp'],username:EXP_USER,credential:EXP_PASS}]:[]; // مثال: {urls:['turn:host:80','turns:host:443?transport=tcp'],username:'..',credential:'..'}
 const STUN=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}];
 let ICE={iceServers:STUN},hasTurn=0,iceWhy='';
 async function getIce(){
- let tu=[];
- iceWhy=TURN_API?'':'TURN_APP فاضي';
- if(TURN_API){try{let tm;const r=await Promise.race([fetch(TURN_API),new Promise((_,j)=>{tm=setTimeout(()=>j(new Error('timeout')),7000)})]);clearTimeout(tm);
-  if(r.ok){const j=await r.json();tu=Array.isArray(j)?j:(j.iceServers||[]);if(!tu.length)iceWhy='الرد بدون خوادم: '+JSON.stringify(j).slice(0,140)}
-  else{let t='';try{t=(await r.text()).slice(0,140)}catch(e){}iceWhy='HTTP '+r.status+' '+t}}
-  catch(e){iceWhy='تعذر الوصول للرابط ('+(e&&e.name)+') — غالباً اسم التطبيق غير صحيح أو الشبكة تحجب الطلب'}}
- tu=tu.concat(TURN_STATIC);if(!tu.length&&!iceWhy)iceWhy='لا توجد بيانات TURN';
+ const tu=TURN_STATIC.slice();iceWhy=tu.length?'':'لا توجد بيانات TURN';
  hasTurn=tu.some(x=>JSON.stringify(x.urls||'').indexOf('turn')>-1);
  ICE={iceServers:STUN.concat(tu)};return ICE}
 const MC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
@@ -494,7 +424,7 @@ async function tReq(pin){
   c.on('open',()=>{c.send({t:'treq',n:name,p:TK.pub,pin});showGate('⏳','تم إرسال طلبك — في انتظار موافقة السكرتارية...')});
   c.on('data',async d=>{
    if(!d)return;
-   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;akSet(d.ak);
+   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;
     try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC}))}catch(e){}
     try{p.destroy()}catch(e){}tStart()}
    else if(d.t=='trej'){got=1;try{p.destroy()}catch(e){}showGate('⛔','رفضت السكرتارية دخولك. تواصل معها لمعرفة السبب.',1)}});
@@ -530,15 +460,14 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'muteAll':tMuteAll();break;
   case 'gm':if(d.v===0||d.v===2){gm=d.v;sys('وضع الدخول (من السكرتارية): '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}break;
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
-  case 'ak':akSet(d.v);break;
   case 'rc':{const r=recCfgOk(d.v);if(r&&!RC){RC=r;if(hubT0&&Date.now()-hubT0>12000)recPlan()}break}
   case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
-function forceEnd(){NOWARN=1;Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});
+function forceEnd(){Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});
  mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}alert('أنهت السكرتارية الجلسة');location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin()}
 async function startTPeer(){
  const ice=await getIce();
- if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع TURN_API أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
+ if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
  const p=peer=new Peer('itqan-'+room,{config:ice});let opened=0;
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
  p.on('disconnected',()=>{if(p.destroyed)return;sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
@@ -550,7 +479,7 @@ async function startTPeer(){
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
-  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&(LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'}),sys('👋 '+o.name+' خرج من الحصة'));hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
+  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
  });
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='scr'){
@@ -576,21 +505,20 @@ function tData(c,d){
  if(d.t=='cohello'){coHello(c);return}
  if(d.t=='coproof'){coProof(c,d);return}
  if(cohosts[c.peer]===c){if(d.t=='cmd')coCmd(d);return}
- if(d.t=='bye'){stuGone(c.peer,c);return}
  if(d.t=='hello'){
   if(conns[c.peer])return;
   if(gm==2){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
   const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
   if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
   return}
- const o=conns[c.peer];if(!o||!o.adm)return;o.hb=Date.now();
+ const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
  else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- mailStu(o.name);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});o.hb=Date.now();tmSendTo(o);callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ mailStu(o.name);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o)return;if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
@@ -776,7 +704,7 @@ function sData(d){
  else if(d.t=='restore'&&Array.isArray(d.s)){strokes=d.s;rebuild()}
  else if(d.t=='ssp'){canScr=d.on?1:0;document.body.classList.toggle('cs',!!canScr);if(!canScr)stopSScr();sys(canScr?'🖥 سمح لك المعلم بمشاركة شاشتك — اضغط 🖥':'🚫 أوقف المعلم مشاركة الشاشة لك')}
  else if(d.t=='trapi'){sSrBlock=d.on?1:0;if(d.on&&sSr){sSr.stop();sSr=null}}else if(d.t=='ssd'){stopSScr();sys('🖥 لا يمكن مشاركة شاشتك الآن (هناك مشاركة أخرى)')}
- else if(d.t=='ins'){ins=d.ins;redraw()}else if(d.t=='tm'){tmGot(d)}else if(d.t=='cap'){capGot(d)}
+ else if(d.t=='ins'){ins=d.ins;redraw()}
  render();
 }
 function showPoll(q){
@@ -794,7 +722,7 @@ function sync(){
 }
 function endCall(){
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
- if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;NOWARN=1;if(role=='s')try{conn&&conn.open&&conn.send({t:'bye'})}catch(e){}
+ if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
  mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin();
 }
@@ -820,7 +748,7 @@ function render(){
  else if(role=='t'&&tab=='stu'){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
   E=Object.entries(conns),W=E.filter(([k,x])=>!x.adm),A=E.filter(([k,x])=>x.adm),
   row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span>'+i+U(n)+'</span><span style="display:flex;gap:5px;flex-wrap:wrap">'+b+'</span></div>';
-  L.innerHTML='<div class="m" style="background:#0f3d3a;text-align:center">👥 المتصلون الآن: <b>'+A.length+'</b></div>'+'<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
+  L.innerHTML='<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
   (W.length?'<div class="m s">⏳ في غرفة الانتظار ('+W.length+')</div><button class="m" '+B('#1a9486')+' onclick="admitAll()">قبول الجميع</button>'+W.map(([k,x])=>row('⏳ ',x.name,'<button '+B('#1a9486')+' onclick="admit(\''+k+'\')">قبول</button><button '+B('#d4605a')+' onclick="deny(\''+k+'\')">رفض</button>')).join(''):'')+
   '<button class="m" style="background:#1a9486;color:#fff;text-align:center" onclick="tMuteAll()">'+(allMuted?'🎤 إلغاء كتم الجميع':'🔇 كتم صوت جميع الطلاب')+'</button>'+
   '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="tCamBan()">'+(camBanAll?'📷 السماح بكاميرات الطلاب':'🚫 منع كاميرات الطلاب')+'</button>'+
@@ -832,7 +760,7 @@ function render(){
   ib('#e3c08d','🔔','تنبيه','nudge(\''+k+'\')')+
   ib('#1a9486','⭐','استيكر','stkPick(\''+k+'\')')+
   ib('#e5484d','🚪','طرد','deny(\''+k+'\',1)'))).join('')||'<div class="m s">لا يوجد طلاب متصلون</div>')}
- else{const arr=tab=='stu'?stu:hd;L.innerHTML=(tab=='stu'?'<div class="m s">👥 المتصلون الآن: '+stu.length+'</div>':'')+arr.map(n=>'<div class="m">'+(tab=='hand'?'✋ ':'🟢 ')+U(n)+'</div>').join('')||'<div class="m s">'+(tab=='stu'?'لا يوجد طلاب متصلون':'لا توجد أيدٍ مرفوعة')+'</div>'}
+ else{const arr=tab=='stu'?stu:hd;L.innerHTML=arr.map(n=>'<div class="m">'+(tab=='hand'?'✋ ':'🟢 ')+U(n)+'</div>').join('')||'<div class="m s">'+(tab=='stu'?'لا يوجد طلاب متصلون':'لا توجد أيدٍ مرفوعة')+'</div>'}
  if(tab=='chat')L.scrollTop=L.scrollHeight;
  if(role=='t')pushCo();
 }
@@ -847,7 +775,7 @@ function ui(){
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
  $('#tp').classList.toggle('on',!!poll);$('#tw').classList.toggle('on',!!st.wb);
- const i=$('#ci');if(role=='s'){i.disabled=!!st.lock;i.placeholder=st.lock?'الشات مقفول من المعلم':'اكتب للمعلم...'};sendMs();sbRef();capUi();tmUi()
+ const i=$('#ci');if(role=='s'){i.disabled=!!st.lock;i.placeholder=st.lock?'الشات مقفول من المعلم':'اكتب للمعلم...'};sendMs();sbRef()
 }
 
 /* ---------- السبورة ---------- */
@@ -968,7 +896,7 @@ function buildTb(){const t=$('#tb');t.innerHTML='';
  COLS.forEach(c=>{const b=B('','لون',()=>{col=c;refTb()},'sw');b.style.background=c;b.dataset.col=c});SP();
  ['#ffe600','#7CFC00','#ff7ad9','#4cc9ff'].forEach(c=>{const b=B('','هايلايتر',()=>{hcol=c;tool='hl';refTb()},'sw');b.style.background=c;b.style.borderRadius='4px';b.dataset.hc=c});SP();
  [[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>{B('<i style="display:block;border-radius:9px;background:#fff;width:20px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;refTb()}).dataset.w=w});SP();
- B('↩','تراجع',undo);B('🗑','مسح الكل',wclr);B('✍️',T('swOn'),tSw).dataset.sw='1';SP();B('◐','خلفية: بيضاء / شفافة',tBg);B('▦',T('bgs'),function(){bgMenu(this)});SP();B('🧮',T('calc'),()=>calcT());B('📈',T('desmos'),()=>dsmT());B('⏱',T('tmT'),()=>tmT());refTb()}
+ B('↩','تراجع',undo);B('🗑','مسح الكل',wclr);B('✍️',T('swOn'),tSw).dataset.sw='1';SP();B('◐','خلفية: بيضاء / شفافة',tBg);B('▦',T('bgs'),function(){bgMenu(this)});SP();B('🧮',T('calc'),()=>calcT());B('📈',T('desmos'),()=>dsmT());refTb()}
 function refTb(){document.querySelectorAll('#tb [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool==tool));
  document.querySelectorAll('#tb [data-col]').forEach(b=>b.classList.toggle('on',b.dataset.col==col));
  document.querySelectorAll('#tb [data-hc]').forEach(b=>b.classList.toggle('on',tool=='hl'&&b.dataset.hc==hcol));
@@ -1559,7 +1487,7 @@ async function sxAcc(k){const r=SX.reqs[k];if(!r)return;
  if(!r.ok&&!confirm('كود المعلم غير مطابق! هل تريد قبوله رغم ذلك؟'))return;
  if(!r.c.open){delete SX.reqs[k];sxDraw();return alert('انقطع اتصال المعلم — اطلب منه فتح الرابط من جديد')}
  const cert={r:SX.room,p:r.p,e:Date.now()+14*36e5};
- try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher(),ak:akForTeacher()})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
+ try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher()})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
  SX.acc={n:r.n};delete SX.reqs[k];sxDraw()}
 function sxRej(k){const r=SX.reqs[k];if(!r)return;try{r.c.send({t:'trej'})}catch(e){}delete SX.reqs[k];sxDraw()}
 function sxHub(){
@@ -1725,13 +1653,13 @@ function sxRecOn(on){if(!SX)return;
 function sxRecEnd(){if(SX&&SX.rec){const r=SX.rec;SX.rec=null;r.stop().then(recRefresh)}rcStatus()}
 function sxRecStop(){if(SX&&SX.rec){sxRecEnd();sxCmd('recst','',0)}}
 function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k,n:(SX&&SX.title)||'حصة'}:null}
-function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r);const a=akForTeacher();if(a)sxCmd('ak','',a)}
+function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r)}
 /* ---- واجهة الإعداد والحالة (لوحة السكرتارية) ---- */
 function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
  e.innerHTML='<div class="sxc"><h3>🎥 تسجيل الحصص على Google Drive</h3>'+
  (c&&c.u&&!rcEd?'<div class="sxr"><span>'+(c.on?'🟢 التسجيل التلقائي مفعّل':'⚪ التسجيل متوقف')+'</span><span class="bt"><button class="sxb d" onclick="rcToggle()">'+(c.on?'إيقاف':'تفعيل')+'</button><button class="sxb d" onclick="rcEdit()">تعديل</button><button class="sxb" onclick="rcTest()">اختبار</button></span></div>'
  :'<input id="rcu" dir="ltr" placeholder="رابط السكريبت (ينتهي بـ /exec)" value="'+esc(c?c.u:'')+'"><input id="rck" placeholder="كلمة سر السكريبت" value="'+esc(c?c.k:'')+'"><button class="sxb g" onclick="rcSave()">حفظ</button><small style="color:#a9bccd;line-height:1.8">خطوات إعداد السكريبت في الملف المرفق Code.gs</small>')+
- '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus();akDraw()}
+ '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus()}
 function rcSave(){const u=$('#rcu').value.trim(),k=$('#rck').value.trim();
  if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');if(!k)return alert('اكتبي كلمة سر السكريبت');
  RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();if(SX)sxRcPush()}
@@ -1883,188 +1811,6 @@ function trUi(){const b=$('#ai_tgo'),s=$('#ai_trs'),o=$('#ai_script');if(!b)retu
 function trCopy(){const t=trLines().join('\n');if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){const o=$('#ai_script');o.select();document.execCommand('copy')}aiSt('تم النسخ ✓')}
 function trDl(){const t=trLines().join('\n');if(!t)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}));a.download='transcript-'+room+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 setInterval(()=>{if(role!='t')return;if(TR.on)trUi();if(TR.dirty){TR.dirty=0;try{localStorage.setItem('itqan_tr_'+room,JSON.stringify(LOG.tr.slice(-3000)))}catch(e){}}},2000);
-</script>
-
-<script>
-/* ===== تحذير التحديث + الخروج الفوري + المتصلون ===== */
-window.NOWARN=0;
-Object.assign(I18.ar,{refS:'⚠️ تحديث الصفحة سيفصلك من الحصة وستحتاج للدخول من جديد (وقد تنتظر موافقة المعلم). هل تريد التحديث فعلاً؟',refT:'⚠️ تحديث الصفحة سيقطع البث عن كل الطلاب مؤقتاً. هل تريد المتابعة؟',capOn:'السكريبت المباشر شغّال — كلام الحصة سيظهر مكتوباً',tmEnd:'انتهى الوقت!',tmT:'ستوب واتش وتايمر'});
-Object.assign(I18.en,{refS:'⚠️ Refreshing will disconnect you from the lesson and you will have to join again (and may wait for teacher approval). Refresh anyway?',refT:'⚠️ Refreshing will cut the stream for all students temporarily. Continue?',capOn:'Live transcript is on — the lesson will appear as text',tmEnd:'Time is up!',tmT:'Stopwatch & timer'});
-addEventListener('beforeunload',e=>{if(window.NOWARN||(role!='s'&&role!='t'))return;e.preventDefault();e.returnValue=T(role=='t'?'refT':'refS')});
-addEventListener('keydown',e=>{if(window.NOWARN||(role!='s'&&role!='t'))return;const k=(e.key||'').toLowerCase();
- if(k=='f5'||((e.ctrlKey||e.metaKey)&&k=='r')){e.preventDefault();if(confirm(T(role=='t'?'refT':'refS'))){window.NOWARN=1;location.reload()}}},true);
-addEventListener('pagehide',()=>{if(role=='s'){try{conn&&conn.open&&conn.send({t:'bye'})}catch(e){}}});
-setInterval(()=>{if(role=='s'&&conn&&conn.open)try{conn.send({t:'hb'})}catch(e){}},5000);
-function stuGone(k,c){const o=conns[k];if(!o||(c&&o.c!==c))return;delete conns[k];dropMic(o);
- if(o.adm){LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});sys('👋 '+o.name+' خرج من الحصة')}
- try{o.sc&&o.sc.close()}catch(e){}try{o.call&&o.call.close()}catch(e){}hands.delete(k);hideCam('s:'+k);
- setTimeout(()=>{try{o.c.close()}catch(e){}},200);roster2()}
-setInterval(()=>{if(role!='t')return;const n=Date.now();
- Object.entries(conns).forEach(([k,o])=>{const q=o.c.peerConnection&&o.c.peerConnection.iceConnectionState;
-  if(q=='failed'||q=='closed'||(q=='disconnected'&&n-(o.hb||0)>15000))stuGone(k)})},4000);
-
-/* ===== ستوب واتش + تايمر (المعلم يتحكم ويعرضه للطلاب) ===== */
-const TM={m:'sw',r:0,b:0,at:0,show:0,tg:300000,laps:[]};
-const tmVal=()=>{const e=TM.r?Date.now()-TM.at:0;return TM.m=='sw'?TM.b+e:Math.max(0,TM.b-e)};
-const p2=n=>String(n).padStart(2,'0');
-function tmFmt(ms,m,c){const s=m=='cd'?Math.ceil(ms/1000):Math.floor(ms/1000),h=Math.floor(s/3600);
- return(h?h+':':'')+p2(Math.floor(s%3600/60))+':'+p2(s%60)+(c?'.'+p2(Math.floor(ms%1000/10)):'')}
-function beep(){try{_ac=_ac||new _AC();if(_ac.state=='suspended')_ac.resume();const t=_ac.currentTime;
- [0,.35,.7].forEach(d=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='square';o.frequency.value=880;
-  g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.2,t+d+.02);g.gain.exponentialRampToValueAtTime(.001,t+d+.28);
-  o.connect(g);g.connect(_ac.destination);o.start(t+d);o.stop(t+d+.3)})}catch(e){}}
-function tmDone(){beep();toast('⏰',T('tmEnd'));try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch(e){}}
-function tmBc(){if(role=='t')bc({t:'tm',m:TM.m,r:TM.r,v:tmVal(),s:TM.show})}
-function tmSendTo(o){try{o.c.send({t:'tm',m:TM.m,r:TM.r,v:tmVal(),s:TM.show})}catch(e){}}
-function tmGot(d){if(role!='s')return;if(d.m!='sw'&&d.m!='cd')return;const v=+d.v;if(!isFinite(v)||v<0||v>1e8)return;
- if(d.m=='cd'&&!d.r&&v==0&&TM.r&&tmVal()>0)tmDone();
- TM.m=d.m;TM.r=d.r?1:0;TM.b=v;TM.at=Date.now();TM.show=d.s?1:0;tmTick()}
-function tmT(){if(role!='t')return;const p=$('#tmp');p.hidden=!p.hidden;tmUi()}
-function tmMode(m){TM.m=m;TM.r=0;TM.b=m=='sw'?0:TM.tg;TM.laps=[];tmBc();tmUi()}
-function tmGo(){if(TM.r){TM.b=tmVal();TM.r=0}else{if(TM.m=='cd'&&TM.b<=0)TM.b=TM.tg;TM.at=Date.now();TM.r=1}tmBc();tmUi()}
-function tmReset(){TM.r=0;TM.b=TM.m=='sw'?0:TM.tg;TM.laps=[];tmBc();tmUi()}
-function tmSet(ms){TM.m='cd';TM.tg=ms;TM.r=0;TM.b=ms;tmBc();tmUi()}
-function tmApply(){const m=Math.min(600,Math.max(0,+$('#tmm').value||0)),s=Math.min(59,Math.max(0,+$('#tms').value||0)),ms=(m*60+s)*1000;if(ms>0)tmSet(ms)}
-function tmLap(){if(TM.m=='sw'&&TM.r){TM.laps.push(tmVal());tmUi()}}
-function tmShowChg(){TM.show=$('#tmsh').checked?1:0;tmBc();tmTick()}
-function tmTick(){if(role!='t'&&role!='s')return;
- if(TM.r&&TM.m=='cd'&&tmVal()<=0){TM.r=0;TM.b=0;tmDone();tmBc()}
- const v=tmVal(),o=$('#tmo');
- if(o){o.hidden=!TM.show;o.textContent=(TM.m=='cd'?'⏳ ':'⏱ ')+tmFmt(v,TM.m,0);o.classList.toggle('lo',TM.m=='cd'&&!!TM.r&&v<=10000)}
- const d=$('#tmd');if(d&&!$('#tmp').hidden)d.textContent=tmFmt(v,TM.m,TM.m=='sw')}
-function tmUi(){const p=$('#tmp');if(!p)return;const sw=TM.m=='sw';
- $('#tm_sw').classList.toggle('on',sw);$('#tm_cd').classList.toggle('on',!sw);$('#tmcd').hidden=sw;$('#tmlap').hidden=!sw;
- $('#tmgo').textContent=TM.r?'⏸ إيقاف مؤقت':'▶ ابدأ';$('#tmsh').checked=!!TM.show;
- $('#tml').textContent=TM.laps.map((v,i)=>'#'+(i+1)+'   '+tmFmt(v,'sw',1)).slice(-30).join('\n');
- const b=$('#btm');if(b)b.classList.toggle('on',!p.hidden||!!TM.r);tmTick()}
-setInterval(tmTick,100);
-
-/* ===== السكريبت المباشر عبر Gemini (إنجليزي / عربي مصري) ===== */
-const CAPS=[],CAP={on:0,vis:1,lines:[],srcs:{},ac:null,seen:0,err:'',tm:0};
-const CAP_PROMPT='You are a speech-to-text engine for a live online classroom. The speaker uses English or Egyptian Arabic (Egyptian colloquial dialect) and may mix both. Transcribe exactly what is said, word for word. Write Arabic speech in Arabic script and keep the Egyptian dialect wording (do NOT convert it to Modern Standard Arabic and do NOT translate). Write English speech in English. Add basic punctuation. Output ONLY the transcription text. If there is no clear human speech (silence, noise, music, breathing), output exactly: [SILENCE]. Never invent text.';
-function capCfg(){try{return JSON.parse(localStorage.getItem('itqan_cap')||'{}')}catch(e){return{}}}
-function capSaveCfg(){try{localStorage.setItem('itqan_cap',JSON.stringify({key:$('#cap_key').value.trim(),model:$('#cap_model').value.trim(),stu:$('#cap_stu').checked?1:0,show:$('#cap_show').checked?1:0}))}catch(e){}}
-function capKey(){const c=capCfg(),a=aiLoad();return c.key||(a.provider=='gemini'&&a.key)||''}
-function capOpen(){const c=capCfg();$('#cap_key').value=c.key||'';$('#cap_model').value=c.model||'';if(c.stu===0)$('#cap_stu').checked=false;if(c.show===0)$('#cap_show').checked=false;$('#capp').hidden=false;capUi()}
-function capClose(){capSaveCfg();$('#capp').hidden=true}
-function capShowChg(){capSaveCfg();if(CAP.on){st.cap=$('#cap_show').checked?1:0;bst();ui()}}
-function capSt(){const e=$('#cap_st');if(!e)return;e.style.color=CAP.err?'#fbbf24':'';
- e.textContent=(CAP.on?'🟢 يعمل — '+Object.keys(CAP.srcs).length+' مصدر صوت • '+CAPS.length+' مقطع':'⚪ متوقف'+(CAPS.length?' • '+CAPS.length+' مقطع محفوظ':''))+(CAP.err?' — ⚠️ '+CAP.err:'')}
-function capToggle(){if(role!='t')return;if(CAP.on)return capStop();capSaveCfg();
- if(!capKey()){CAP.err='أدخل مفتاح Gemini أولاً';return capSt()}
- const AC=window.AudioContext||window.webkitAudioContext;if(!AC){CAP.err='المتصفح لا يدعم تحليل الصوت';return capSt()}
- CAP.err='';CAP.ac=CAP.ac||new AC();CAP.ac.resume&&CAP.ac.resume().catch(()=>{});CAP.on=1;st.cap=$('#cap_show').checked?1:0;bst();
- CAP.tm=setInterval(capSync,2000);capSync();sys('📝 بدأ السكريبت المباشر (تفريغ تلقائي بالذكاء الاصطناعي — إنجليزي / عربي مصري)');ui()}
-function capStop(){clearInterval(CAP.tm);Object.keys(CAP.srcs).forEach(capSrcDel);CAP.on=0;st.cap=0;bst();sys('📝 توقف السكريبت المباشر');ui()}
-function capSync(){if(!CAP.on)return;const want={};
- if(micT&&micT.readyState=='live')want.T={l:name+' (المعلم)',t:micT};
- if($('#cap_stu').checked)Object.entries(conns).forEach(([k,o])=>{if(o.adm&&o.mt&&o.mt.readyState=='live')want['s'+k]={l:o.name,t:o.mt}});
- Object.keys(CAP.srcs).forEach(k=>{if(!want[k]||CAP.srcs[k].track!==want[k].t)capSrcDel(k)});
- Object.entries(want).forEach(([k,w])=>{if(!CAP.srcs[k])capSrcAdd(k,w.l,w.t)});capSt()}
-function capSrcAdd(key,label,track){const ac=CAP.ac,sr=ac.sampleRate;
- const S={key,label,track,sr,buf:[],len:0,sp:0,sil:0,nf:.004,chain:Promise.resolve(),pend:0};
- S.sn=ac.createMediaStreamSource(new MediaStream([track]));S.pr=ac.createScriptProcessor(4096,1,1);S.z=ac.createGain();S.z.gain.value=0;
- S.pr.onaudioprocess=e=>{const d=e.inputBuffer.getChannelData(0);let s=0;for(let i=0;i<d.length;i++)s+=d[i]*d[i];
-  const rms=Math.sqrt(s/d.length),dur=d.length/sr,sp=rms>Math.max(.012,S.nf*3)&&track.enabled;
-  if(!sp)S.nf=S.nf*.97+rms*.03;
-  if(sp){S.sp+=dur;S.sil=0}else S.sil+=dur;
-  S.buf.push(new Float32Array(d));S.len+=dur;
-  if(!S.sp){while(S.len>.45&&S.buf.length){S.len-=S.buf[0].length/sr;S.buf.shift()}return}
-  if(S.sil>=.8||S.len>=14){if(S.sp>=.4)capFlush(S,S.buf);S.buf=[];S.len=0;S.sp=0;S.sil=0}};
- S.sn.connect(S.pr);S.pr.connect(S.z);S.z.connect(ac.destination);CAP.srcs[key]=S}
-function capSrcDel(k){const S=CAP.srcs[k];if(!S)return;delete CAP.srcs[k];
- try{S.pr.onaudioprocess=null;S.sn.disconnect();S.pr.disconnect();S.z.disconnect()}catch(e){}
- if(S.sp>=.4&&S.buf.length)capFlush(S,S.buf)}
-function capWav(bufs,sr){let n=0;bufs.forEach(b=>n+=b.length);const all=new Float32Array(n);let o=0;bufs.forEach(b=>{all.set(b,o);o+=b.length});
- const r=sr/16000,m=Math.floor(n/r),pcm=new Int16Array(m);
- for(let i=0;i<m;i++){const a=Math.floor(i*r),b=Math.min(n,Math.floor((i+1)*r));let s=0,c=0;for(let j=a;j<b;j++){s+=all[j];c++}const v=Math.max(-1,Math.min(1,c?s/c:0));pcm[i]=v<0?v*32768:v*32767}
- const h=new DataView(new ArrayBuffer(44)),w=(p,t)=>{for(let i=0;i<t.length;i++)h.setUint8(p+i,t.charCodeAt(i))};
- w(0,'RIFF');h.setUint32(4,36+m*2,true);w(8,'WAVEfmt ');h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,1,true);h.setUint32(24,16000,true);h.setUint32(28,32000,true);h.setUint16(32,2,true);h.setUint16(34,16,true);w(36,'data');h.setUint32(40,m*2,true);
- return new Blob([h,pcm],{type:'audio/wav'})}
-const capB64=bl=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>{const r=String(f.result),i=r.indexOf(';base64,');res(i<0?'':r.slice(i+8))};f.onerror=()=>rej(f.error);f.readAsDataURL(bl)});
-async function capCall(data){const c=capCfg(),model=c.model||'gemini-2.5-flash',gc={temperature:0};if(/2\.5-flash/.test(model))gc.thinkingConfig={thinkingBudget:0};
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(capKey()),{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({systemInstruction:{parts:[{text:CAP_PROMPT}]},contents:[{role:'user',parts:[{inlineData:{mimeType:'audio/wav',data}},{text:'Transcribe.'}]}],generationConfig:gc})});
- if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.body=(await r.text()).slice(0,300)}catch(x){}throw e}
- const j=await r.json();return((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||'').join('').trim()}
-async function capAsk(blob){const d=await capB64(blob);
- for(let i=0;i<2;i++){try{return await capCall(d)}catch(e){if(i==0&&(e.status==429||e.status>=500)){await new Promise(r=>setTimeout(r,2500));continue}throw e}}}
-function capFlush(S,bufs){if(S.pend>5||!CAP.on&&!CAP.ac)return;const blob=capWav(bufs.slice(),S.sr),ts=Date.now();S.pend++;
- S.chain=S.chain.then(()=>capAsk(blob)).then(t=>capOut(S,t,ts)).catch(capErr).finally(()=>{S.pend--})}
-function capOut(S,t,ts){CAP.err='';t=String(t||'').replace(/\[?SILENCE\]?/gi,'').trim().slice(0,600);if(!t||t.replace(/[\s.…,!?؟،-]/g,'').length<2){capSt();return}
- const n=S.label;CAPS.push({n,x:t,ts});if(CAPS.length>5000)CAPS.shift();LOG.tr.push({ts,t:n+': '+t});
- if($('#cap_show').checked)bc({t:'cap',n,x:t,ts});capShow(n,t);capUi()}
-function capErr(e){const s=e&&e.status,b=(e&&e.body)||'';
- if(s==401||s==403||/API_KEY_INVALID|API key not valid/i.test(b)){capStop();CAP.err='مفتاح Gemini غير صالح أو غير مصرّح — تم إيقاف السكريبت'}
- else if(s==429)CAP.err='تجاوزت حد الاستخدام المجاني لـ Gemini — بعض المقاطع تُتخطى';
- else if(s==404)CAP.err='اسم النموذج غير صحيح';
- else CAP.err='تعذر التفريغ: '+((e&&e.message)||'');capSt()}
-function capGot(d){if(role!='s'||typeof d.x!='string')return;const n=String(d.n||'').slice(0,40),x=d.x.slice(0,600);
- CAPS.push({n,x,ts:+d.ts||Date.now()});if(CAPS.length>5000)CAPS.shift();capShow(n,x);capUi()}
-function capShow(n,x){CAP.lines.push({n,x,ts:Date.now()});capRender()}
-function capRender(){const o=$('#capo');if(!o)return;const t=Date.now();CAP.lines=CAP.lines.filter(l=>t-l.ts<9000).slice(-2);o.textContent='';
- CAP.lines.forEach(l=>{const d=document.createElement('div');d.className='cl';d.dir='auto';const b=document.createElement('b');b.textContent=l.n?l.n+': ':'';d.append(b,document.createTextNode(l.x));o.append(d)});
- o.hidden=!(CAP.vis&&CAP.lines.length)}
-setInterval(capRender,1000);
-function capUi(){const b=$('#cct');if(!b)return;b.hidden=!(st.cap||CAPS.length||CAP.on);$('#cdl').hidden=!CAPS.length;b.classList.toggle('on',!!CAP.vis);
- if(role=='s'){if(st.cap&&!CAP.seen){CAP.seen=1;toast('📝',T('capOn'))}if(!st.cap)CAP.seen=0}
- const g=$('#cap_go');if(g)g.textContent=CAP.on?'⏹ إيقاف السكريبت':'▶ تشغيل السكريبت';capSt();capRender()}
-function capText(){const f=t=>new Date(t).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});return CAPS.map(c=>'['+f(c.ts)+'] '+(c.n?c.n+': ':'')+c.x).join('\n')}
-function capDl(){if(!CAPS.length)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+capText()],{type:'text/plain;charset=utf-8'}));a.download='itqan-script-'+(room||'class')+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-function capCopy(){const t=capText();if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){}const e=$('#cap_st');if(e)e.textContent='✓ تم النسخ'}
-</script>
-
-<script>
-/* ===== مفتاح Gemini من السكرتارية (مرة واحدة) → المعلم في الذاكرة فقط → تشغيل السكريبت تلقائياً ===== */
-const AK={k:'',m:'',auto:1};
-function akLoad(){try{const j=JSON.parse(localStorage.getItem('itqan_ak'));return j&&typeof j.k=='string'&&j.k?j:null}catch(e){return null}}
-function akForTeacher(){const j=akLoad();return j?{k:j.k,m:j.m||'',auto:j.auto===0?0:1}:null}
-function akSet(a){if(role!='t'||!a||typeof a.k!='string'||!a.k||a.k.length>200)return;
- AK.k=a.k.trim();AK.m=typeof a.m=='string'?a.m.trim().slice(0,80):'';AK.auto=a.auto===0?0:1;CAP.model='';
- sys('🔑 استلمت مفتاح الذكاء الاصطناعي من السكرتارية');
- if(AK.auto&&!CAP.on)setTimeout(()=>{if(!CAP.on)capToggle()},1500)}
-function capKey(){const c=capCfg(),a=aiLoad();return AK.k||c.key||(a.provider=='gemini'&&a.key)||''}
-function capOpen(){const c=capCfg();$('#cap_key').value=AK.k?'':(c.key||'');$('#cap_key').disabled=!!AK.k;$('#cap_key').placeholder=AK.k?'✓ المفتاح مُعدّ من السكرتارية':'مفتاح API';
- $('#cap_model').value=AK.m?'':(c.model||'');$('#cap_model').placeholder='تلقائي (اتركه فارغاً)';if(c.stu===0)$('#cap_stu').checked=false;if(c.show===0)$('#cap_show').checked=false;$('#capp').hidden=false;capUi()}
-function capPick(names){const ok=names.filter(n=>/flash/.test(n)&&!/image|tts|live|audio|embed|thinking|robotics|computer/.test(n));
- if(ok.includes('gemini-flash-latest'))return'gemini-flash-latest';
- const sc=n=>{const m=n.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?(-.+)?$/);if(!m)return-1;return parseFloat(m[1])*10-(m[2]?3:0)-(m[3]?5:0)};
- return ok.map(n=>[sc(n),n]).sort((a,b)=>b[0]-a[0]).map(x=>x[1])[0]||ok[0]||''}
-async function capList(key){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+encodeURIComponent(key));
- if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.body=(await r.text()).slice(0,300)}catch(x){}throw e}
- const j=await r.json();return(j.models||[]).filter(x=>(x.supportedGenerationMethods||[]).includes('generateContent')).map(x=>String(x.name).replace(/^models\//,''))}
-async function capModelFor(key){const m=(AK.m||capCfg().model||'').trim();if(m)return m;if(CAP.model)return CAP.model;
- const n=capPick(await capList(key));if(!n){const e=new Error('لا يوجد نموذج مناسب لهذا المفتاح');e.status=404;throw e}CAP.model=n;return n}
-async function capCall(data){const key=capKey();let model=await capModelFor(key);
- for(let t=0;t<2;t++){const gc={temperature:0};if(/gemini-2\.5/.test(model))gc.thinkingConfig={thinkingBudget:0};
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({systemInstruction:{parts:[{text:CAP_PROMPT}]},contents:[{role:'user',parts:[{inlineData:{mimeType:'audio/wav',data}},{text:'Transcribe.'}]}],generationConfig:gc})});
-  if(r.status==404&&t==0&&!(AK.m||capCfg().model)){CAP.model='';model=await capModelFor(key);continue}
-  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;try{e.body=(await r.text()).slice(0,300)}catch(x){}throw e}
-  const j=await r.json();return((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||'').join('').trim()}}
-function capErr(e){const s=e&&e.status,b=(e&&e.body)||'';
- if(s==401||s==403||/API_KEY_INVALID|API key not valid/i.test(b)){capStop();CAP.err='مفتاح Gemini غير صالح أو غير مصرّح — تم إيقاف السكريبت'}
- else if(s==429)CAP.err='تجاوزت حد الاستخدام المجاني لـ Gemini — بعض المقاطع تُتخطى';
- else if(s==404)CAP.err='النموذج غير متاح لهذا المفتاح (404) — اترك خانة النموذج فارغة ليُختار تلقائياً';
- else CAP.err='تعذر التفريغ: '+((e&&e.message)||'')+(b?' '+b.slice(0,80):'');capSt()}
-['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(CAP.ac&&CAP.ac.state=='suspended')CAP.ac.resume().catch(()=>{})}));
-/* واجهة السكرتارية */
-function akDraw(){const e=$('#sxR');if(!e)return;const a=akLoad();
- e.insertAdjacentHTML('beforeend','<div class="sxc"><h3>🤖 السكريبت المباشر (Gemini)</h3>'+
- (a?'<div class="sxr"><span>🟢 مفتاح محفوظ على هذا الجهاز (••••'+esc(a.k.slice(-4))+')</span><span class="bt"><button class="sxb" onclick="akTest()">اختبار</button><button class="sxb r" onclick="akClear()">حذف</button></span></div>':'')+
- '<input id="akk" type="password" dir="ltr" autocomplete="off" placeholder="'+(a?'مفتاح جديد (اتركه فارغاً للإبقاء على الحالي)':'مفتاح Gemini API')+'">'+
- '<input id="akm" dir="ltr" placeholder="اسم النموذج (اختياري — الأفضل تركه فارغاً)" value="'+esc(a?a.m||'':'')+'">'+
- '<label style="font-size:13px"><input type="checkbox" id="aka" '+(!a||a.auto!==0?'checked':'')+'> تشغيل السكريبت تلقائياً عند دخول المعلم</label>'+
- '<button class="sxb g" onclick="akSave()">حفظ</button><div id="akst" style="min-height:20px"></div>'+
- '<small style="color:#8a8ea5;line-height:1.8">يُدخل مرة واحدة هنا. يُرسل للمعلم المعتمد فقط عبر القناة المشفّرة ويبقى في ذاكرة متصفحه ولا يصل للطلاب.</small></div>')}
-function akMsg(m,bad){const e=$('#akst');if(e){e.textContent=m;e.style.color=bad?'#fca5a5':'#86efac'}}
-function akSave(){const old=akLoad(),k=($('#akk').value||'').trim()||(old?old.k:'');if(!k)return akMsg('اكتب المفتاح أولاً',1);
- try{localStorage.setItem('itqan_ak',JSON.stringify({k,m:($('#akm').value||'').trim(),auto:$('#aka').checked?1:0}))}catch(e){return akMsg('تعذر الحفظ على هذا الجهاز',1)}
- if(SX)sxRcPush();rcDraw();akMsg('✓ تم الحفظ'+(SX&&SX.hub?' وإرساله للمعلم':''))}
-function akClear(){if(!confirm('حذف المفتاح من هذا الجهاز؟'))return;try{localStorage.removeItem('itqan_ak')}catch(e){}rcDraw()}
-async function akTest(){const a=akLoad();if(!a)return;akMsg('⏳ جارٍ الاختبار...');
- try{const n=a.m||capPick(await capList(a.k));akMsg(n?'✓ المفتاح شغّال — النموذج: '+n:'✗ المفتاح سليم لكن لا يوجد نموذج مناسب',!n)}
- catch(e){akMsg('✗ '+(e.status==400||e.status==403?'المفتاح غير صالح أو غير مفعّل لخدمة Gemini':'تعذر الاتصال ('+(e.message||'')+')'),1)}}
 </script>
 </body>
 </html>
