@@ -1129,7 +1129,7 @@ function toolsMenu(btn){if(role=='t'){tWb();return}
 document.addEventListener('click',e=>{['tlm','bgm'].forEach(id=>{const m=document.getElementById(id);if(m&&!m.hidden&&!m.contains(e.target)&&!e.target.closest('#bt')&&!(id=='bgm'&&e.target.closest('#tb')))m.hidden=true})});
 /* ===== إشعارات الإيميل عبر EmailJS (emailjs.com — حساب مجاني، اربطه بجيميل الأكاديمية) =====
    قالب EmailJS: To Email = {{to_email}} ، Subject = {{subject}} ، المحتوى = {{message}} */
-const MAIL={service:'',template:'',key:'',to:'itqanacademy.alex@gmail.com'};
+const MAIL={service:'service_vy75i8g',template:'template_aro2n43',key:'-1tdu7CnVQ_bg0uRY',to:'itqanacademy.alex@gmail.com'};
 let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
 function mailSend(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
  try{fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
