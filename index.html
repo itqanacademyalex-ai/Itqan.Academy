@@ -1870,5 +1870,93 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;
 function sxDropWatch(){clearTimeout(SX.dropT);if(SX.bye||!SX.had)return;
  SX.dropT=setTimeout(()=>{if(!SX||SX.hub||SX.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(SX.title||SX.room),'انقطع اتصال المعلم'+(SX.tn?' ('+SX.tn+')':'')+' عن الحصة ('+(SX.title||SX.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
+<style>
+body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
+#msm{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl}
+#msm .msb{background:#12263d;color:#fff;border-radius:18px;padding:18px;max-width:380px;width:100%;display:flex;flex-direction:column;gap:10px;font-family:inherit}
+#msm h3{margin:0;font-size:17px}#msm p{margin:0;font-size:13px;opacity:.8;line-height:1.6}
+#msm button{padding:13px;border-radius:12px;background:#1a9486;font-size:15px;color:#fff;border:0}
+#msm button[data-a=x]{background:#27496b}
+#msn{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.75);padding:6px 10px;border-radius:24px;color:#fff;direction:ltr}
+#msn button{width:38px;height:38px;border-radius:50%;background:#27496b;color:#fff;border:0;font-size:16px}
+</style>
+<script>
+/* ===== 1) حفظ ما هو معروض على الشاشة فعلياً (سبورة / شاشة مشاركة / كاميرا كبيرة) مع الكتابة فوقها ===== */
+(function(){
+ const origSave=window.wbSave;
+ function snap(){
+  const stg=$('#stage'),w0=stg.clientWidth,h0=stg.clientHeight;if(!w0||!h0)return null;
+  let k=Math.min(4,Math.max(1,1920/Math.max(w0,h0)));if(w0*h0*k*k>8e6)k=Math.sqrt(8e6/(w0*h0));
+  const W=Math.round(w0*k),H=Math.round(h0*k),c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');x.imageSmoothingQuality='high';
+  const ok=v=>v&&v.videoWidth>0&&v.readyState>1;
+  const contain=v=>{const r=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*r,h=v.videoHeight*r,l=(W-w)/2,t=(H-h)/2;x.drawImage(v,l,t,w,h);return[l,t,w,h]};
+  const wbOn=!!st.wb&&wb.width>0,white=wbOn&&!!st.bg;let crop=null,has=wbOn;
+  x.fillStyle=white?'#fff':'#000';x.fillRect(0,0,W,H);
+  if(!white){const v=$('#v'),cv=$('#cv');
+   if(st.scr&&ok(v)){crop=contain(v);has=true}
+   else if(cv&&cv.style.display!='none'&&ok(cv)){crop=contain(cv);has=true}}
+  if(wbOn){x.drawImage(wb,0,0,W,H);if(!st.scr)crop=null;else if(white)crop=null}
+  if(wbOn&&!white&&crop)crop=null;
+  return{c,crop,has}}
+ window.wbSave=function(){
+  let r;try{r=snap()}catch(e){r=null}
+  if(!r||!r.has)return origSave();
+  let c=r.c;
+  if(r.crop){const[l,t,w,h]=r.crop,o=document.createElement('canvas');o.width=Math.round(w);o.height=Math.round(h);o.getContext('2d').drawImage(c,l,t,w,h,0,0,o.width,o.height);c=o}
+  c.toBlob(async b=>{
+   if(!b)return alert(T('fail'));
+   const n='itqan-'+(st.scr?'screen':'board')+'-'+Date.now()+'.png';
+   if(MOB&&navigator.canShare){try{const f=new File([b],n,{type:'image/png'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e&&e.name=='AbortError')return}}
+   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)},'image/png')}
+})();
+
+/* ===== 2) مشاركة من الموبايل / التابلت (بديل مشاركة الشاشة غير المدعومة في متصفحات اللمس) ===== */
+(function(){
+ const hasDM=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia),origBtn=window.scrBtn;
+ function useTrack(t){
+  t.contentHint='detail';
+  if(role=='t'){
+   if(scrT){try{scrT.stop()}catch(e){}scrT=null;scrAEnd()}
+   if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
+   scrT=t;t.onended=()=>{scrT=null;scrAEnd();refresh()};refresh()}
+  else{
+   if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
+   sScrA=null;sScrT=t;t.onended=stopSScr;
+   sScrCall=peer.call('itqan-'+room,new MediaStream([t]),{metadata:{k:'scr'}});
+   setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution'),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}}
+ const stopShare=()=>role=='t'?tScr():stopSScr();
+ async function cam(){
+  try{const ms=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});useTrack(ms.getVideoTracks()[0])}
+  catch(e){alert('تعذر فتح الكاميرا الخلفية — تأكد من السماح للمتصفح باستخدام الكاميرا')}}
+ async function imgs(files){
+  const im=[];for(const f of files){try{im.push(await createImageBitmap(f))}catch(e){}}
+  if(!im.length)return alert('تعذر فتح الصور');
+  const cv=document.createElement('canvas');cv.width=1920;cv.height=1080;const g=cv.getContext('2d');let i=0;
+  const draw=()=>{g.fillStyle='#fff';g.fillRect(0,0,1920,1080);const b=im[i],r=Math.min(1920/b.width,1080/b.height),w=b.width*r,h=b.height*r;g.drawImage(b,(1920-w)/2,(1080-h)/2,w,h)};
+  draw();const t=cv.captureStream(10).getVideoTracks()[0],tm=setInterval(draw,200);
+  const bar=document.createElement('div');bar.id='msn';
+  const lb=document.createElement('span'),up=()=>lb.textContent=(i+1)+' / '+im.length;
+  const mk=(txt,fn)=>{const b=document.createElement('button');b.textContent=txt;b.onclick=fn;return b};
+  bar.append(mk('◀',()=>{i=(i-1+im.length)%im.length;draw();up()}),lb,mk('▶',()=>{i=(i+1)%im.length;draw();up()}),mk('✕',stopShare));up();
+  document.body.appendChild(bar);
+  const st0=t.stop.bind(t);t.stop=()=>{clearInterval(tm);bar.remove();im.forEach(b=>b.close&&b.close());st0()};
+  useTrack(t)}
+ function menu(){
+  const o=$('#msm');if(o)o.remove();
+  const m=document.createElement('div');m.id='msm';
+  m.innerHTML='<div class="msb"><h3>📱 المشاركة من الموبايل / التابلت</h3><p>متصفحات الموبايل والتابلت لا تسمح بمشاركة الشاشة نفسها، لكن تقدر تشارك:</p><button data-a="cam">📷 الكاميرا الخلفية (كتاب / ورقة / سبورة)</button><button data-a="img">🖼 صور أو لقطات شاشة من الجهاز</button><button data-a="x">إلغاء</button></div>';
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=()=>{const f=[...inp.files];m.remove();if(f.length)imgs(f)};
+  m.onclick=e=>{const a=e.target.dataset&&e.target.dataset.a;if(e.target===m||a=='x')return m.remove();if(a=='cam'){m.remove();cam()}if(a=='img')inp.click()};
+  document.body.appendChild(m)}
+ window.scrBtn=function(){
+  if(hasDM)return origBtn();
+  if(role=='t'?scrT:sScrT)return stopShare();
+  if(role!='t'&&!canScr)return alert('اطلب من المعلم السماح لك بمشاركة الشاشة');
+  menu()}
+})();
+</script>
+
 </body>
 </html>
