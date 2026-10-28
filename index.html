@@ -1942,13 +1942,58 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
   document.body.appendChild(bar);
   const st0=t.stop.bind(t);t.stop=()=>{clearInterval(tm);bar.remove();im.forEach(b=>b.close&&b.close());st0()};
   useTrack(t)}
+ const PJ='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/',MJ='https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',LD={};
+ const ld=u=>LD[u]||(LD[u]=new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{delete LD[u];no(new Error('load'))};document.head.appendChild(s)}));
+ const mk=(txt,fn)=>{const b=document.createElement('button');b.textContent=txt;b.onclick=fn;return b};
+ const fit=(g,s,w,h,bg)=>{g.fillStyle=bg;g.fillRect(0,0,1920,1080);const r=Math.min(1920/w,1080/h);g.drawImage(s,(1920-w*r)/2,(1080-h*r)/2,w*r,h*r)};
+ function pub(drawFn,items,clean,aud,fps){
+  const cv=document.createElement('canvas');cv.width=1920;cv.height=1080;const g=cv.getContext('2d');
+  const run=()=>{try{drawFn(g)}catch(e){}};run();
+  const t=cv.captureStream(fps?15:10).getVideoTracks()[0],tm=setInterval(run,fps||200);
+  const bar=document.createElement('div');bar.id='msn';items(bar);document.body.appendChild(bar);
+  const st0=t.stop.bind(t);t.stop=()=>{clearInterval(tm);bar.remove();try{clean&&clean()}catch(e){}st0()};
+  useTrack(t);
+  if(aud&&role=='t'){scrAT=aud;mxSrc('S',aud)}
+  return run}
+ async function pdf(f){
+  try{await ld(PJ+'pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc=PJ+'pdf.worker.min.js';
+   const d=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+   let pc=null,n=1,busy=0,want=1,run=()=>{};const lb=document.createElement('span');
+   const show=async()=>{if(busy)return;busy=1;try{while(want!=null){const k=want;want=null;const p=await d.getPage(k),v0=p.getViewport({scale:1}),v=p.getViewport({scale:Math.min(1920/v0.width,1080/v0.height)}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);await p.render({canvasContext:c.getContext('2d'),viewport:v}).promise;pc=c;n=k;lb.textContent=n+' / '+d.numPages;run()}}catch(e){}busy=0};
+   const go=k=>{want=Math.min(d.numPages,Math.max(1,k));show()};
+   await show();if(!pc)throw 0;
+   run=pub(g=>{if(pc)fit(g,pc,pc.width,pc.height,'#fff')},bar=>bar.append(mk('◀',()=>go(n-1)),lb,mk('▶',()=>go(n+1)),mk('✕',stopShare)),()=>{try{d.destroy()}catch(e){}})
+  }catch(e){alert('تعذر فتح ملف PDF — تأكد من الإنترنت ومن أن الملف غير محمي بكلمة سر')}}
+ async function docx(f){
+  try{await ld(MJ);const r=await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()});
+   const ps=r.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);if(!ps.length)return alert('الملف لا يحتوي نصاً');
+   const FN='40px Tahoma,Arial,sans-serif',g0=document.createElement('canvas').getContext('2d');g0.font=FN;const L=[];
+   ps.forEach(p=>{const rtl=/[\u0600-\u06FF]/.test(p);let cur='';p.split(/\s+/).forEach(x=>{const t=cur?cur+' '+x:x;if(cur&&g0.measureText(t).width>1700){L.push({t:cur,rtl});cur=x}else cur=t});L.push({t:cur,rtl});L.push({t:'',rtl})});
+   const pg=[];for(let i=0;i<L.length;i+=15)pg.push(L.slice(i,i+15));
+   let n=0,run=()=>{};const lb=document.createElement('span'),up=()=>lb.textContent=(n+1)+' / '+pg.length;
+   run=pub(g=>{g.fillStyle='#fff';g.fillRect(0,0,1920,1080);g.fillStyle='#111';g.font=FN;g.textBaseline='alphabetic';
+    pg[n].forEach((l,i)=>{g.direction=l.rtl?'rtl':'ltr';g.textAlign=l.rtl?'right':'left';g.fillText(l.t,l.rtl?1860:60,95+i*64)});g.direction='ltr'},
+    bar=>{bar.append(mk('◀',()=>{n=Math.max(0,n-1);up();run()}),lb,mk('▶',()=>{n=Math.min(pg.length-1,n+1);up();run()}),mk('✕',stopShare));up()});
+   if(role=='t')sys('📝 ملف Word يُعرض كنص فقط (بدون صور أو جداول). للحفاظ على الشكل الكامل صدّره PDF وشاركه.')
+  }catch(e){alert('تعذر فتح الملف — يدعم صيغة docx فقط (احفظ ملفات doc القديمة بصيغة docx أو PDF)')}}
+ async function vid(f){
+  const v=document.createElement('video');v.playsInline=true;v.setAttribute('playsinline','');v.preload='auto';v.src=URL.createObjectURL(f);
+  try{await new Promise((ok,no)=>{v.onloadeddata=ok;v.onerror=no;v.load()})}catch(e){URL.revokeObjectURL(v.src);return alert('تعذر تشغيل الفيديو — جرّب صيغة MP4')}
+  let aud=null,ac=null;
+  if(role=='t'){try{ac=new(window.AudioContext||window.webkitAudioContext)();const d=ac.createMediaStreamDestination();ac.createMediaElementSource(v).connect(d);aud=d.stream.getAudioTracks()[0];ac.resume()}catch(e){}}else v.muted=true;
+  v.play().catch(()=>{});
+  pub(g=>{if(v.videoWidth)fit(g,v,v.videoWidth,v.videoHeight,'#000')},
+   bar=>bar.append(mk('⏪',()=>{v.currentTime=Math.max(0,v.currentTime-10)}),mk('⏯',()=>{v.paused?v.play():v.pause()}),mk('⏩',()=>{v.currentTime=Math.min(v.duration||0,v.currentTime+10)}),mk('✕',stopShare)),
+   ()=>{v.pause();URL.revokeObjectURL(v.src);v.removeAttribute('src');ac&&ac.close().catch(()=>{})},aud,66);
+  if(role=='t'&&!aud)sys('⚠️ تعذر نقل صوت الفيديو — سيصل الفيديو بدون صوت')}
+ function pick(acc,fn,multi){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.onchange=()=>{const f=[...i.files];if(f.length)fn(f)};i.click()}
  function menu(){
   const o=$('#msm');if(o)o.remove();
   const m=document.createElement('div');m.id='msm';
-  m.innerHTML='<div class="msb"><h3>📱 المشاركة من الموبايل / التابلت</h3><p>متصفحات الموبايل والتابلت لا تسمح بمشاركة الشاشة نفسها، لكن تقدر تشارك:</p><button data-a="cam">📷 الكاميرا الخلفية (كتاب / ورقة / سبورة)</button><button data-a="img">🖼 صور أو لقطات شاشة من الجهاز</button><button data-a="x">إلغاء</button></div>';
-  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
-  inp.onchange=()=>{const f=[...inp.files];m.remove();if(f.length)imgs(f)};
-  m.onclick=e=>{const a=e.target.dataset&&e.target.dataset.a;if(e.target===m||a=='x')return m.remove();if(a=='cam'){m.remove();cam()}if(a=='img')inp.click()};
+  m.innerHTML='<div class="msb"><h3>📱 المشاركة من الموبايل / التابلت</h3><p>متصفحات الموبايل والتابلت لا تسمح بمشاركة الشاشة نفسها، لكن تقدر تشارك:</p><button data-a="pdf">📄 ملف PDF</button><button data-a="doc">📝 ملف Word (docx)</button><button data-a="vid">🎬 فيديو من الجهاز</button><button data-a="img">🖼 صور أو لقطات شاشة من الجهاز</button><button data-a="cam">📷 الكاميرا الخلفية (كتاب / ورقة / سبورة)</button><button data-a="x">إلغاء</button></div>';
+  m.onclick=e=>{const a=e.target.dataset&&e.target.dataset.a;if(e.target===m||a=='x')return m.remove();if(!a)return;m.remove();
+   if(a=='cam')cam();else if(a=='img')pick('image/*',imgs,1);else if(a=='pdf')pick('application/pdf,.pdf',f=>pdf(f[0]));
+   else if(a=='doc')pick('.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',f=>docx(f[0]));else if(a=='vid')pick('video/*',f=>vid(f[0]))};
   document.body.appendChild(m)}
  window.scrBtn=function(){
   if(hasDM)return origBtn();
