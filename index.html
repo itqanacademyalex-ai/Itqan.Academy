@@ -323,6 +323,9 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
   <input id="ai_model" placeholder="اسم النموذج" dir="ltr">
   <input id="ai_url" placeholder="https://script.google.com/macros/s/.../exec" dir="ltr">
   <small>المفتاح يُحفظ في متصفحك أنت فقط ولا يُرسل إلا للخدمة التي تختارها. بيانات الحصة (الشات والتفريغ) ستُرسل لهذه الخدمة، فأخبر الطلاب بذلك.</small></div>
+ <div class="ais"><h4>لغة الملخص / Summary language</h4>
+  <select id="ai_slang"><option value="auto">تلقائي حسب لغة الحصة / Auto</option><option value="eg">عربي (لهجة مصرية)</option><option value="en">English</option></select>
+  <label><input type="checkbox" id="ai_aend" checked> إنشاء الملخص وإرساله بالإيميل تلقائياً عند إنهاء الحصة</label></div>
  <div class="row"><button class="go" id="ai_go" onclick="aiRun()">✨ إنشاء الملخص</button><small id="ai_st"></small></div>
  <textarea id="ai_out" placeholder="سيظهر الملخص هنا..."></textarea>
  <div class="row"><button onclick="aiCopy()">📋 نسخ</button><button onclick="aiDl()">⬇ تنزيل</button><button onclick="aiShare()">💬 إرسال للطلاب في الشات</button></div>
@@ -331,7 +334,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.26-b';
+const VER='2026.10.27-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -465,11 +468,10 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'muteAll':tMuteAll();break;
   case 'gm':if(d.v===0||d.v===2){gm=d.v;sys('وضع الدخول (من السكرتارية): '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}break;
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
-  case 'rc':{const r=recCfgOk(d.v);if(r&&!RC){RC=r;if(hubT0&&Date.now()-hubT0>12000)recPlan()}break}
+  case 'rc':{const r=recCfgOk(d.v);if(r&&(!RC||RC.k!==r.k||RC.u!==r.u)){const first=!RC;RC=r;if(first&&hubT0&&Date.now()-hubT0>12000)recPlan()}break}
   case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
-function forceEnd(){Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});
- mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}alert('أنهت السكرتارية الجلسة');location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin()}
+function forceEnd(){Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});sys('أنهت السكرتارية الجلسة');endFlowT(1)}
 async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
@@ -726,6 +728,7 @@ function sync(){
  clearTimeout(rt);dropCall();stopCam();canTalk=1;canCam=1;try{peer.destroy()}catch(e){}initS();sys('جارٍ إعادة الاتصال...');
 }
 function endCall(){
+ if(role=='t'&&aiAutoOn()){if(confirm('إنهاء الحصة للجميع؟'))endFlowT(0);return}
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
@@ -952,9 +955,9 @@ const AIDEF={gemini:'gemini-2.5-flash',openai:'gpt-4o-mini',anthropic:'claude-ha
 const LOG={start:0,att:[],tr:[]};let sr=null,srOn=0,aiAsked=0;
 const aiSt=(m,e)=>{const x=$('#ai_st');x.textContent=m;x.style.color=e?'#ff8a8a':''};
 function aiLoad(){try{return JSON.parse(localStorage.getItem('itqan_ai')||'{}')}catch(e){return{}}}
-function aiSave(){try{localStorage.setItem('itqan_ai',JSON.stringify({provider:$('#ai_prov').value,key:$('#ai_key').value,model:$('#ai_model').value,url:$('#ai_url').value,lang:$('#ai_lang').value,tp:$('#ai_tp').value,tkey:$('#ai_tkey').value,tmodel:$('#ai_tmodel').value,tdial:$('#ai_tdial').value,tauto:$('#ai_tauto').checked?1:0}))}catch(e){}}
-function aiOpen(){const c=aiLoad();if(c.provider)$('#ai_prov').value=c.provider;$('#ai_key').value=c.key||'';$('#ai_model').value=c.model||'';$('#ai_url').value=c.url||'';if(c.lang)$('#ai_lang').value=c.lang;if(c.tp)$('#ai_tp').value=c.tp;$('#ai_tkey').value=c.tkey||'';$('#ai_tmodel').value=c.tmodel||'';if(c.tdial)$('#ai_tdial').value=c.tdial;$('#ai_tauto').checked=c.tauto!==0;aiProv(1);$('#aip').hidden=false;aiUi();trUi()}
-function aiClose(){aiSave();$('#aip').hidden=true}
+function aiSave(){try{localStorage.setItem('itqan_ai',JSON.stringify({provider:$('#ai_prov').value,key:$('#ai_key').value,model:$('#ai_model').value,url:$('#ai_url').value,lang:$('#ai_lang').value,tp:$('#ai_tp').value,tkey:$('#ai_tkey').value,tmodel:$('#ai_tmodel').value,tdial:$('#ai_tdial').value,tauto:$('#ai_tauto').checked?1:0,slang:$('#ai_slang').value,aend:$('#ai_aend').checked?1:0}))}catch(e){}}
+function aiOpen(){const c=aiLoad();if(c.provider)$('#ai_prov').value=c.provider;$('#ai_key').value=c.key||'';$('#ai_model').value=c.model||'';$('#ai_url').value=c.url||'';if(c.lang)$('#ai_lang').value=c.lang;if(c.tp)$('#ai_tp').value=c.tp;$('#ai_tkey').value=c.tkey||'';$('#ai_tmodel').value=c.tmodel||'';if(c.tdial)$('#ai_tdial').value=c.tdial;$('#ai_tauto').checked=c.tauto!==0;if(c.slang)$('#ai_slang').value=c.slang;$('#ai_aend').checked=c.aend!==0;aiProv(1);$('#aip').hidden=false;aiUi();trUi()}
+function aiClose(){aiSave();$('#aip').hidden=true;if(endDone)location.reload()}
 function aiProv(keep){const p=$('#ai_prov').value,m=$('#ai_model'),w=p=='webhook';
  if(!keep&&(!m.value||Object.values(AIDEF).includes(m.value)))m.value=AIDEF[p];if(keep&&!m.value)m.value=AIDEF[p];
  $('#ai_key').hidden=w;m.hidden=w;$('#ai_url').hidden=!w}
@@ -968,16 +971,20 @@ function aiData(){const fm=t=>new Date(t).toLocaleTimeString('ar-EG',{hour:'2-di
   attendance:$('#ai_att').checked?LOG.att.map(a=>fm(a.ts)+' — '+a.n+' '+a.ev):[],
   chat:$('#ai_chat').checked?chat.filter(x=>!x.sys).map(x=>(x.ts?fm(x.ts)+' ':'')+x.n+': '+x.m):[],
   polls:chat.filter(x=>x.sys&&String(x.m).startsWith('نتيجة الاستفتاء')).map(x=>x.m),
-  transcript:$('#ai_tr').checked?LOG.tr.map(x=>fm(x.ts)+' '+(x.n?x.n+': ':'')+x.t):[],notes:$('#ai_notes').value.trim()}}
-function aiPrompt(d){const cut=(a,n)=>a.join('\n').slice(-n);
- return 'أنت مساعد تعليمي. لخّص الحصة الدراسية التالية بالعربية الفصحى المبسطة بصيغة منظمة تتضمن: عنوان الحصة، ملخص قصير (3 إلى 5 أسطر)، النقاط والمفاهيم الرئيسية، الأمثلة أو التمارين التي نُوقشت، أسئلة الطلاب وإجاباتها، الواجبات أو المهام المطلوبة، وتوصيات للمعلم للحصة القادمة. اعتمد فقط على المعلومات الواردة، ولا تخترع معلومات غير موجودة، وإن كان قسم بلا بيانات فاكتب «لا يوجد».\n\n'+
- 'المعلم: '+d.teacher+'\nالتاريخ: '+d.date+'\nالمدة التقريبية: '+d.minutes+' دقيقة\n\n'+
- '## الحضور\n'+(cut(d.attendance,4000)||'لا يوجد')+'\n\n## نص كلام المعلم والطلاب (تفريغ صوتي تلقائي)\n'+(cut(d.transcript,60000)||'لا يوجد')+'\n\n## رسائل الشات\n'+(cut(d.chat,20000)||'لا يوجد')+'\n\n## نتائج الاستفتاءات\n'+(cut(d.polls,3000)||'لا يوجد')+'\n\n## ملاحظات المعلم\n'+(d.notes||'لا يوجد')}
+  transcript:$('#ai_tr').checked?LOG.tr.map(x=>fm(x.ts)+' '+(x.n?x.n+': ':'')+x.t):[],notes:$('#ai_notes').value.trim(),slang:(!$('#aip').hidden?$('#ai_slang').value:(aiLoad().slang||'auto'))}}
+function aiLangOf(d){let l=d.slang||'auto';if(l!='auto')return l;const t=[...(d.transcript||[]),...(d.chat||[])].join(' '),ar=(t.match(/[\u0600-\u06FF]/g)||[]).length,la=(t.match(/[A-Za-z]/g)||[]).length;
+ if(ar+la<20)return LANG=='ar'?'eg':'en';return ar/(ar+la)>0.35?'eg':'en'}
+function aiPrompt(d){const cut=(a,n)=>a.join('\n').slice(-n),l=aiLangOf(d),en=l=='en',N=en?'None':'مفيش';
+ const head=en?
+ 'You are a teaching assistant for an online academy. Summarize the class below in clear, simple English, organized under these headings: 1) Class title 2) Short summary (3-5 lines) 3) Key points and concepts 4) Examples/exercises discussed 5) Student questions and answers 6) Homework/tasks 7) Notes for the teacher for the next class (participation, absences, any issues). The transcript is automatic speech-to-text (mostly Egyptian Arabic dialect and/or English) and may contain errors, so interpret it carefully; translate Arabic content into English and keep technical terms and names as they are. Use only the provided information, never invent anything, and write "None" for any section without data.\n\n':
+ 'إنت مساعد تعليمي لأكاديمية أونلاين. لخّص الحصة دي بالعامية المصرية المبسطة والواضحة (المصطلحات العلمية والأسماء تفضل زي ما هي) ورتّبها تحت العناوين دي: ١) عنوان الحصة ٢) ملخص قصير (٣ لـ٥ سطور) ٣) النقاط والمفاهيم الأساسية ٤) الأمثلة والتمارين اللي اتناقشت ٥) أسئلة الطلاب وإجاباتها ٦) الواجب أو المطلوب من الطلاب ٧) ملاحظات للمعلم للحصة الجاية (التفاعل، الغياب، أي مشكلة). النص المفرَّغ اتولّد تلقائياً من الصوت وممكن فيه أخطاء، فاستنتج المعنى بحذر. لو فيه كلام بالإنجليزي اكتب ملخصه بالعربي وسيب المصطلحات الإنجليزية زي ما هي. اعتمد بس على المعلومات الموجودة وماتألفش حاجة، وأي قسم مفيهوش بيانات اكتب فيه «مفيش».\n\n';
+ const H=en?['Teacher','Date','Approx. duration','min','Attendance','Transcript (teacher and students, automatic)','Chat messages','Poll results','Teacher notes']:['المعلم','التاريخ','المدة التقريبية','دقيقة','الحضور','نص كلام المعلم والطلاب (تفريغ صوتي تلقائي)','رسائل الشات','نتائج الاستفتاءات','ملاحظات المعلم'];
+ return head+H[0]+': '+d.teacher+'\n'+H[1]+': '+d.date+'\n'+H[2]+': '+d.minutes+' '+H[3]+'\n\n## '+H[4]+'\n'+(cut(d.attendance,4000)||N)+'\n\n## '+H[5]+'\n'+(cut(d.transcript,60000)||N)+'\n\n## '+H[6]+'\n'+(cut(d.chat,20000)||N)+'\n\n## '+H[7]+'\n'+(cut(d.polls,3000)||N)+'\n\n## '+H[8]+'\n'+(d.notes||N)}
 async function aiHttp(url,opt){const r=await fetch(url,opt),t=await r.text();if(!r.ok)throw new Error('HTTP '+r.status+' '+t.slice(0,160));let j=null;try{j=JSON.parse(t)}catch(e){}return{t,j}}
 async function aiCall(p,key,model,url,d){const prompt=aiPrompt(d);
  if(p=='webhook'){const o=await aiHttp(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,prompt})});return o.j&&(o.j.summary||o.j.text||o.j.result)||o.t}
- if(p=='gemini'){const o=await aiHttp('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
-  return o.j.candidates[0].content.parts.map(x=>x.text||'').join('')}
+ if(p=='gemini'){const o=await aiHttp('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:.3}})});
+  const c=o.j&&o.j.candidates&&o.j.candidates[0],p=c&&c.content&&c.content.parts;if(!p)throw new Error('لم يرجع الذكاء الاصطناعي نتيجة'+(c&&c.finishReason?' ('+c.finishReason+')':''));return p.map(x=>x.text||'').join('')}
  if(p=='openai'){const o=await aiHttp('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:prompt}]})});return o.j.choices[0].message.content}
  const o=await aiHttp('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model,max_tokens:2000,messages:[{role:'user',content:prompt}]})});
  return o.j.content.map(x=>x.text||'').join('')}
@@ -1131,14 +1138,23 @@ document.addEventListener('click',e=>{['tlm','bgm'].forEach(id=>{const m=documen
    قالب EmailJS: To Email = {{to_email}} ، Subject = {{subject}} ، المحتوى = {{message}} */
 const MAIL={service:'service_vy75i8g',template:'template_aro2n43',key:'-1tdu7CnVQ_bg0uRY',to:'itqanacademy.alex@gmail.com'};
 let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
-function mailSend(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
- try{fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
+function mailEJ(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
+ try{return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
+function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
+ if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,0)}).catch(()=>mailEJ(sub,msg,0))}catch(e){}}
+ return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
 function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return sys(T('mailOff'));mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
 function mailStu(n){mailNames.add(n);mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
 function mailFlush(keep){clearTimeout(mailTm);if(!mailQ.length)return;const q=mailQ.splice(0);mailSend('🎓 دخل '+q.length+' طالب الغرفة '+roomName,'دخل الطلاب التالية أسماؤهم:\n- '+q.join('\n- ')+'\nالوقت: '+mailNow(),keep)}
-function mailEnd(keep){if(role!='t'||mailDone||!sessT0)return;mailDone=1;mailFlush(keep);const mn=Math.round((Date.now()-sessT0)/60000);
- mailSend('⏱ انتهت الحصة '+roomName+' — '+(mn?mn+' دقيقة':'أقل من دقيقة'),'انتهت الحصة في الغرفة: '+roomName+'\nالمدة: '+(mn?mn+' دقيقة':'أقل من دقيقة')+'\nعدد الطلاب الذين دخلوا: '+mailNames.size+(mailNames.size?'\nالأسماء: '+[...mailNames].join('، '):'')+'\nانتهت في: '+mailNow(),keep)}
+function mailEnd(keep,sum,why){if(role!='t'||mailDone||!sessT0)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
+ const en=!!sum&&aiLangOf(aiData())=='en',mn=Math.round((Date.now()-sessT0)/60000),dur=en?(mn?mn+' min':'< 1 min'):(mn?mn+' دقيقة':'أقل من دقيقة'),
+ subj=(sum?(en?'✅ Class summary — ':'✅ ملخص الحصة — '):(en?'⏱ Class ended — ':'⏱ انتهت الحصة — '))+roomName+' — '+dur;
+ let body=(en?'Room: ':'الغرفة: ')+roomName+'\n'+(en?'Duration: ':'المدة: ')+dur+'\n'+(en?'Ended at: ':'انتهت في: ')+mailNow()+'\n\n';
+ if(sum)body+=(en?'===== Class summary =====\n':'===== ملخص الحصة =====\n')+sum.slice(0,9000)+'\n\n';
+ else{body+='⚠️ لم يتم توليد ملخص بالذكاء الاصطناعي'+(why?' ('+why+')':'')+'.\n';const tl=trLines().join('\n');if(tl)body+='\n===== آخر التفريغ الصوتي =====\n'+tl.slice(-2500)+'\n\n'}
+ body+=attRep(en?'en':'eg');
+ return mailSend(subj,body.slice(0,14000),keep)}
 window.addEventListener('pagehide',()=>mailEnd(1));
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
@@ -1505,10 +1521,11 @@ function sxHub(){
    if(!(d.c&&await certOk(d.c,d.s,SX.room,SX.pub)&&await vfy(d.c.p,'T|'+SX.room+'|'+nonce,d.g))){try{c.close()}catch(e){}return}
    c.send({t:'cohello'})}
   else if(d.t=='conon'&&step==1){step=2;c.send({t:'coproof',g:await sgn(SX.priv,'C|'+SX.room+'|'+d.n)})}
-  else if(d.t=='coack'&&step==2){step=3;SX.hub=c;SX.hubTry=null;clearTimeout(to);sxDraw();sxRcPush()}
+  else if(d.t=='coack'&&step==2){step=3;SX.hub=c;SX.hubTry=null;clearTimeout(to);SX.bye=0;SX.had=1;clearTimeout(SX.dropT);sxDraw();sxRcPush()}
+  else if(d.t=='bye'&&step==3){SX.bye=1;clearTimeout(SX.dropT)}
   else if(d.t=='rec'&&step==3){sxRecOn(d.on)}
   else if(d.t=='rs'&&step==3){const pw=SX.snap?SX.snap.w.length:0;SX.snap=d;if(d.w.length>pw)chime();sxDraw()}});
- c.on('close',()=>{clearTimeout(to);if(SX.hubTry===c)SX.hubTry=null;if(SX.hub===c){SX.hub=null;SX.snap=null;sxRecEnd();sxDraw()}});
+ c.on('close',()=>{clearTimeout(to);if(SX.hubTry===c)SX.hubTry=null;if(SX.hub===c){SX.hub=null;SX.snap=null;sxRecEnd();sxDraw();sxDropWatch()}});
  c.on('error',()=>{})}
 function sxCmd(a,k,v){if(SX&&SX.hub)try{SX.hub.send({t:'cmd',a,k,v})}catch(e){}}
 function sxLink(r){if(!/^https?:$/.test(location.protocol)||window!==top)return'';return location.origin+location.pathname+'?s='+SX.room+'&k='+SX.pub+'&r='+r}
@@ -1518,8 +1535,9 @@ function sxWa(r){const u=sxLink(r),t=SX.title?' ('+SX.title+')':'';
  const m=r=='t'?'مرحباً'+(SX.tn?' '+SX.tn:'')+'، رابط دخولك للحصة'+t+':\n'+u+'\nكود المعلم: '+SX.pin+'\nبعد فتح الرابط سأقوم بالسماح لك بالدخول.':'رابط الدخول للحصة'+t+':\n'+u+'\nاكتب اسمك ثم انتظر حتى يتم السماح لك بالدخول.';
  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
 function sxEnd(){if(!confirm('إنهاء الجلسة وحذف الروابط؟ لن يعمل أي رابط بعد ذلك.'))return;
+ SX.bye=1;clearTimeout(SX.dropT);
  if(SX.hub){sxCmd('end');setTimeout(sxClose,400)}else sxClose()}
-async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;try{localStorage.removeItem('itqan_sx')}catch(e){}try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);SX=null;sxHome();recRefresh()}
+async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;try{localStorage.removeItem('itqan_sx')}catch(e){}try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);clearTimeout(SX.dropT);SX=null;sxHome();recRefresh()}
 function sxDraw(){if(!SX)return;
  const tl=sxLink('t'),sl=sxLink('s'),sn=SX.snap,reqs=Object.entries(SX.reqs);
  $('#sxst').textContent=SX.hub?'🟢 المعلم داخل الحصة':(SX.acc?'⏳ المعلم معتمد — ينتظر فتح الغرفة':'⏳ في انتظار المعلم');
@@ -1553,8 +1571,8 @@ const RE_URL=/^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[A-Za-z0-
 let RC=null,recOwner=null,recOn=0,recStopped=0,recWait=0,recSelfEng=null,hubT0=0,_hc=null,_hcT=null,rcEd=0,rcMsg='';
 let RCFG=null;try{RCFG=JSON.parse(localStorage.getItem('itqan_rc'))}catch(e){}
 /* ===== إعداد التسجيل الدائم على Google Drive ===== */
-const DEF_REC={u:'https://script.google.com/macros/s/AKfycby6s-kmvk3Kl5mgA0GwFfhgbcF9soP2Zui4EMO8pXxIPGAjt73OJC0Z2QtKINFzbjMe/exec',k:'1',n:'حصة'};
-if(!RCFG||!RCFG.u)RCFG={u:DEF_REC.u,k:DEF_REC.k,on:1};
+const DEF_REC={u:'https://script.google.com/macros/s/AKfycby6s-kmvk3Kl5mgA0GwFfhgbcF9soP2Zui4EMO8pXxIPGAjt73OJC0Z2QtKINFzbjMe/exec',k:'',n:'حصة'};
+if(!RCFG||!RCFG.u)RCFG={u:DEF_REC.u,k:'',on:1};
 RC=recCfgOk(DEF_REC);
 const RUPS=[],RDONE=[],RV={m:null,c:null,ms:null,cs:null};
 const recMB=b=>(b/1048576).toFixed(1);
@@ -1657,21 +1675,21 @@ function sxRecOn(on){if(!SX)return;
  rcStatus()}
 function sxRecEnd(){if(SX&&SX.rec){const r=SX.rec;SX.rec=null;r.stop().then(recRefresh)}rcStatus()}
 function sxRecStop(){if(SX&&SX.rec){sxRecEnd();sxCmd('recst','',0)}}
-function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k,n:(SX&&SX.title)||'حصة'}:null}
+function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k||'',n:(SX&&SX.title)||'حصة'}:null}
 function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r)}
 /* ---- واجهة الإعداد والحالة (لوحة السكرتارية) ---- */
 function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
  e.innerHTML='<div class="sxc"><h3>🎥 تسجيل الحصص على Google Drive</h3>'+
  (c&&c.u&&!rcEd?'<div class="sxr"><span>'+(c.on?'🟢 التسجيل التلقائي مفعّل':'⚪ التسجيل متوقف')+'</span><span class="bt"><button class="sxb d" onclick="rcToggle()">'+(c.on?'إيقاف':'تفعيل')+'</button><button class="sxb d" onclick="rcEdit()">تعديل</button><button class="sxb" onclick="rcTest()">اختبار</button></span></div>'
- :'<input id="rcu" dir="ltr" placeholder="رابط السكريبت (ينتهي بـ /exec)" value="'+esc(c?c.u:'')+'"><input id="rck" placeholder="كلمة سر السكريبت" value="'+esc(c?c.k:'')+'"><button class="sxb g" onclick="rcSave()">حفظ</button><small style="color:#a9bccd;line-height:1.8">خطوات إعداد السكريبت في الملف المرفق Code.gs</small>')+
+ :'<input id="rcu" dir="ltr" placeholder="رابط السكريبت (ينتهي بـ /exec)" value="'+esc(c?c.u:'')+'"><input id="rck" placeholder="كلمة سر السكريبت (اختيارية)" value="'+esc(c?c.k:'')+'"><button class="sxb g" onclick="rcSave()">حفظ</button><small style="color:#a9bccd;line-height:1.8">كلمة السر اختيارية: اتركها فارغة لو السكريبت من غير SECRET</small>')+
  '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus()}
 function rcSave(){const u=$('#rcu').value.trim(),k=$('#rck').value.trim();
- if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');if(!k)return alert('اكتبي كلمة سر السكريبت');
+ if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');
  RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();if(SX)sxRcPush()}
 function rcEdit(){rcEd=1;rcDraw()}
 function rcToggle(){RCFG.on=RCFG.on?0:1;try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcDraw();if(SX&&RCFG.on)sxRcPush()}
 async function rcTest(){rcMsg='⏳ جارٍ الاختبار...';rcStatus();
- try{const r=await fetch(RCFG.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:RCFG.k,a:'ping'})});const j=await r.json();rcMsg=j.ok?'✓ متصل — المجلد: '+j.n:'✗ '+(j.e==='auth'?'كلمة السر غير مطابقة':j.e)}
+ try{const r=await fetch(RCFG.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:RCFG.k,a:'ping'})});const j=await r.json();rcMsg=j.ok?'✓ متصل — المجلد: '+j.n+(j.q!=null?' • متبقي '+j.q+' إيميل اليوم':''):'✗ '+(j.e==='auth'?'كلمة السر غير مطابقة':j.e)}
  catch(e){rcMsg='✗ تعذر الاتصال بالسكريبت — راجعي الرابط وإعدادات النشر (Anyone)'}rcStatus()}
 function rcStatus(){const e=$('#rcst');if(!e)return;let h='';
  if(rcMsg)h+='<div>'+esc(rcMsg)+'</div>';
@@ -1816,6 +1834,41 @@ function trUi(){const b=$('#ai_tgo'),s=$('#ai_trs'),o=$('#ai_script');if(!b)retu
 function trCopy(){const t=trLines().join('\n');if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){const o=$('#ai_script');o.select();document.execCommand('copy')}aiSt('تم النسخ ✓')}
 function trDl(){const t=trLines().join('\n');if(!t)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}));a.download='transcript-'+room+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 setInterval(()=>{if(role!='t')return;if(TR.on)trUi();if(TR.dirty){TR.dirty=0;try{localStorage.setItem('itqan_tr_'+room,JSON.stringify(LOG.tr.slice(-3000)))}catch(e){}}},2000);
+</script>
+<script>
+/* ===== ملخص نهاية الحصة التلقائي + تقرير الحضور + تنبيه انقطاع المعلم ===== */
+let endDone=0,endBusy=0;
+function aiCfgAuto(){const c=aiLoad();let p=c.provider||'gemini',key=(c.key||'').trim(),model=(c.model||'').trim(),url=(c.url||'').trim();const tk=(c.tkey||'').trim(),tp=c.tp||'gemini';
+ if(p!='webhook'&&!key&&tk){p=tp;key=tk;model=''}
+ if(!model)model=AIDEF[p]||'';return{p,key,model,url,on:c.aend!==0}}
+function aiAutoOn(){const f=aiCfgAuto();return f.on&&(f.p=='webhook'?/^https:\/\//.test(f.url):!!f.key)}
+async function aiAutoRun(){const f=aiCfgAuto(),d=aiData();
+ if(!d.chat.length&&!d.transcript.length&&!d.notes&&!d.polls.length)throw new Error('لا توجد بيانات للتلخيص (لا تفريغ ولا شات)');
+ return String(await aiCall(f.p,f.key,f.model,f.url,d)).trim()}
+async function trFlush(){if(!TR.on)return;Object.values(TR.taps).forEach(tp=>{if(tp.seg)trCut(tp)});const t0=Date.now();
+ while((TR.q.length||TR.busy)&&Date.now()-t0<20000)await new Promise(r=>setTimeout(r,400));trStop()}
+function attRep(l){const en=l=='en',ev=LOG.att.slice().sort((a,b)=>a.ts-b.ts),end=Date.now(),M={},f=t=>new Date(t).toLocaleTimeString(en?'en-GB':'ar-EG',{hour:'2-digit',minute:'2-digit'});
+ ev.forEach(e=>{const m=M[e.n]||(M[e.n]={n:e.n,first:e.ts,last:e.ts,tot:0,at:null,drops:0,kicked:0});
+  if(e.ev=='دخل'){if(m.at==null)m.at=e.ts}else{if(m.at!=null){m.tot+=e.ts-m.at;m.at=null}m.last=e.ts;if(e.ev=='طُرد')m.kicked++;else m.drops++}});
+ const L=Object.values(M);if(!L.length)return en?'Attendance: no students joined.\n':'الحضور: لم يدخل أي طالب.\n';
+ return(en?'===== Attendance ('+L.length+' students) =====\n':'===== الحضور ('+L.length+' طالب) =====\n')+L.map(m=>{const open=m.at!=null,mm=Math.round((m.tot+(open?end-m.at:0))/60000);
+  return'- '+m.n+': '+(en?'joined ':'دخل ')+f(m.first)+(open?(en?' • stayed until the end':' • فضل لحد النهاية'):(en?' • left ':' • خرج ')+f(m.last))+' • '+mm+(en?' min':' د')+((open?m.drops>=1:m.drops>1)?(en?' • disconnected '+m.drops+'x':' • انقطع/خرج '+(m.drops==1?'مرة':m.drops+' مرات')):'')+(m.kicked?(en?' • removed':' • اتطرد'):'')}).join('\n')+'\n'}
+async function endFlowT(forced){if(endBusy)return;endBusy=1;
+ try{if(!$('#aip').hidden)aiSave()}catch(e){}
+ showGate('⏳','جارٍ إنهاء الحصة وتجهيز الملخص… لا تغلق الصفحة');
+ if(!forced)Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'انتهت الحصة — شكراً لكم'})}catch(e){}});
+ const recP=recSelfEng?recSelfEng.stop().catch(()=>{}):Promise.resolve();
+ try{await trFlush()}catch(e){}
+ try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
+ let sum='',why='';
+ if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
+ try{await Promise.race([Promise.resolve(mailEnd(0,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
+ try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ رفع التسجيل على Drive… لا تغلق الصفحة ('+recMB(RUPS[0].meta.off)+' ميجا)';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
+ $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
+ aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'تعذر توليد الملخص تلقائياً ('+why+') — تم إرسال إيميل بالحضور وآخر النص. أغلق النافذة (✕) للإنهاء.',!sum)}
+function sxDropWatch(){clearTimeout(SX.dropT);if(SX.bye||!SX.had)return;
+ SX.dropT=setTimeout(()=>{if(!SX||SX.hub||SX.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(SX.title||SX.room),'انقطع اتصال المعلم'+(SX.tn?' ('+SX.tn+')':'')+' عن الحصة ('+(SX.title||SX.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
 </body>
 </html>
