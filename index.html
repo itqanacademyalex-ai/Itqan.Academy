@@ -691,7 +691,7 @@ async function vProof(d){const c=conn;
 function sData(d){
  if(!d||typeof d!=='object')return;
  if(!vOk){if(d.t=='proof')vProof(d);return}
- if(d.t=='recon'){$('#recb').hidden=!d.on;return}
+ if(d.t=='recon'){$('#recb').hidden=!d.on;return}if(d.t=='hb'){window.T_HB=Date.now();return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
  else if(d.t=='denied'||d.t=='kicked'){final=1;stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
  else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
@@ -1521,7 +1521,8 @@ function sxHub(){
    if(!(d.c&&await certOk(d.c,d.s,SX.room,SX.pub)&&await vfy(d.c.p,'T|'+SX.room+'|'+nonce,d.g))){try{c.close()}catch(e){}return}
    c.send({t:'cohello'})}
   else if(d.t=='conon'&&step==1){step=2;c.send({t:'coproof',g:await sgn(SX.priv,'C|'+SX.room+'|'+d.n)})}
-  else if(d.t=='coack'&&step==2){step=3;SX.hub=c;SX.hubTry=null;clearTimeout(to);SX.bye=0;SX.had=1;clearTimeout(SX.dropT);sxDraw();sxRcPush()}
+  else if(d.t=='coack'&&step==2){step=3;SX.hub=c;SX.hbAt=Date.now();SX.hubTry=null;clearTimeout(to);SX.bye=0;SX.had=1;clearTimeout(SX.dropT);sxDraw();sxRcPush()}
+  else if(d.t=='hb'&&step==3){SX.hbAt=Date.now()}
   else if(d.t=='bye'&&step==3){SX.bye=1;clearTimeout(SX.dropT)}
   else if(d.t=='rec'&&step==3){sxRecOn(d.on)}
   else if(d.t=='rs'&&step==3){const pw=SX.snap?SX.snap.w.length:0;SX.snap=d;if(d.w.length>pw)chime();sxDraw()}});
@@ -1540,7 +1541,7 @@ function sxEnd(){if(!confirm('إنهاء الجلسة وحذف الروابط؟ 
 async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;try{localStorage.removeItem('itqan_sx')}catch(e){}try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);clearTimeout(SX.dropT);SX=null;sxHome();recRefresh()}
 function sxDraw(){if(!SX)return;
  const tl=sxLink('t'),sl=sxLink('s'),sn=SX.snap,reqs=Object.entries(SX.reqs);
- $('#sxst').textContent=SX.hub?'🟢 المعلم داخل الحصة':(SX.acc?'⏳ المعلم معتمد — ينتظر فتح الغرفة':'⏳ في انتظار المعلم');
+ $('#sxst').textContent=window.sxStat();
  const K=k=>'data-k="'+esc(k)+'"';
  let h='';
  if(SX.err)h+='<div class="sxw">'+esc(SX.err)+'</div>';
@@ -2000,6 +2001,34 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
   if(role=='t'?scrT:sScrT)return stopShare();
   if(role!='t'&&!canScr)return alert('اطلب من المعلم السماح لك بمشاركة الشاشة');
   menu()}
+})();
+
+/* ===== 3) مؤشر حضور المعلم (للطلاب والسكرتارية) ===== */
+(function(){
+ const STALE=12000;
+ window.sxStat=function(){
+  if(!SX)return'';const n=Date.now();
+  if(SX.hub){SX.lostAt=0;const q=n-(SX.hbAt||n);return q>STALE?'🟠 المعلم لا يستجيب منذ '+Math.round(q/1000)+' ث — قد يكون انقطع الإنترنت عنده':'🟢 المعلم متصل بالغرفة'}
+  if(SX.had){SX.lostAt=SX.lostAt||n;const m=Math.floor((n-SX.lostAt)/60000);return'🔴 المعلم غير متصل'+(m?' منذ '+m+' د':' الآن')}
+  return SX.acc?'⏳ المعلم معتمد — ينتظر فتح الغرفة':'⏳ في انتظار المعلم'};
+ const css=document.createElement('style');
+ css.textContent='#tst{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff}#tst.on{background:#1f8f5f}#tst.off{background:#b5473f;animation:rcp 1.6s infinite}';
+ document.head.appendChild(css);
+ let badge=null,was=0,wasAdm=0;
+ setInterval(()=>{
+  if(role=='t'){try{bc({t:'hb'})}catch(e){}try{Object.values(cohosts).forEach(c=>{try{c.send({t:'hb'})}catch(e){}})}catch(e){}}
+ },3000);
+ setInterval(()=>{
+  if(typeof SX!=='undefined'&&SX){const e=$('#sxst');if(e)e.textContent=window.sxStat()}
+  if(role=='t'||typeof admitted==='undefined')return;
+  if(!badge){const a=$('#tmr');if(!a)return;badge=document.createElement('span');badge.id='tst';badge.hidden=true;a.after(badge)}
+  if(admitted&&!wasAdm)window.T_HB=Date.now();wasAdm=admitted;
+  if(!admitted){badge.hidden=true;was=0;return}
+  const ok=Date.now()-(window.T_HB||0)<STALE;
+  badge.hidden=false;badge.className=ok?'on':'off';badge.textContent=ok?'🟢 المعلم متصل':'🔴 المعلم غير متصل';
+  if(was&&ok!=was-1)sys(ok?'✅ عاد اتصال المعلم':'⚠️ المعلم غير متصل حالياً — انتظر عودته');
+  was=ok?2:1;
+ },1000);
 })();
 </script>
 
