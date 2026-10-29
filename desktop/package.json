@@ -16,7 +16,6 @@
   "build": {
     "appId": "com.itqanacademy.desktop",
     "productName": "Itqan Academy",
-    "artifactName": "ItqanAcademy-${version}-${arch}-${target}.${ext}",
     "files": ["main.js", "preload.js", "home.html", "picker.html", "prompt.html", "offline.html", "build/icon.png"],
     "directories": { "output": "dist", "buildResources": "build" },
     "protocols": [{ "name": "Itqan Academy", "schemes": ["itqan"] }],
@@ -27,7 +26,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Itqan Academy"
+      "shortcutName": "Itqan Academy",
+      "artifactName": "ItqanAcademy-${version}-setup.${ext}"
     },
     "portable": { "artifactName": "ItqanAcademy-${version}-portable.${ext}" }
   }
