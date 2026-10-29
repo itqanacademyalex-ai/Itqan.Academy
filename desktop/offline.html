@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Itqan Academy</title>
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:#0e1a2b;color:#e9eff5;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;padding:16px}
+.c{background:#14283f;border-radius:20px;padding:28px;max-width:420px;text-align:center;display:flex;flex-direction:column;gap:14px}
+h2{font-size:20px}p{line-height:1.9;color:#c4d3e0}
+button{padding:12px;border-radius:12px;border:0;background:#1a9486;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="c">
+ <h2>📶 مفيش اتصال بالإنترنت</h2>
+ <p>التطبيق محتاج إنترنت عشان يفتح الفصل. اتأكد إن النت شغّال، وهنحاول تاني لوحدنا كل 10 ثواني.</p>
+ <button id="r">حاول تاني الآن</button>
+</div>
+<script>
+const u=new URLSearchParams(location.search).get('u')||'https://itqanacademyalex-ai.github.io/Itqan.Academy/';
+const go=()=>{if(/^https:\/\/itqanacademyalex-ai\.github\.io\//.test(u))location.href=u};
+document.getElementById('r').onclick=go;setInterval(()=>{if(navigator.onLine)go()},10000);addEventListener('online',go);
+</script>
+</body>
+</html>

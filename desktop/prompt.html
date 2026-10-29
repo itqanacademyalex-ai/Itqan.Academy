@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Itqan Academy</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#14283f;color:#e9eff5;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;padding:16px;display:flex;flex-direction:column;gap:12px;height:100vh}
+#m{font-size:14px;line-height:1.7;white-space:pre-wrap}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #27496b;background:#1d3652;color:#fff;font:inherit;outline:0}
+input:focus{border-color:#1a9486}
+.b{display:flex;gap:8px;justify-content:flex-start;margin-top:auto}
+button{padding:8px 22px;border-radius:10px;border:0;font:inherit;font-weight:700;cursor:pointer;color:#fff}
+#ok{background:#1a9486}#no{background:#27496b}
+</style>
+</head>
+<body>
+<div id="m"></div>
+<input id="v" autocomplete="off" dir="auto">
+<div class="b"><button id="ok">موافق</button><button id="no">إلغاء</button></div>
+<script>
+const v=document.getElementById('v');
+window.itqanApp.promptGet().then(d=>{document.getElementById('m').textContent=d.msg;v.value=d.def;v.focus();v.select()});
+document.getElementById('ok').onclick=()=>window.itqanApp.promptDone(v.value);
+document.getElementById('no').onclick=()=>window.itqanApp.promptDone(null);
+addEventListener('keydown',e=>{if(e.key=='Enter')window.itqanApp.promptDone(v.value);if(e.key=='Escape')window.itqanApp.promptDone(null)});
+</script>
+</body>
+</html>

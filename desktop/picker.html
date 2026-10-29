@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>اختار اللي عايز تشاركه</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#0e1a2b;color:#e9eff5;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;padding:16px;display:flex;flex-direction:column;gap:12px;height:100vh}
+h2{font-size:17px}
+.tabs{display:flex;gap:8px}
+.tabs button{flex:1;padding:8px;border-radius:10px;border:1.5px solid #27496b;background:#14283f;color:#c4d3e0;font:inherit;cursor:pointer}
+.tabs button.a{border-color:#1a9486;color:#fff}
+#g{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;align-content:start}
+.s{background:#14283f;border:2px solid transparent;border-radius:12px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.s:hover{border-color:#27496b}.s.on{border-color:#1a9486}
+.s img{width:100%;aspect-ratio:16/9;object-fit:contain;background:#000;border-radius:8px}
+.s span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.f label{display:flex;gap:6px;align-items:center;font-size:14px}
+.f button{padding:10px 22px;border-radius:12px;border:0;font:inherit;font-weight:700;cursor:pointer;color:#fff}
+#ok{background:#1a9486}#ok:disabled{opacity:.4;cursor:default}#no{background:#27496b}
+</style>
+</head>
+<body>
+<h2>🖥 اختار اللي عايز تشاركه مع الطلاب</h2>
+<div class="tabs"><button id="ts" class="a">الشاشة كلها</button><button id="tw">نافذة معيّنة</button></div>
+<div id="g"></div>
+<div class="f">
+ <label id="al"><input type="checkbox" id="au" checked> مشاركة صوت الكمبيوتر (فيديو، يوتيوب...)</label>
+ <span><button id="no">إلغاء</button> <button id="ok" disabled>مشاركة</button></span>
+</div>
+<script>
+let all=[],sel=null,mode='screen';
+const g=document.getElementById('g'),ok=document.getElementById('ok');
+if(!/Windows/i.test(navigator.userAgent))document.getElementById('al').style.display='none';
+function draw(){g.textContent='';sel=null;ok.disabled=true;
+ all.filter(s=>mode=='screen'?s.screen:!s.screen).forEach((s,i,a)=>{const d=document.createElement('div');d.className='s';
+  const im=document.createElement('img');im.src=s.thumb;const n=document.createElement('span');n.textContent=s.screen&&a.length>1?('شاشة '+(i+1)):s.name;
+  d.append(im,n);d.onclick=()=>{g.querySelectorAll('.s').forEach(x=>x.classList.remove('on'));d.classList.add('on');sel=s.id;ok.disabled=false};
+  d.ondblclick=()=>{sel=s.id;go()};g.append(d);if(a.length==1&&mode=='screen')d.click()})}
+function go(){if(sel)window.itqanApp.pickerDone({id:sel,audio:document.getElementById('au').checked})}
+document.getElementById('ts').onclick=e=>{mode='screen';e.target.classList.add('a');document.getElementById('tw').classList.remove('a');draw()};
+document.getElementById('tw').onclick=e=>{mode='window';e.target.classList.add('a');document.getElementById('ts').classList.remove('a');draw()};
+ok.onclick=go;document.getElementById('no').onclick=()=>window.itqanApp.pickerDone(null);
+addEventListener('keydown',e=>{if(e.key=='Escape')window.itqanApp.pickerDone(null);if(e.key=='Enter')go()});
+window.itqanApp.pickerSources().then(s=>{all=s;draw()});
+</script>
+</body>
+</html>

@@ -335,7 +335,9 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-f';
+/* داخل تطبيق الكمبيوتر: prompt() من التطبيق، ودخول السكرتارية من المتصفح فقط */
+if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
+const VER='2026.10.29-g';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -383,8 +385,12 @@ const certMsg=c=>'C1|'+c.r+'|'+c.p+'|'+c.e;
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
  return(s&&k&&(r=='t'||r=='s')&&/^[a-z0-9]{4,16}$/.test(s)&&/^[A-Za-z0-9_-]{86,88}$/.test(k))?{room:s,k,r}:null})();
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
+/* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
+function appHelp(){if(window.itqanApp||MOB||!/Windows/i.test(navigator.userAgent))return;
+ const b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-bottom:10px';b.textContent='💻 افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)';
+ b.onclick=()=>{location.href='itqan://open?u='+encodeURIComponent(location.href)};$('#jlink').prepend(b)}
 function inAppHelp(){if(!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
  const d=document.createElement('div');d.style.cssText='display:flex;flex-direction:column;gap:6px;margin-bottom:10px';
  const t=document.createElement('small');t.style.cssText='line-height:1.8;color:#e3c08d';const b=document.createElement('button');b.className='w';b.style.background='#1a9486';
@@ -1240,6 +1246,7 @@ const ENM=[
 ["اكتب كود الغرفة اللي أرسلته لك السكرتارية","Enter the room code sent to you by the secretary"],
 ["كود الغرفة غير صحيح — تأكد من الكود اللي أرسلته لك السكرتارية وحاول مرة أخرى.","Wrong room code — check the code the secretary sent you and try again."],
 ["اكتب اسمك","Enter your name"],
+["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
 ["رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)","Room code (teacher: leave empty to create a new room)"],
 ["دخول كمعلم","Join as teacher"],
 ["دخول كطالب","Join as student"],
