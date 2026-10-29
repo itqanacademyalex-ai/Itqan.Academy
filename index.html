@@ -348,7 +348,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.29-i';
+const VER='2026.10.29-l';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -423,6 +423,7 @@ function pwaHome(){if(!PWA||window.itqanApp)return;
   const r=u.searchParams.get('r');if(role&&r!==role)return er.textContent=r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.';
   location.href=u.href};
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
+ window.__ln={open:()=>!f.hidden,reset:()=>{role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>secOpen();
  j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec)}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
@@ -437,6 +438,11 @@ function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|I
  x.onclick=()=>{d.remove();try{localStorage.setItem('itqan_inst_x',Date.now())}catch(e){}};
  if(instEv){t.textContent='ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.';const b=document.createElement('button');b.textContent='📲 تثبيت';b.style.cssText='background:#1a9486;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';
   b.onclick=async()=>{const e=instEv;instEv=null;d.remove();try{e.prompt();await e.userChoice}catch(x){}};d.append(im,t,b,x)}
+ else if(navigator.share){t.textContent='ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».';
+  const b=document.createElement('button');b.textContent='⬆️ مشاركة';b.style.cssText='background:#1a9486;border-radius:10px;padding:10px;width:100%;font-weight:700;font-size:15px';
+  b.onclick=()=>{navigator.share({title:'Itqan Academy',url:location.href}).catch(()=>{})};
+  const n=document.createElement('small');n.style.cssText='width:100%;opacity:.7;font-size:11px;line-height:1.6';n.textContent='لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.';
+  d.style.flexWrap='wrap';d.append(im,t,x,b,n)}
  else{t.textContent='ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».';d.append(im,t,x)}
  $('#join .card').append(d)}
 /* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
@@ -1304,7 +1310,9 @@ const ENM=[
 ["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
 ["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
 ["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
-["تثبيت","Install"],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
+["تثبيت","Install"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
+["ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap “Share”, then “Add to Home Screen”."],
+["لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.","If “Add to Home Screen” isn’t listed, use the Share button ⬆️ in Safari’s toolbar."],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
 ["رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)","Room code (teacher: leave empty to create a new room)"],
 ["دخول كمعلم","Join as teacher"],
@@ -1585,9 +1593,10 @@ try{setLang(localStorage.getItem('itqan_lang')||'ar')}catch(e){setLang('ar')}
 </script>
 
 <script>
-/* ================= لوحة السكرتارية ================= */
-let SX=null;
-/* كل الجلسات المحفوظة (آخر 18 ساعة) — كل حصة يمكن فتحها في تبويب منفصل */
+/* ================= لوحة السكرتارية — لوحة واحدة لكل الحصص ================= */
+const SXS={};let SXV=null; /* كل الحصص الشغّالة في الصفحة دي، والحصة المفتوحة بالتفصيل (أو null = اللوحة) */
+const sxAll=()=>Object.values(SXS);
+/* كل الجلسات المحفوظة (آخر 18 ساعة) */
 function sxPut(a){try{localStorage.setItem('itqan_sxs',JSON.stringify(a))}catch(e){}}
 function sxList(){let a=[];try{a=JSON.parse(localStorage.getItem('itqan_sxs'))||[]}catch(e){}if(!Array.isArray(a))a=[];
  try{const o=JSON.parse(localStorage.getItem('itqan_sx'));if(o&&o.room&&!a.some(x=>x.room===o.room))a.push(o);localStorage.removeItem('itqan_sx')}catch(e){}
@@ -1601,7 +1610,7 @@ function secOpen(){
 }
 let sxFail=0;
 /* السكرتارية رجعت للصفحة: لو الاتصال بالخادم اتقطع وهي في الخلفية نرجّعه فوراً */
-document.addEventListener('visibilitychange',()=>{if(document.hidden||!SX||!SX.peer)return;const p=SX.peer;if(p.destroyed)sxPeer();else if(p.disconnected){try{p.reconnect()}catch(e){}}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;sxAll().forEach(X=>{const p=X.peer;if(!p)return;if(p.destroyed)sxPeer(X);else if(p.disconnected){try{p.reconnect()}catch(e){}}})});
 function sxLogin(){$('#sxst').textContent='🔒';$('#sxB').innerHTML='';
  $('#sxA').innerHTML='<h3>🔐 دخول السكرتارية</h3><input id="sxpw" type="password" placeholder="كلمة السر" autocomplete="current-password" onkeydown="if(event.key==\'Enter\')sxAuth()"><div id="sxpe" style="color:#fca5a5;min-height:20px"></div><button class="sxb g" id="sxpb" onclick="sxAuth()">دخول</button><button class="sxb d" onclick="location.reload()">رجوع</button>';
  setTimeout(()=>{const i=$('#sxpw');i&&i.focus()},50)}
@@ -1611,103 +1620,129 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
  if(h&&h===SEC_HASH){sxFail=0;try{sessionStorage.setItem('itqan_su',SEC_HASH)}catch(e){}sxHome();return}
  sxFail++;i.value='';$('#sxpe').textContent='كلمة السر غير صحيحة'+(sxFail>2?' — انتظر '+Math.min(sxFail*3,30)+' ثانية':'');
  setTimeout(()=>{b.disabled=false;i.focus()},sxFail>2?Math.min(sxFail*3,30)*1000:600)}
-function sxHome(){const L=sxList(),K=k=>'data-k="'+esc(k)+'"';
- $('#sxst').textContent='';
- $('#sxA').innerHTML='<h3>➕ جلسة جديدة</h3><input id="sxn" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الجلسة وتوليد الروابط</button>'+
-  (L.length?'<hr style="border-color:#27496b;width:100%"><h3>📋 الجلسات المفتوحة ('+L.length+')</h3><small style="color:#a9bccd;line-height:1.8">لإدارة أكثر من حصة في نفس الوقت افتحي كل حصة في تبويب منفصل.</small>'+
-   L.slice().reverse().map(s=>'<div class="sxr"><span><b>'+U(s.title||s.room)+'</b>'+(s.tn?' — '+U(s.tn):'')+'</span><span class="bt"><button class="sxb" '+K(s.room)+' onclick="sxResume(this.dataset.k)">استكمال</button><button class="sxb d" '+K(s.room)+' onclick="sxForget(this.dataset.k)">حذف</button></span></div>').join(''):'');
- $('#sxB').innerHTML='';rcDraw()}
-function sxForget(r){if(!confirm('حذف هذه الجلسة من القائمة؟ لن تتمكني من التحكم فيها بعد ذلك.'))return;sxPut(sxList().filter(x=>x.room!==r));sxHome()}
+/* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
+function sxHome(){$('#sec').classList.add('sxwide');
+ $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>';
+ rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender()}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  const s={room:genCode(),pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),jwk:await crypto.subtle.exportKey('jwk',kp.privateKey),
   pin:String(1000+crypto.getRandomValues(new Uint32Array(1))[0]%9000),title:$('#sxn').value.trim(),tn:$('#sxt').value.trim(),ts:Date.now()};
- sxPut(sxList().concat([s]));
- sxStart(s,kp.privateKey)}
-async function sxResume(r){const s=sxList().find(x=>x.room===r);if(!s)return sxHome();sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}
-function sxStart(s,priv){SX={...s,priv,reqs:{},hub:null,hubTry:null,snap:null,peer:null,regOk:0,err:'',acc:null,msg:''};
- $('#sxA').innerHTML='';sxDraw();sxPeer();SX.pt=setInterval(()=>{if(SX&&SX.regOk&&!SX.hub&&!SX.hubTry)sxHub()},5000)}
-async function sxPeer(){
- const ice=await getIce();
- const p=SX.peer=new Peer('itqan-reg-'+SX.room,{config:ice});
- p.on('open',()=>{SX.regOk=1;SX.err='';sxDraw();sxHub()});
- p.on('disconnected',()=>{if(p.destroyed)return;SX.regOk=0;const re=()=>{if(p.destroyed||!p.disconnected||!SX||SX.peer!==p)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1500)});
+ sxPut(sxList().concat([s]));$('#sxn').value='';$('#sxt').value='';
+ SXV=s.room;sxStart(s,kp.privateKey)}
+async function sxResume(r){const s=sxList().find(x=>x.room===r);if(!s||SXS[r])return;try{sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}catch(e){}}
+function sxStart(s,priv){if(SXS[s.room])return;
+ const X=SXS[s.room]={...s,priv,reqs:{},hub:null,hubTry:null,snap:null,peer:null,regOk:0,err:'',acc:null,msg:'',rv:{}};
+ sxPeer(X);X.pt=setInterval(()=>{if(SXS[X.room]===X&&X.regOk&&!X.hub&&!X.hubTry)sxHub(X)},5000);sxRender()}
+const sxLive=X=>SXS[X.room]===X;
+async function sxPeer(X){
+ const ice=await getIce();if(!sxLive(X))return;
+ const p=X.peer=new Peer('itqan-reg-'+X.room,{config:ice});
+ p.on('open',()=>{X.regOk=1;X.err='';sxRender();sxHub(X)});
+ p.on('disconnected',()=>{if(p.destroyed)return;X.regOk=0;const re=()=>{if(p.destroyed||!p.disconnected||!sxLive(X)||X.peer!==p)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1500)});
  p.on('error',e=>{
-  if(e.type=='unavailable-id'){SX.err='الجلسة ما زالت مفتوحة في نافذة أخرى أو من محاولة سابقة — جارٍ إعادة المحاولة...';SX.regOk=0;sxDraw();try{p.destroy()}catch(x){}setTimeout(sxPeer,5000);return}
-  if(e.type=='peer-unavailable'){SX.hubTry=null;return}
-  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){SX.err='مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...';sxDraw();if(!SX.regOk&&!p.id)setTimeout(()=>{if(SX&&SX.peer===p){try{p.destroy()}catch(x){}sxPeer()}},4000)}});
- p.on('call',sxOnCall);
+  if(e.type=='unavailable-id'){X.err='الحصة دي مفتوحة في نافذة أو تبويب تاني — اقفليه، وجارٍ إعادة المحاولة...';X.regOk=0;sxRender();try{p.destroy()}catch(x){}setTimeout(()=>{if(sxLive(X))sxPeer(X)},5000);return}
+  if(e.type=='peer-unavailable'){X.hubTry=null;return}
+  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){X.err='مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...';sxRender();if(!X.regOk&&!p.id)setTimeout(()=>{if(sxLive(X)&&X.peer===p){try{p.destroy()}catch(x){}sxPeer(X)}},4000)}});
+ p.on('call',c=>sxOnCall(X,c));
  p.on('connection',c=>{
   c.on('data',async d=>{
    if(!d||d.t!='treq')return;
-   if(!SX.reqs[c.peer]&&Object.keys(SX.reqs).length>=8)return;
+   if(!X.reqs[c.peer]&&Object.keys(X.reqs).length>=8)return;
    const pb=String(d.p||'');if(!/^[A-Za-z0-9_-]{86,88}$/.test(pb))return;
    try{await impPub(pb)}catch(e){return}
-   if(String(d.pin||'')!==SX.pin){try{c.send({t:'trej',w:'pin'})}catch(e){}return}
-   SX.reqs[c.peer]={c,n:String(d.n||'').slice(0,40)||'معلم',p:pb,ok:1};chime();sxDraw()});
-  c.on('close',()=>{delete SX.reqs[c.peer];sxDraw()});
+   if(String(d.pin||'')!==X.pin){try{c.send({t:'trej',w:'pin'})}catch(e){}return}
+   X.reqs[c.peer]={c,n:String(d.n||'').slice(0,40)||'معلم',p:pb,ok:1};chime();sxRender()});
+  c.on('close',()=>{delete X.reqs[c.peer];sxRender()});
   c.on('error',()=>{})})}
-async function sxAcc(k){const r=SX.reqs[k];if(!r)return;
- if(!r.ok)return;
- if(!r.c.open){delete SX.reqs[k];sxDraw();return alert('انقطع اتصال المعلم — اطلب منه فتح الرابط من جديد')}
- const cert={r:SX.room,p:r.p,e:Date.now()+14*36e5};
- try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher(),ml:mlOn()?1:0})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
- SX.acc={n:r.n};delete SX.reqs[k];sxDraw()}
-function sxRej(k){const r=SX.reqs[k];if(!r)return;try{r.c.send({t:'trej'})}catch(e){}delete SX.reqs[k];sxDraw()}
-function sxHub(){
- if(!SX||!SX.peer||SX.peer.destroyed||SX.peer.disconnected||SX.hub||SX.hubTry)return;
- const c=SX.hubTry=SX.peer.connect('itqan-'+SX.room,{reliable:true});let step=0;const nonce=rnd();
- const to=setTimeout(()=>{if(SX.hubTry===c&&!SX.hub){try{c.close()}catch(e){}SX.hubTry=null}},15000);
+async function sxAcc(r,k){const X=SXS[r],q=X&&X.reqs[k];if(!q||!q.ok)return;
+ if(!q.c.open){delete X.reqs[k];sxRender();return alert('انقطع اتصال المعلم — اطلب منه فتح الرابط من جديد')}
+ const cert={r:X.room,p:q.p,e:Date.now()+14*36e5};
+ try{q.c.send({t:'tok',c:cert,s:await sgn(X.priv,certMsg(cert)),rc:rcForTeacher(X),ml:mlOn()?1:0})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
+ X.acc={n:q.n};delete X.reqs[k];sxRender()}
+function sxRej(r,k){const X=SXS[r],q=X&&X.reqs[k];if(!q)return;try{q.c.send({t:'trej'})}catch(e){}delete X.reqs[k];sxRender()}
+function sxHub(X){
+ if(!sxLive(X)||!X.peer||X.peer.destroyed||X.peer.disconnected||X.hub||X.hubTry)return;
+ const c=X.hubTry=X.peer.connect('itqan-'+X.room,{reliable:true});let step=0;const nonce=rnd();
+ const to=setTimeout(()=>{if(X.hubTry===c&&!X.hub){try{c.close()}catch(e){}X.hubTry=null}},15000);
  c.on('open',()=>c.send({t:'chal',n:nonce}));
  c.on('data',async d=>{if(!d)return;
   if(d.t=='proof'&&step==0){step=1;
-   if(!(d.c&&await certOk(d.c,d.s,SX.room,SX.pub)&&await vfy(d.c.p,'T|'+SX.room+'|'+nonce,d.g))){try{c.close()}catch(e){}return}
+   if(!(d.c&&await certOk(d.c,d.s,X.room,X.pub)&&await vfy(d.c.p,'T|'+X.room+'|'+nonce,d.g))){try{c.close()}catch(e){}return}
    c.send({t:'cohello'})}
-  else if(d.t=='conon'&&step==1){step=2;c.send({t:'coproof',g:await sgn(SX.priv,'C|'+SX.room+'|'+d.n)})}
-  else if(d.t=='coack'&&step==2){step=3;SX.hub=c;SX.hbAt=Date.now();SX.hubTry=null;clearTimeout(to);SX.bye=0;SX.had=1;clearTimeout(SX.dropT);sxDraw();sxRcPush()}
-  else if(d.t=='hb'&&step==3){SX.hbAt=Date.now()}
-  else if(d.t=='bye'&&step==3){SX.bye=1;clearTimeout(SX.dropT)}
-  else if(d.t=='rec'&&step==3){sxRecOn(d.on)}
-  else if(d.t=='rs'&&step==3){const pw=SX.snap?SX.snap.w.length:0;SX.snap=d;if(d.w.length>pw)chime();sxDraw()}});
- c.on('close',()=>{clearTimeout(to);if(SX.hubTry===c)SX.hubTry=null;if(SX.hub===c){SX.hub=null;SX.snap=null;sxRecEnd();sxDraw();sxDropWatch()}});
+  else if(d.t=='conon'&&step==1){step=2;c.send({t:'coproof',g:await sgn(X.priv,'C|'+X.room+'|'+d.n)})}
+  else if(d.t=='coack'&&step==2){step=3;X.hub=c;X.hbAt=Date.now();X.hubTry=null;clearTimeout(to);X.bye=0;X.had=1;clearTimeout(X.dropT);sxRender();sxRcPush(X)}
+  else if(d.t=='hb'&&step==3){X.hbAt=Date.now()}
+  else if(d.t=='bye'&&step==3){X.bye=1;clearTimeout(X.dropT)}
+  else if(d.t=='rec'&&step==3){sxRecOn(X,d.on)}
+  else if(d.t=='rs'&&step==3){const pw=X.snap?X.snap.w.length:0;X.snap=d;if(d.w.length>pw)chime();sxRender()}});
+ c.on('close',()=>{clearTimeout(to);if(X.hubTry===c)X.hubTry=null;if(X.hub===c){X.hub=null;X.snap=null;sxRecEnd(X);sxRender();sxDropWatch(X)}});
  c.on('error',()=>{})}
-function sxCmd(a,k,v){if(SX&&SX.hub)try{SX.hub.send({t:'cmd',a,k,v})}catch(e){}}
-function sxLink(r){if(!/^https?:$/.test(location.protocol)||window!==top)return'';return location.origin+location.pathname+'?s='+SX.room+'&k='+SX.pub+'&r='+r}
-function sxFlash(m){SX.msg=m;sxDraw();setTimeout(()=>{if(SX){SX.msg='';sxDraw()}},2500)}
-async function sxCopy(r){const u=sxLink(r);try{await navigator.clipboard.writeText(u);sxFlash('✓ تم نسخ الرابط')}catch(e){prompt('انسخ الرابط:',u)}}
-function sxWa(r){const u=sxLink(r),t=SX.title?' ('+SX.title+')':'';
+function sxCmd(r,a,k,v){const X=SXS[r];if(X&&X.hub)try{X.hub.send({t:'cmd',a,k,v})}catch(e){}}
+function sxLink(X,r){if(!/^https?:$/.test(location.protocol)||window!==top)return'';return location.origin+location.pathname+'?s='+X.room+'&k='+X.pub+'&r='+r}
+function sxFlash(X,m){X.msg=m;sxRender();setTimeout(()=>{X.msg='';sxRender()},2500)}
+async function sxCopy(r,t){const X=SXS[r];if(!X)return;const u=sxLink(X,t);try{await navigator.clipboard.writeText(u);sxFlash(X,'✓ تم نسخ الرابط')}catch(e){prompt('انسخ الرابط:',u)}}
+function sxWa(r,w){const X=SXS[r];if(!X)return;const u=sxLink(X,w),t=X.title?' ('+X.title+')':'';
  const ob='\n⚠️ مهم: افتح الرابط في Chrome أو Safari وليس داخل واتساب (اضغط ⋮ أو زر المشاركة ← «فتح في المتصفح»)، وإلا قد لا يعمل الميكروفون.';
- const m=r=='t'?'مرحباً'+(SX.tn?' '+SX.tn:'')+'، رابط دخولك للحصة'+t+':\n'+u+'\nكود المعلم: '+SX.pin+'\nبعد فتح الرابط سأقوم بالسماح لك بالدخول.'+ob:'رابط الدخول للحصة'+t+':\n'+u+'\nاكتب اسمك ثم انتظر حتى يتم السماح لك بالدخول.'+ob;
+ const m=w=='t'?'مرحباً'+(X.tn?' '+X.tn:'')+'، رابط دخولك للحصة'+t+':\n'+u+'\nكود المعلم: '+X.pin+'\nبعد فتح الرابط سأقوم بالسماح لك بالدخول.'+ob:'رابط الدخول للحصة'+t+':\n'+u+'\nاكتب اسمك ثم انتظر حتى يتم السماح لك بالدخول.'+ob;
  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
-function sxEnd(){if(!confirm('إنهاء الجلسة وحذف الروابط؟ لن يعمل أي رابط بعد ذلك.'))return;
- SX.bye=1;clearTimeout(SX.dropT);
- if(SX.hub){sxCmd('end');setTimeout(sxClose,400)}else sxClose()}
-async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;sxPut(sxList().filter(x=>x.room!==SX.room));try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);clearTimeout(SX.dropT);SX=null;sxHome();recRefresh()}
-function sxDraw(){if(!SX)return;
- const tl=sxLink('t'),sl=sxLink('s'),sn=SX.snap,reqs=Object.entries(SX.reqs);
- $('#sxst').textContent=window.sxStat();
- const K=k=>'data-k="'+esc(k)+'"';
- let h='';
- if(SX.err)h+='<div class="sxw">'+esc(SX.err)+'</div>';
+function sxEnd(r){const X=SXS[r];if(!X)return;if(!confirm('إنهاء الحصة «'+(X.title||X.room)+'» وحذف روابطها؟ لن يعمل أي رابط بعد ذلك.'))return;
+ X.bye=1;clearTimeout(X.dropT);
+ if(X.hub){sxCmd(r,'end');setTimeout(()=>sxClose(X),400)}else sxClose(X)}
+async function sxClose(X){try{X.rec&&await X.rec.stop()}catch(e){}X.rec=null;sxPut(sxList().filter(x=>x.room!==X.room));try{X.peer.destroy()}catch(e){}clearInterval(X.pt);clearTimeout(X.dropT);
+ Object.values(X.rv).forEach(v=>{try{v.srcObject=null;v.remove&&v.remove()}catch(e){}});
+ if(SXS[X.room]===X)delete SXS[X.room];if(SXV===X.room)SXV=null;sxRender();recRefresh()}
+function sxOpen(r){if(!SXS[r])return;SXV=r;sxRender();try{$('#sec').scrollTop=0}catch(e){}}
+function sxBack(){SXV=null;sxRender()}
+/* حالة المعلم لكل حصة */
+function sxStat(X){if(!X)return'';const n=Date.now();
+ if(X.hub){X.lostAt=0;const q=n-(X.hbAt||n);return q>12000?'🟠 المعلم لا يستجيب منذ '+Math.round(q/1000)+' ث':'🟢 المعلم متصل'}
+ if(X.had){X.lostAt=X.lostAt||n;const m=Math.floor((n-X.lostAt)/60000);return'🔴 المعلم غير متصل'+(m?' منذ '+m+' د':' الآن')}
+ return X.acc?'⏳ المعلم معتمد — ينتظر فتح الغرفة':'⏳ في انتظار المعلم'}
+function sxSummary(){const L=sxAll();if(!L.length)return'';const on=L.filter(X=>X.hub).length,w=L.reduce((a,X)=>a+(X.snap?X.snap.w.length:0),0),q=L.reduce((a,X)=>a+Object.keys(X.reqs).length,0);
+ return '📚 '+L.length+' حصة • 🟢 '+on+' معلم متصل'+(w?' • ⏳ '+w+' طالب منتظر':'')+(q?' • 👨‍🏫 '+q+' طلب دخول معلم':'')}
+function sxTick(){if(role!='c')return;const e=$('#sxst');if(e&&sxAll().length)e.textContent=sxSummary();document.querySelectorAll('#sxB [data-st]').forEach(s=>{const t=sxStat(SXS[s.dataset.st]);if(s.textContent!==t)s.textContent=t})}
+let sxRT=0;function sxRender(){clearTimeout(sxRT);sxRT=setTimeout(sxPaint,60)}
+function sxPaint(){if(role!='c'||!$('#sxB'))return;if(SXV&&!SXS[SXV])SXV=null;
+ const det=!!SXV;$('#sxA').hidden=det;const R=$('#sxR');if(R)R.hidden=det;
+ $('#sxB').innerHTML=det?sxDetail(SXS[SXV]):sxDash();sxTick();if(!sxAll().length)$('#sxst').textContent=''}
+const sxD=(r,k)=>' data-r="'+esc(r)+'"'+(k!=null?' data-k="'+esc(k)+'"':'');
+/* اللوحة: كارت لكل حصة — المهم (طلب معلم/طلاب منتظرين) يظهر فوق وعليه أزرار القبول */
+function sxDash(){const L=sxAll();
+ if(!L.length)return '<div class="sxc"><small style="color:#a9bccd;line-height:1.9">مفيش حصص مفتوحة دلوقتي — اعملي حصة جديدة من فوق، وكل الحصص هتظهر هنا مع بعض.</small></div>';
+ const hot=X=>(Object.keys(X.reqs).length?2:0)+(X.snap&&X.snap.w.length?1:0);
+ L.sort((a,b)=>hot(b)-hot(a)||b.ts-a.ts);
+ return '<div class="sxg">'+L.map(X=>{const sn=X.snap,reqs=Object.entries(X.reqs),w=sn?sn.w.length:0,a=sn?sn.a.length:0,hd=sn?sn.a.filter(x=>x.h).length:0;
+  return '<div class="sxc sxk'+(hot(X)?' hot':'')+'"><div class="sxkh"><b>'+U(X.title||('حصة '+X.room))+'</b><span class="sxs" data-st="'+esc(X.room)+'"></span></div>'+
+   (X.tn?'<small style="color:#a9bccd">👨‍🏫 '+U(X.tn)+'</small>':'')+
+   '<div class="sxkn"><span title="داخل الحصة">🎓 '+a+'</span><span title="في الانتظار"'+(w?' class="hot"':'')+'>⏳ '+w+'</span><span title="يد مرفوعة">✋ '+hd+'</span>'+(X.rec?'<span title="جارٍ التسجيل">🔴</span>':'')+'</div>'+
+   (X.err?'<div class="sxw">'+esc(X.err)+'</div>':'')+
+   reqs.map(([k,q])=>'<div class="sxr"><span>👨‍🏫 '+U(q.n)+' عايز يدخل كمعلم</span><span class="bt"><button class="sxb g"'+sxD(X.room,k)+' onclick="sxAcc(this.dataset.r,this.dataset.k)">قبول</button><button class="sxb r"'+sxD(X.room,k)+' onclick="sxRej(this.dataset.r,this.dataset.k)">رفض</button></span></div>').join('')+
+   (w?'<button class="sxb g"'+sxD(X.room)+' onclick="sxCmd(this.dataset.r,\'admitAll\')">✓ قبول الطلاب المنتظرين ('+w+')</button>':'')+
+   '<div class="bt" style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb"'+sxD(X.room)+' onclick="sxOpen(this.dataset.r)">فتح الحصة ←</button><button class="sxb d"'+sxD(X.room)+' onclick="sxWa(this.dataset.r,\'t\')">📲 المعلم</button><button class="sxb d"'+sxD(X.room)+' onclick="sxWa(this.dataset.r,\'s\')">📲 الطلاب</button></div></div>'}).join('')+'</div>'}
+/* تفاصيل حصة واحدة: الروابط والكود والطلبات والتحكم في الطلاب */
+function sxDetail(X){const r=X.room,tl=sxLink(X,'t'),sl=sxLink(X,'s'),sn=X.snap,reqs=Object.entries(X.reqs);
+ let h='<div class="sxr" style="background:transparent;padding:0"><button class="sxb d" onclick="sxBack()">→ كل الحصص</button><span class="sxs" data-st="'+esc(r)+'"></span></div>';
+ if(X.err)h+='<div class="sxw">'+esc(X.err)+'</div>';
  if(!tl)h+='<div class="sxw">⚠️ هذه الصفحة غير مفتوحة من رابط https — الروابط لن تعمل للآخرين. ارفع الملف على استضافة (مثل Netlify أو GitHub Pages) وافتحه من هناك.</div>';
- h+='<div class="sxc"><h3>🔗 روابط الدعوة'+(SX.title?' — '+U(SX.title):'')+'</h3>'+
-  '<div>👨‍🏫 رابط المعلم'+(SX.tn?' ('+U(SX.tn)+')':'')+'</div><div class="sxl"><code>'+esc(tl||'—')+'</code><button class="sxb" onclick="sxCopy(\'t\')">نسخ</button><button class="sxb g" onclick="sxWa(\'t\')">واتساب</button></div>'+
-  '<div>🔑 كود المعلم (أرسله له مع الرابط)</div><div class="sxpin">'+esc(SX.pin)+'</div>'+
-  '<div>🎓 رابط الطلاب</div><div class="sxl"><code>'+esc(sl||'—')+'</code><button class="sxb" onclick="sxCopy(\'s\')">نسخ</button><button class="sxb g" onclick="sxWa(\'s\')">واتساب</button></div>'+
-  (SX.msg?'<div style="color:#e6fbf8">'+esc(SX.msg)+'</div>':'')+
+ h+='<div class="sxc"><h3>🔗 روابط الدعوة'+(X.title?' — '+U(X.title):'')+'</h3>'+
+  '<div>👨‍🏫 رابط المعلم'+(X.tn?' ('+U(X.tn)+')':'')+'</div><div class="sxl"><code>'+esc(tl||'—')+'</code><button class="sxb"'+sxD(r)+' onclick="sxCopy(this.dataset.r,\'t\')">نسخ</button><button class="sxb g"'+sxD(r)+' onclick="sxWa(this.dataset.r,\'t\')">واتساب</button></div>'+
+  '<div>🔑 كود المعلم (أرسله له مع الرابط)</div><div class="sxpin">'+esc(X.pin)+'</div>'+
+  '<div>🎓 رابط الطلاب</div><div class="sxl"><code>'+esc(sl||'—')+'</code><button class="sxb"'+sxD(r)+' onclick="sxCopy(this.dataset.r,\'s\')">نسخ</button><button class="sxb g"'+sxD(r)+' onclick="sxWa(this.dataset.r,\'s\')">واتساب</button></div>'+
+  (X.msg?'<div style="color:#e6fbf8">'+esc(X.msg)+'</div>':'')+
   '<small style="color:#a9bccd;line-height:1.8">لا أحد يدخل بدون موافقة. أبقِ هذه الصفحة مفتوحة حتى يدخل المعلم.</small></div>';
- if(reqs.length)h+='<div class="sxc"><h3>👨‍🏫 طلبات دخول المعلم</h3>'+reqs.map(([k,r])=>'<div class="sxr"><span>'+U(r.n)+' '+(r.ok?'<span style="color:#e6fbf8">✓ الكود صحيح</span>':'<span style="color:#fca5a5">✗ الكود غير مطابق</span>')+'</span><span class="bt"><button class="sxb g" '+K(k)+' onclick="sxAcc(this.dataset.k)">قبول</button><button class="sxb r" '+K(k)+' onclick="sxRej(this.dataset.k)">رفض</button></span></div>').join('')+'</div>';
- if(SX.hub&&sn){
+ if(reqs.length)h+='<div class="sxc"><h3>👨‍🏫 طلبات دخول المعلم</h3>'+reqs.map(([k,q])=>'<div class="sxr"><span>'+U(q.n)+' <span style="color:#e6fbf8">✓ الكود صحيح</span></span><span class="bt"><button class="sxb g"'+sxD(r,k)+' onclick="sxAcc(this.dataset.r,this.dataset.k)">قبول</button><button class="sxb r"'+sxD(r,k)+' onclick="sxRej(this.dataset.r,this.dataset.k)">رفض</button></span></div>').join('')+'</div>';
+ if(X.hub&&sn){
   h+='<div class="sxc"><h3>🚪 التحكم في الدخول — المعلم: '+U(sn.tn)+'</h3>'+
-   '<div class="sxr"><span>وضع الدخول: <b>'+['بموافقة','تلقائي (يحدده المعلم)','مقفلة'][sn.gm]+'</b></span><span class="bt"><button class="sxb g" onclick="sxCmd(\'gm\',\'\',0)">بموافقة</button><button class="sxb r" onclick="sxCmd(\'gm\',\'\',2)">إقفال الغرفة</button></span></div>'+
-   '<div class="bt" style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="sxCmd(\'muteAll\')">'+(sn.am?'🎤 إلغاء كتم الجميع':'🔇 كتم الجميع')+'</button><button class="sxb d" onclick="sxCmd(\'lock\')">'+(sn.lk?'💬 فتح الشات':'🔒 قفل الشات')+'</button></div>'+
+   '<div class="sxr"><span>وضع الدخول: <b>'+['بموافقة','تلقائي (يحدده المعلم)','مقفلة'][sn.gm]+'</b></span><span class="bt"><button class="sxb g"'+sxD(r)+' onclick="sxCmd(this.dataset.r,\'gm\',\'\',0)">بموافقة</button><button class="sxb r"'+sxD(r)+' onclick="sxCmd(this.dataset.r,\'gm\',\'\',2)">إقفال الغرفة</button></span></div>'+
+   '<div class="bt" style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d"'+sxD(r)+' onclick="sxCmd(this.dataset.r,\'muteAll\')">'+(sn.am?'🎤 إلغاء كتم الجميع':'🔇 كتم الجميع')+'</button><button class="sxb d"'+sxD(r)+' onclick="sxCmd(this.dataset.r,\'lock\')">'+(sn.lk?'💬 فتح الشات':'🔒 قفل الشات')+'</button></div>'+
    '<h3>⏳ غرفة الانتظار ('+sn.w.length+')</h3>'+
-   (sn.w.length?'<button class="sxb g" onclick="sxCmd(\'admitAll\')">قبول الجميع</button>'+sn.w.map(x=>'<div class="sxr"><span>⏳ '+U(x.n)+'</span><span class="bt"><button class="sxb g" '+K(x.k)+' onclick="sxCmd(\'admit\',this.dataset.k)">قبول</button><button class="sxb r" '+K(x.k)+' onclick="sxCmd(\'deny\',this.dataset.k)">رفض</button></span></div>').join(''):'<small style="color:#a9bccd">لا أحد في الانتظار</small>')+
+   (sn.w.length?'<button class="sxb g"'+sxD(r)+' onclick="sxCmd(this.dataset.r,\'admitAll\')">قبول الجميع</button>'+sn.w.map(x=>'<div class="sxr"><span>⏳ '+U(x.n)+'</span><span class="bt"><button class="sxb g"'+sxD(r,x.k)+' onclick="sxCmd(this.dataset.r,\'admit\',this.dataset.k)">قبول</button><button class="sxb r"'+sxD(r,x.k)+' onclick="sxCmd(this.dataset.r,\'deny\',this.dataset.k)">رفض</button></span></div>').join(''):'<small style="color:#a9bccd">لا أحد في الانتظار</small>')+
    '<h3>🎓 الطلاب داخل الحصة ('+sn.a.length+')</h3>'+
-   (sn.a.length?sn.a.map(x=>'<div class="sxr"><span>'+(x.h?'✋ ':'🟢 ')+U(x.n)+' '+(x.c?'':'🔇')+'</span><span class="bt"><button class="sxb d" '+K(x.k)+' onclick="sxCmd(\'mute\',this.dataset.k)">'+(x.c?'كتم':'إلغاء الكتم')+'</button><button class="sxb r" '+K(x.k)+' onclick="sxCmd(\'kick\',this.dataset.k)">طرد</button></span></div>').join(''):'<small style="color:#a9bccd">لا يوجد طلاب</small>')+'</div>'}
- else if(SX.acc)h+='<div class="sxc"><small style="line-height:1.9">✓ تم اعتماد المعلم ('+U(SX.acc.n)+'). بمجرد فتحه للغرفة ستظهر هنا أدوات التحكم في الطلاب.</small></div>';
- h+='<button class="sxb r" style="padding:11px" onclick="sxEnd()">⏹ إنهاء الجلسة وإبطال الروابط</button>';
- $('#sxB').innerHTML=h}
+   (sn.a.length?sn.a.map(x=>'<div class="sxr"><span>'+(x.h?'✋ ':'🟢 ')+U(x.n)+' '+(x.c?'':'🔇')+'</span><span class="bt"><button class="sxb d"'+sxD(r,x.k)+' onclick="sxCmd(this.dataset.r,\'mute\',this.dataset.k)">'+(x.c?'كتم':'إلغاء الكتم')+'</button><button class="sxb r"'+sxD(r,x.k)+' onclick="sxCmd(this.dataset.r,\'kick\',this.dataset.k)">طرد</button></span></div>').join(''):'<small style="color:#a9bccd">لا يوجد طلاب</small>')+'</div>'}
+ else if(X.acc)h+='<div class="sxc"><small style="line-height:1.9">✓ تم اعتماد المعلم ('+U(X.acc.n)+'). بمجرد فتحه للغرفة ستظهر هنا أدوات التحكم في الطلاب.</small></div>';
+ h+='<button class="sxb r" style="padding:11px"'+sxD(r)+' onclick="sxEnd(this.dataset.r)">⏹ إنهاء الحصة وإبطال الروابط</button>';
+ return h}
 </script>
 <script>
 /* ================= تسجيل الحصص → Google Drive ================= */
@@ -1719,12 +1754,12 @@ let RCFG=null;try{RCFG=JSON.parse(localStorage.getItem('itqan_rc'))}catch(e){}
 const DEF_REC={u:'https://script.google.com/macros/s/AKfycby6s-kmvk3Kl5mgA0GwFfhgbcF9soP2Zui4EMO8pXxIPGAjt73OJC0Z2QtKINFzbjMe/exec',k:'',n:'حصة'};
 if(!RCFG||!RCFG.u)RCFG={u:DEF_REC.u,k:'',on:1};
 RC=recCfgOk(DEF_REC);
-const RUPS=[],RDONE=[],RV={m:null,c:null,ms:null,cs:null};
+const RUPS=[],RDONE=[];
 const recMB=b=>(b/1048576).toFixed(1);
 function recCfgOk(r){return r&&typeof r.u==='string'&&typeof r.k==='string'&&RE_URL.test(r.u)&&r.k.length<200?{u:r.u,k:r.k,n:String(r.n||'حصة').slice(0,60)}:null}
 function recName(t){const d=new Date(),p=n=>String(n).padStart(2,'0');return(t||'حصة')+'_'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'_'+p(d.getHours())+'-'+p(d.getMinutes())}
 function recMime(){for(const m of ['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm','video/mp4']){try{if(MediaRecorder.isTypeSupported(m))return m}catch(e){}}return'video/webm'}
-function recBusy(){return RUPS.length>0||!!recSelfEng||(typeof SX!=='undefined'&&!!SX&&!!SX.rec)}
+function recBusy(){return RUPS.length>0||!!recSelfEng||(typeof SXS!=='undefined'&&sxAll().some(X=>!!X.rec))}
 /* ---- تخزين مؤقت في المتصفح (للاستعادة بعد الانقطاع) ---- */
 let _db=null;
 function rdb(){return _db||(_db=new Promise((res,rej)=>{const q=indexedDB.open('itqan_rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('meta',{keyPath:'id'});d.createObjectStore('chunks',{keyPath:'key'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))}
@@ -1806,24 +1841,25 @@ function coMedia(){
   try{c._mc&&c._mc.close()}catch(e){}
   try{const at=mxRecTrack();c._mc=peer.call(c.peer,new MediaStream([progEnsure().tr,...(at?[at]:[])]),{metadata:{k:'rec'}});c._mct=Date.now();setTimeout(()=>tuneCall(c._mc,8e5,'maintain-resolution'),900)}catch(e){}});
  pushCo()}
-/* ---- جانب السكرتارية ---- */
-function rvEl(k){if(!RV[k]){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none';document.body.appendChild(v);RV[k]=v}return RV[k]}
-function sxOnCall(c){if(!SX||c.peer!=='itqan-'+SX.room)return;c.answer();const cam=c.metadata&&c.metadata.k=='cam';
- c.on('stream',s=>{c._s=s;const v=rvEl(cam?'c':'m');v.srcObject=s;v.play().catch(()=>{});if(!cam){const a=RV.au||(RV.au=new Audio());a.muted=true;a.srcObject=s;a.play().catch(()=>{})}if(cam)RV.cs=s;else RV.ms=s});
- c.on('close',()=>{if(cam&&RV.cs&&RV.cs===c._s){RV.cs=null;if(RV.c)RV.c.srcObject=null}})}
-function sxRecOn(on){if(!SX)return;
- if(!on){sxRecEnd();return}
- if(SX.rec)return;
- if(!(RCFG&&RCFG.on&&RCFG.u)){sxCmd('recst','',2);return}
- try{SX.rec=recStart({name:recName(SX.title)},{main:()=>RV.m&&RV.ms?RV.m:null,cam:()=>null,camBig:()=>false,ac:()=>sacGet(),audio:()=>RV.ms?RV.ms.getAudioTracks():[]},RCFG.u,RCFG.k,recRefresh);sxCmd('recst','',1)}
- catch(e){SX.rec=null;sxCmd('recst','',2)}
- rcStatus()}
-function sxRecEnd(){if(SX&&SX.rec){const r=SX.rec;SX.rec=null;r.stop().then(recRefresh)}rcStatus()}
-function sxRecStop(){if(SX&&SX.rec){sxRecEnd();sxCmd('recst','',0)}}
-function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k||'',n:(SX&&SX.title)||'حصة'}:null}
-function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r);sxCmd('ml','',mlOn()?1:0)}
+/* ---- جانب السكرتارية (لكل حصة فيديو وتسجيل مستقل) ---- */
+function rvEl(X,k){if(!X.rv[k]){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none';document.body.appendChild(v);X.rv[k]=v}return X.rv[k]}
+function sxOnCall(X,c){if(c.peer!=='itqan-'+X.room)return;c.answer();const cam=c.metadata&&c.metadata.k=='cam',R=X.rv;
+ c.on('stream',s=>{c._s=s;const v=rvEl(X,cam?'c':'m');v.srcObject=s;v.play().catch(()=>{});if(!cam){const a=R.au||(R.au=new Audio());a.muted=true;a.srcObject=s;a.play().catch(()=>{})}if(cam)R.cs=s;else R.ms=s});
+ c.on('close',()=>{if(cam&&R.cs&&R.cs===c._s){R.cs=null;if(R.c)R.c.srcObject=null}})}
+function sxRecOn(X,on){if(!sxLive(X))return;
+ if(!on){sxRecEnd(X);return}
+ if(X.rec)return;
+ if(!(RCFG&&RCFG.on&&RCFG.u)){sxCmd(X.room,'recst','',2);return}
+ const R=X.rv;
+ try{X.rec=recStart({name:recName(X.title)},{main:()=>R.m&&R.ms?R.m:null,cam:()=>null,camBig:()=>false,ac:()=>sacGet(),audio:()=>R.ms?R.ms.getAudioTracks():[]},RCFG.u,RCFG.k,recRefresh);sxCmd(X.room,'recst','',1)}
+ catch(e){X.rec=null;sxCmd(X.room,'recst','',2)}
+ rcStatus();sxRender()}
+function sxRecEnd(X){if(X&&X.rec){const r=X.rec;X.rec=null;r.stop().then(recRefresh)}rcStatus()}
+function sxRecStop(r){const X=SXS[r];if(X&&X.rec){sxRecEnd(X);sxCmd(r,'recst','',0);sxRender()}}
+function rcForTeacher(X){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k||'',n:(X&&X.title)||'حصة'}:null}
+function sxRcPush(X){const r=rcForTeacher(X);if(r)sxCmd(X.room,'rc','',r);sxCmd(X.room,'ml','',mlOn()?1:0)}
 function mlOn(){try{return localStorage.getItem('itqan_ml')=='1'}catch(e){return false}}
-function mlToggle(){try{localStorage.setItem('itqan_ml',mlOn()?'0':'1')}catch(e){}rcDraw();if(SX)sxCmd('ml','',mlOn()?1:0)}
+function mlToggle(){try{localStorage.setItem('itqan_ml',mlOn()?'0':'1')}catch(e){}rcDraw();sxAll().forEach(X=>sxCmd(X.room,'ml','',mlOn()?1:0))}
 function mlRow(){return '<div class="sxc"><h3>📧 إشعارات الإيميل</h3><div class="sxr"><span>'+(mlOn()?'🟢 إيميلات فورية مفعّلة (دخول المعلم والطلاب، انقطاع المعلم)':'⚪ إيميل واحد فقط في نهاية الحصة (الحضور + الملخص)')+'</span><span class="bt"><button class="sxb d" onclick="mlToggle()">'+(mlOn()?'إيقاف الفورية':'تفعيل الفورية')+'</button></span></div></div>'}
 /* ---- واجهة الإعداد والحالة (لوحة السكرتارية) ---- */
 function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
@@ -1833,15 +1869,15 @@ function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
  '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>'+mlRow();rcStatus()}
 function rcSave(){const u=$('#rcu').value.trim(),k=$('#rck').value.trim();
  if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');
- RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();if(SX)sxRcPush()}
+ RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();sxAll().forEach(sxRcPush)}
 function rcEdit(){rcEd=1;rcDraw()}
-function rcToggle(){RCFG.on=RCFG.on?0:1;try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcDraw();if(SX&&RCFG.on)sxRcPush()}
+function rcToggle(){RCFG.on=RCFG.on?0:1;try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcDraw();if(RCFG.on)sxAll().forEach(sxRcPush)}
 async function rcTest(){rcMsg='⏳ جارٍ الاختبار...';rcStatus();
  try{const r=await fetch(RCFG.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:RCFG.k,a:'ping'})});const j=await r.json();rcMsg=j.ok?'✓ متصل — المجلد: '+j.n+(j.q!=null?' • متبقي '+j.q+' إيميل اليوم':''):'✗ '+(j.e==='auth'?'كلمة السر غير مطابقة':j.e)}
  catch(e){rcMsg='✗ تعذر الاتصال بالسكريبت — راجعي الرابط وإعدادات النشر (Anyone)'}rcStatus()}
 function rcStatus(){const e=$('#rcst');if(!e)return;let h='';
  if(rcMsg)h+='<div>'+esc(rcMsg)+'</div>';
- if(typeof SX!=='undefined'&&SX&&SX.rec){const s=Math.floor((Date.now()-SX.rec.t0)/1000),p=n=>String(n).padStart(2,'0');h+='<div class="sxr"><span style="color:#fca5a5">🔴 جارٍ التسجيل — '+p(Math.floor(s/60))+':'+p(s%60)+'</span><button class="sxb r" onclick="sxRecStop()">⏹ إيقاف</button></div>'}
+ if(typeof SXS!=='undefined')sxAll().filter(X=>X.rec).forEach(X=>{const s=Math.floor((Date.now()-X.rec.t0)/1000),p=n=>String(n).padStart(2,'0');h+='<div class="sxr"><span style="color:#fca5a5">🔴 '+U(X.title||X.room)+' — '+p(Math.floor(s/60))+':'+p(s%60)+'</span><button class="sxb r" data-r="'+esc(X.room)+'" onclick="sxRecStop(this.dataset.r)">⏹ إيقاف</button></div>'});
  RUPS.forEach(u=>{const pend=u.q.reduce((a,c)=>a+c.blob.size,0);h+='<div class="sxr"><span>'+(u.err?'⚠️ تعذر الرفع ('+esc(u.err)+') — إعادة تلقائية':'☁️ جارٍ رفع '+U(u.meta.name)+' — '+recMB(u.meta.off)+' ميجا')+(pend?' • متبقي '+recMB(pend):'')+'</span></div>'});
  RDONE.forEach(d=>{h+='<div class="sxr"><span>✓ تم الحفظ: '+U(d.n)+'</span>'+(d.id?'<a class="sxb" style="text-decoration:none" target="_blank" rel="noopener" href="https://drive.google.com/file/d/'+encodeURIComponent(d.id)+'/view">فتح</a>':'')+'</div>'});
  if(RUPS.length)h+='<small style="color:#e3c08d">لا تغلقي هذه الصفحة حتى يظهر «تم الحفظ».</small>';
@@ -1849,7 +1885,7 @@ function rcStatus(){const e=$('#rcst');if(!e)return;let h='';
 function recUi(){const el=$('#recs');if(!el)return;if(role=='c'||!RUPS.length){el.hidden=true;return}
  const u=RUPS[0];el.hidden=false;el.textContent=u.err?'⚠️ تعذر رفع التسجيل — ستتم إعادة المحاولة':'☁️ جارٍ رفع التسجيل… '+recMB(u.meta.off)+' ميجا'+(recSelfEng?'':' (لا تغلق الصفحة)')}
 function recRefresh(){recUi();rcStatus()}
-setInterval(()=>{if(typeof SX!=='undefined'&&SX&&SX.rec)rcStatus()},1000);
+setInterval(()=>{if(typeof SXS!=='undefined'&&sxAll().some(X=>X.rec))rcStatus()},1000);
 addEventListener('beforeunload',e=>{if(recBusy()){e.preventDefault();e.returnValue=''}});
 recRecover(recRefresh);
 </script>
@@ -2015,8 +2051,8 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
  aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'انتهت الحصة وتم إرسال تقرير الحضور على الإيميل. أغلق النافذة (✕) للإنهاء.',0)}
-function sxDropWatch(){clearTimeout(SX.dropT);if(SX.bye||!SX.had||!mlOn())return;
- SX.dropT=setTimeout(()=>{if(!SX||SX.hub||SX.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(SX.title||SX.room),'انقطع اتصال المعلم'+(SX.tn?' ('+SX.tn+')':'')+' عن الحصة ('+(SX.title||SX.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
+function sxDropWatch(X){clearTimeout(X.dropT);if(X.bye||!X.had||!mlOn())return;
+ X.dropT=setTimeout(()=>{if(!sxLive(X)||X.hub||X.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(X.title||X.room),'انقطع اتصال المعلم'+(X.tn?' ('+X.tn+')':'')+' عن الحصة ('+(X.title||X.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
 <style>
 body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
@@ -2035,6 +2071,7 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
 body.pfs #stage{bottom:calc(56px + env(safe-area-inset-bottom,0px))}
 body.pfs .bar{bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:auto}
 #sdn{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}#sdn div{background:rgba(10,20,34,.92);color:#fff;border:1px solid rgba(227,192,141,.5);border-radius:999px;padding:7px 16px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.35);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s,transform .4s;animation:sdi .25s ease-out}#sdn div.out{opacity:0;transform:translateY(-8px)}@keyframes sdi{from{opacity:0;transform:translateY(-8px)}}
+#sec.sxwide .sx{width:min(1180px,100%)}#sec .sx>#sxR{order:5}.sxg{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}.sxk{gap:8px}.sxk.hot{outline:2px solid #e3c08d}.sxkh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}.sxkh b{font-size:16px}.sxs{font-size:12px;color:#c4d3e0}.sxkn{display:flex;gap:14px;font-size:15px}.sxkn .hot{color:#fca5a5;font-weight:700}
 body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#fca5a5}#sdu:empty{display:none}
 </style>
 <script>
@@ -2162,11 +2199,6 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
 /* ===== 3) مؤشر حضور المعلم (للطلاب والسكرتارية) ===== */
 (function(){
  const STALE=12000;
- window.sxStat=function(){
-  if(!SX)return'';const n=Date.now();
-  if(SX.hub){SX.lostAt=0;const q=n-(SX.hbAt||n);return q>STALE?'🟠 المعلم لا يستجيب منذ '+Math.round(q/1000)+' ث — قد يكون انقطع الإنترنت عنده':'🟢 المعلم متصل بالغرفة'}
-  if(SX.had){SX.lostAt=SX.lostAt||n;const m=Math.floor((n-SX.lostAt)/60000);return'🔴 المعلم غير متصل'+(m?' منذ '+m+' د':' الآن')}
-  return SX.acc?'⏳ المعلم معتمد — ينتظر فتح الغرفة':'⏳ في انتظار المعلم'};
  const css=document.createElement('style');
  css.textContent='#tst{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff}#tst.on{background:#1f8f5f}#tst.off{background:#b5473f;animation:rcp 1.6s infinite}';
  document.head.appendChild(css);
@@ -2175,7 +2207,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(role=='t'){try{bc({t:'hb'})}catch(e){}try{Object.values(cohosts).forEach(c=>{try{c.send({t:'hb'})}catch(e){}})}catch(e){}}
  },3000);
  setInterval(()=>{
-  if(typeof SX!=='undefined'&&SX){const e=$('#sxst');if(e)e.textContent=window.sxStat()}
+  if(typeof SXS!=='undefined')sxTick();
   if(role=='t'||typeof admitted==='undefined')return;
   if(!badge){const a=$('#tmr');if(!a)return;badge=document.createElement('span');badge.id='tst';badge.hidden=true;a.after(badge)}
   if(admitted&&!wasAdm)window.T_HB=Date.now();wasAdm=admitted;
@@ -2274,6 +2306,39 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   const on=typeof st!=='undefined'&&!!st&&!!(st.scr||st.wb);
   box.hidden=!on;stg.classList.toggle('zmo',on);
   if(!on&&(z!=1||tx||ty))reset();else ui2()},400);
+})();
+/* ===== 6) زر «رجوع» في التطبيق المثبّت (آيفون/آيباد/أندرويد) — مفيش زر رجوع للمتصفح هناك =====
+   يقفل الحاجة المفتوحة (لوحة/نافذة) أو يرجع خطوة: خانة اللصق ← اختيار معلم/طالب، صفحة الحصة/الانتظار/السكرتارية ← شاشة البداية،
+   وجوّه الحصة = مغادرة (بتأكيد) */
+(function(){
+ if(!PWA||window.itqanApp)return;
+ const css=document.createElement('style');
+ css.textContent='#bkf{position:fixed;top:10px;right:10px;z-index:80;background:rgba(20,40,63,.94);color:#fff;border:1px solid rgba(227,192,141,.45);border-radius:999px;padding:8px 14px;font:700 14px Cairo,Tahoma,sans-serif;display:flex;gap:6px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35)}html[dir=ltr] #bkf{right:auto;left:10px}#bkf[hidden],#bkc[hidden]{display:none}#bkc{font-weight:700}';
+ document.head.appendChild(css);
+ const mk=(id,cls)=>{const b=document.createElement('button');b.id=id;if(cls)b.className=cls;const a=document.createElement('span');a.className='ar';const t=document.createElement('span');t.textContent='رجوع';b.append(a,t);b.onclick=back;return b};
+ const bkf=mk('bkf');document.body.appendChild(bkf);
+ const bkc=mk('bkc','pop');const top=document.querySelector('#app .top>div');if(top)top.prepend(bkc);
+ const vis=e=>!!e&&!e.hidden&&getComputedStyle(e).display!='none';
+ const OV=['#msm','#bgm','#tlm','#aip','#pm','#stk','#calc','#dsm'];
+ const topOv=()=>{for(const q of OV){const e=$(q);if(vis(e))return e}return null};
+ function state(){
+  if(typeof endBusy!='undefined'&&endBusy)return 'busy';
+  if(vis($('#mg')))return 'mg';
+  if(vis($('#sec')))return 'sec';
+  if(vis($('#join')))return LK?'join':(window.__ln&&window.__ln.open()?'ln':'root');
+  if(topOv())return 'ov';
+  if(vis($('#gate')))return 'gate';
+  return 'class'}
+ function back(){const st=state();
+  if(st=='ov'){const e=topOv();if(e.id=='aip')aiClose();else if(e.id=='msm')e.remove();else if(e.id=='dsm')dsmClose();else e.hidden=true;return}
+  if(st=='ln')return window.__ln.reset();
+  if(st=='mg'){$('#mg').hidden=true;return}
+  if(st=='class')return endCall();
+  if(st=='sec'&&typeof SXS!='undefined'&&sxAll().length&&!confirm('الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.'))return;
+  if(st=='sec'||st=='gate'||st=='join')location.href=homeUrl()}
+ setInterval(()=>{const st=state(),cls=st=='class'||st=='ov';
+  bkf.hidden=st=='root'||st=='busy'||cls;bkc.hidden=!cls;
+  const ar=document.documentElement.dir=='ltr'?'←':'→';[bkf,bkc].forEach(b=>{const a=b.querySelector('.ar');if(a.textContent!==ar)a.textContent=ar})},300);
 })();
 </script>
 
