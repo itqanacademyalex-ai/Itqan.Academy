@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Itqan Academy — الرسم على الشاشة</title>
+<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+body.on canvas{cursor:crosshair}
+body.on::after{content:'';position:fixed;inset:0;border:3px solid rgba(26,148,134,.85);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* طبقة شفافة فوق الشاشة كلها — الرسم هنا بيظهر للطلاب في الشاشة المشاركة */
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+let dpr=1,strokes=[],cur=null,tool='pen',color='#e5484d',width=4,on=false;
+function size(){dpr=window.devicePixelRatio||1;cv.width=Math.round(innerWidth*dpr);cv.height=Math.round(innerHeight*dpr);redraw()}
+function style(s){g.lineCap=g.lineJoin='round';g.globalCompositeOperation=s.tool=='era'?'destination-out':'source-over';
+ g.globalAlpha=s.tool=='hl'?.35:1;g.strokeStyle=s.color;g.lineWidth=(s.tool=='era'?s.w*6:s.tool=='hl'?s.w*4+6:s.w)*dpr}
+function seg(s,i){const p=s.p;style(s);g.beginPath();
+ if(i<1){g.moveTo(p[0][0]*dpr,p[0][1]*dpr);g.lineTo(p[0][0]*dpr+.01,p[0][1]*dpr)}
+ else{const a=i>=2?[(p[i-2][0]+p[i-1][0])/2,(p[i-2][1]+p[i-1][1])/2]:p[0],e=[(p[i-1][0]+p[i][0])/2,(p[i-1][1]+p[i][1])/2];
+  g.moveTo(a[0]*dpr,a[1]*dpr);g.quadraticCurveTo(p[i-1][0]*dpr,p[i-1][1]*dpr,e[0]*dpr,e[1]*dpr)}
+ g.stroke()}
+function paint(s){if(s.tool=='hl'){/* هايلايتر: خط واحد شفاف من غير تراكب */style(s);g.beginPath();s.p.forEach((q,i)=>i?g.lineTo(q[0]*dpr,q[1]*dpr):g.moveTo(q[0]*dpr,q[1]*dpr));if(s.p.length==1)g.lineTo(s.p[0][0]*dpr+.01,s.p[0][1]*dpr);g.stroke();return}
+ s.p.forEach((q,i)=>seg(s,i))}
+function redraw(){g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.globalCompositeOperation='source-over';g.clearRect(0,0,cv.width,cv.height);strokes.forEach(paint);if(cur)paint(cur)}
+cv.addEventListener('pointerdown',e=>{if(!on||e.button)return;try{cv.setPointerCapture(e.pointerId)}catch(x){}cur={tool,color,w:width,p:[[e.clientX,e.clientY]]};if(tool=='hl')redraw();else seg(cur,0)});
+cv.addEventListener('pointermove',e=>{if(!cur)return;const l=cur.p[cur.p.length-1];if(Math.hypot(e.clientX-l[0],e.clientY-l[1])<1)return;cur.p.push([e.clientX,e.clientY]);if(tool=='hl')redraw();else seg(cur,cur.p.length-1)});
+const up=()=>{if(!cur)return;strokes.push(cur);cur=null;redraw();state()};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+addEventListener('keydown',e=>{if(e.key=='Escape')window.itqanApp.ann({t:'close'});if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()=='z'){strokes.pop();redraw();state()}});
+const state=()=>window.itqanApp.ann({t:'state',n:strokes.length,tool,color,width});
+window.itqanApp.onAnn(m=>{
+ if(m.t=='mode'){on=!!m.on;document.body.classList.toggle('on',on)}
+ else if(m.t=='tool')tool=m.v;else if(m.t=='color'){color=m.v;if(tool=='era')tool='pen'}else if(m.t=='width')width=m.v;
+ else if(m.t=='undo'){strokes.pop();redraw()}else if(m.t=='clear'){strokes=[];redraw()}
+ state()});
+addEventListener('resize',size);size();
+</script>
+</body>
+</html>

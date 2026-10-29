@@ -1,7 +1,7 @@
 /* أكاديمية إتقان — تطبيق الكمبيوتر
    التطبيق يفتح نفس الموقع المنشور على GitHub Pages، فأي تحديث للموقع يوصل للتطبيق تلقائياً،
    والروابط اللي السكرتارية بتعملها من التطبيق هي نفس روابط الموقع وتشتغل عند أي حد في المتصفح. */
-const { app, BrowserWindow, session, desktopCapturer, ipcMain, shell, dialog, Menu, powerSaveBlocker, clipboard } = require('electron');
+const { app, BrowserWindow, session, desktopCapturer, ipcMain, shell, dialog, Menu, powerSaveBlocker, clipboard, screen } = require('electron');
 const path = require('path');
 
 const SITE = process.env.ITQAN_SITE || 'https://itqanacademyalex-ai.github.io/Itqan.Academy/'; // ITQAN_SITE للاختبار فقط
@@ -91,6 +91,7 @@ function setupSession() {
       if (!pick) return callback({});
       const src = sources.find(s => s.id === pick.id);
       if (!src) return callback({});
+      lastPick = { screen: src.id.startsWith('screen:'), displayId: src.display_id };
       const res = { video: src };
       if (request.audioRequested && pick.audio && process.platform === 'win32') res.audio = 'loopback';
       callback(res);
@@ -127,6 +128,52 @@ ipcMain.handle('invite:open', (e, raw, role) => {
   const w = BrowserWindow.fromWebContents(e.sender);
   w ? w.loadURL(u) : createWindow(u);
   return true;
+});
+
+/* ---------- الرسم على الشاشة المشاركة (زي Zoom) ----------
+   لما المعلم/الطالب يشارك الشاشة كلها: زر قلم عايم ✏️ فوق كل البرامج. الضغط عليه بيفتح طبقة رسم شفافة فوق الشاشة
+   + شريط أدوات. الرسم نفسه بيتصوّر في الشاشة المشاركة فالطلاب بيشوفوه، أما الزر والشريط مستخبيين عن المشاركة. */
+let lastPick = null;
+const ANN = { pen: null, ov: null, tb: null, on: false, owner: null };
+const annWin = k => ANN[k] && !ANN[k].isDestroyed() ? ANN[k] : null;
+function annDisplay() { const ds = screen.getAllDisplays(); return (lastPick && ds.find(d => String(d.id) === String(lastPick.displayId))) || screen.getPrimaryDisplay(); }
+function annTop(w) { w.setAlwaysOnTop(true, 'screen-saver'); try { w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); } catch (e) {} }
+function annMake(opts, file, hideFromShare) {
+  const w = new BrowserWindow({ frame: false, transparent: true, resizable: false, minimizable: false, maximizable: false, fullscreenable: false,
+    skipTaskbar: true, hasShadow: false, show: false, backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false }, ...opts });
+  annTop(w); if (hideFromShare) { try { w.setContentProtection(true); } catch (e) {} }
+  w.loadFile(path.join(__dirname, file)); return w;
+}
+function annStart(owner) {
+  annStop(); ANN.owner = owner; const b = annDisplay().bounds;
+  ANN.ov = annMake({ x: b.x, y: b.y, width: b.width, height: b.height, enableLargerThanScreen: true }, 'annotate.html', false);
+  ANN.ov.setIgnoreMouseEvents(true); ANN.ov.once('ready-to-show', () => annWin('ov') && ANN.ov.showInactive());
+  const tw = Math.min(760, b.width - 20);
+  ANN.tb = annMake({ width: tw, height: 60, x: b.x + Math.round((b.width - tw) / 2), y: b.y + 14 }, 'anntools.html', true);
+  ANN.pen = annMake({ width: 64, height: 64, x: b.x + b.width - 96, y: b.y + b.height - 170, focusable: false }, 'annpen.html', true);
+  ANN.pen.once('ready-to-show', () => annWin('pen') && ANN.pen.showInactive());
+  owner.once('closed', () => { if (ANN.owner === owner) annStop(); });
+}
+function annMode(on) {
+  const ov = annWin('ov'), tb = annWin('tb'), pen = annWin('pen'); if (!ov) return;
+  ANN.on = !!on; ov.setIgnoreMouseEvents(!ANN.on);
+  if (ANN.on) { ov.show(); ov.focus(); if (tb) { tb.show(); tb.moveTop(); } if (pen) pen.moveTop(); } else if (tb) tb.hide();
+  [ov, pen].forEach(w => w && w.webContents.send('ann', { t: 'mode', on: ANN.on }));
+}
+function annStop() { ['tb', 'pen', 'ov'].forEach(k => { const w = annWin(k); if (w) w.destroy(); ANN[k] = null; }); ANN.on = false; ANN.owner = null; }
+ipcMain.on('ann', (e, m) => {
+  if (!m || typeof m.t !== 'string') return;
+  if (m.t === 'toggle') return annMode(!ANN.on);
+  if (m.t === 'close') return annMode(false);
+  if (['tool', 'color', 'width', 'undo', 'clear'].includes(m.t)) { const ov = annWin('ov'); if (ov) ov.webContents.send('ann', m); return; }
+  if (m.t === 'state') { const tb = annWin('tb'); if (tb) tb.webContents.send('ann', m); }
+});
+/* الصفحة بتبلّغ لما مشاركة الشاشة تبدأ أو تقف */
+ipcMain.on('share', (e, on) => {
+  const w = BrowserWindow.fromWebContents(e.sender); if (!w) return;
+  if (on && lastPick && lastPick.screen) { if (!annWin('ov') || ANN.owner !== w) annStart(w); }
+  else if (!on && ANN.owner === w) annStop();
 });
 
 /* ---------- prompt() — Electron مابيدعموش، فبنعمل نافذة صغيرة بنفس الشكل ---------- */
