@@ -348,7 +348,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.29-j';
+const VER='2026.10.29-k';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -423,6 +423,7 @@ function pwaHome(){if(!PWA||window.itqanApp)return;
   const r=u.searchParams.get('r');if(role&&r!==role)return er.textContent=r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.';
   location.href=u.href};
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
+ window.__ln={open:()=>!f.hidden,reset:()=>{role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>secOpen();
  j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec)}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
@@ -1309,7 +1310,7 @@ const ENM=[
 ["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
 ["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
 ["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
-["تثبيت","Install"],["مشاركة","Share"],
+["تثبيت","Install"],["الرجوع لشاشة البداية؟ الجلسة هتفضل محفوظة وتقدر تستكملها.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
 ["ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap “Share”, then “Add to Home Screen”."],
 ["لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.","If “Add to Home Screen” isn’t listed, use the Share button ⬆️ in Safari’s toolbar."],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
@@ -2281,6 +2282,39 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   const on=typeof st!=='undefined'&&!!st&&!!(st.scr||st.wb);
   box.hidden=!on;stg.classList.toggle('zmo',on);
   if(!on&&(z!=1||tx||ty))reset();else ui2()},400);
+})();
+/* ===== 6) زر «رجوع» في التطبيق المثبّت (آيفون/آيباد/أندرويد) — مفيش زر رجوع للمتصفح هناك =====
+   يقفل الحاجة المفتوحة (لوحة/نافذة) أو يرجع خطوة: خانة اللصق ← اختيار معلم/طالب، صفحة الحصة/الانتظار/السكرتارية ← شاشة البداية،
+   وجوّه الحصة = مغادرة (بتأكيد) */
+(function(){
+ if(!PWA||window.itqanApp)return;
+ const css=document.createElement('style');
+ css.textContent='#bkf{position:fixed;top:10px;right:10px;z-index:80;background:rgba(20,40,63,.94);color:#fff;border:1px solid rgba(227,192,141,.45);border-radius:999px;padding:8px 14px;font:700 14px Cairo,Tahoma,sans-serif;display:flex;gap:6px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35)}html[dir=ltr] #bkf{right:auto;left:10px}#bkf[hidden],#bkc[hidden]{display:none}#bkc{font-weight:700}';
+ document.head.appendChild(css);
+ const mk=(id,cls)=>{const b=document.createElement('button');b.id=id;if(cls)b.className=cls;const a=document.createElement('span');a.className='ar';const t=document.createElement('span');t.textContent='رجوع';b.append(a,t);b.onclick=back;return b};
+ const bkf=mk('bkf');document.body.appendChild(bkf);
+ const bkc=mk('bkc','pop');const top=document.querySelector('#app .top>div');if(top)top.prepend(bkc);
+ const vis=e=>!!e&&!e.hidden&&getComputedStyle(e).display!='none';
+ const OV=['#msm','#bgm','#tlm','#aip','#pm','#stk','#calc','#dsm'];
+ const topOv=()=>{for(const q of OV){const e=$(q);if(vis(e))return e}return null};
+ function state(){
+  if(typeof endBusy!='undefined'&&endBusy)return 'busy';
+  if(vis($('#mg')))return 'mg';
+  if(vis($('#sec')))return 'sec';
+  if(vis($('#join')))return LK?'join':(window.__ln&&window.__ln.open()?'ln':'root');
+  if(topOv())return 'ov';
+  if(vis($('#gate')))return 'gate';
+  return 'class'}
+ function back(){const st=state();
+  if(st=='ov'){const e=topOv();if(e.id=='aip')aiClose();else if(e.id=='msm')e.remove();else if(e.id=='dsm')dsmClose();else e.hidden=true;return}
+  if(st=='ln')return window.__ln.reset();
+  if(st=='mg'){$('#mg').hidden=true;return}
+  if(st=='class')return endCall();
+  if(st=='sec'&&typeof SX!='undefined'&&SX&&!confirm('الرجوع لشاشة البداية؟ الجلسة هتفضل محفوظة وتقدر تستكملها.'))return;
+  if(st=='sec'||st=='gate'||st=='join')location.href=homeUrl()}
+ setInterval(()=>{const st=state(),cls=st=='class'||st=='ov';
+  bkf.hidden=st=='root'||st=='busy'||cls;bkc.hidden=!cls;
+  const ar=document.documentElement.dir=='ltr'?'←':'→';[bkf,bkc].forEach(b=>{const a=b.querySelector('.ar');if(a.textContent!==ar)a.textContent=ar})},300);
 })();
 </script>
 
