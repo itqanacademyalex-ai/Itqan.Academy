@@ -37,7 +37,7 @@ small{color:#a9bccd;line-height:1.8}
  </div>
  <div id="f" hidden>
   <small id="h"></small>
-  <input id="u" placeholder="https://itqanacademyalex-ai.github.io/Itqan.Academy/?s=..." autocomplete="off" spellcheck="false">
+  <input id="u" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" spellcheck="false" style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:700">
   <div class="row"><button id="pa">📋 لصق</button><button id="go">دخول</button></div>
   <div id="e"></div>
  </div>
@@ -47,12 +47,14 @@ let role='';const f=document.getElementById('f'),u=document.getElementById('u'),
 const roleOf=s=>{try{const q=new URL(String(s).trim()).searchParams;return q.get('r')}catch(x){return null}};
 function pick(r){role=r;f.hidden=false;e.textContent='';
  document.getElementById('bt').classList.toggle('on',r=='t');document.getElementById('bs').classList.toggle('on',r=='s');
- document.getElementById('h').textContent=r=='t'?'الصق رابط المعلم اللي بعتته السكرتارية، وبعدها هتكتب اسمك وكود الغرفة.':'الصق رابط الحصة اللي بعتته السكرتارية.';
- window.itqanApp.clipRead().then(t=>{if(!u.value&&roleOf(t)==r)u.value=t.trim()});u.focus()}
+ document.getElementById('h').textContent=r=='t'?'اكتب «كود الحصة» اللي بعتته السكرتارية (أو الصق الرابط). كود المعلم السري هتكتبه في الخطوة الجاية.':'اكتب «كود الحصة» اللي بعتته السكرتارية (أو الصق الرابط).';
+ window.itqanApp.clipRead().then(t=>{t=(t||'').trim();if(u.value)return;if(roleOf(t)==r)u.value=t;else{const m=t.match(/كود الحصة\s*[:：]?\s*([A-Za-z0-9]{4,6})/);if(m)u.value=m[1].toUpperCase()}});u.focus()}
 function go(){const v=u.value.trim(),r=roleOf(v);
- if(!v)return e.textContent='الصق الرابط الأول.';
+ if(!v)return e.textContent='اكتب كود الحصة الأول.';
+ const m=v.match(/كود الحصة\s*[:：]?\s*([A-Za-z0-9]{4,6})/),code=/^https?:\/\/\S+$/i.test(v)?null:(m?m[1]:v).toLowerCase().replace(/[^a-z0-9]/g,'');
+ if(code!==null&&!/^([a-z0-9]{4}|[a-z0-9]{6})$/.test(code))return e.textContent='الكود لازم يكون 4 حروف وأرقام — زي K7M2.';
  if(r&&r!==role)return e.textContent=r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.';
- window.itqanApp.openInvite(v).then(ok=>{if(!ok)e.textContent='الرابط ده مش رابط دعوة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.'})}
+ window.itqanApp.openInvite(code||v,role).then(ok=>{if(!ok)e.textContent='الرابط ده مش رابط دعوة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.'})}
 document.getElementById('bt').onclick=()=>pick('t');document.getElementById('bs').onclick=()=>pick('s');
 document.getElementById('go').onclick=go;
 document.getElementById('pa').onclick=()=>window.itqanApp.clipRead().then(t=>{u.value=(t||'').trim();e.textContent=''});

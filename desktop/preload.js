@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld('itqanApp', {
   prompt: (msg, def) => ipcRenderer.sendSync('prompt', String(msg == null ? '' : msg), def == null ? '' : String(def)),
   /* شاشة البداية */
   clipRead: () => ipcRenderer.invoke('clip:read'),
-  openInvite: u => ipcRenderer.invoke('invite:open', String(u || '')),
+  openInvite: (u, role) => ipcRenderer.invoke('invite:open', String(u || ''), String(role || '')),
   /* نافذة اختيار الشاشة */
   pickerSources: () => ipcRenderer.invoke('picker:get'),
   pickerDone: v => ipcRenderer.send('picker:done', v),

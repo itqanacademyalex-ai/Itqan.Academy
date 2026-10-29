@@ -16,6 +16,7 @@ function inviteUrl(raw) {
   if (raw.startsWith(PROTO + '://')) { try { raw = new URL(raw).searchParams.get('u') || ''; } catch (e) { return null; } }
   if (!isSite(raw)) return null;
   const q = new URL(raw).searchParams;
+  if (/^([a-z0-9]{4}|[a-z0-9]{6})$/.test(q.get('c') || '') && /^(t|s)$/.test(q.get('r') || '')) return raw; // كود الحصة — الموقع بيدوّر على الحصة
   return q.get('s') && q.get('k') && /^(t|s)$/.test(q.get('r') || '') ? raw : null;
 }
 const HOME = path.join(__dirname, 'home.html');
@@ -117,7 +118,10 @@ function showPicker(parent, sources) {
 
 /* ---------- شاشة البداية (دخول المعلم / دخول الطالب) ---------- */
 ipcMain.handle('clip:read', () => clipboard.readText());
-ipcMain.handle('invite:open', (e, raw) => {
+ipcMain.handle('invite:open', (e, raw, role) => {
+  /* كود الحصة (4 حروف وأرقام) بدل الرابط */
+  const c = String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!/^https?:|^itqan:/i.test(String(raw || '').trim()) && /^([a-z0-9]{4}|[a-z0-9]{6})$/.test(c) && /^(t|s)$/.test(role || '')) raw = SITE + (SITE.includes('?') ? '&' : '?') + 'c=' + c + '&r=' + role;
   const u = inviteUrl(raw);
   if (!u) return false;
   const w = BrowserWindow.fromWebContents(e.sender);
