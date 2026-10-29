@@ -449,12 +449,12 @@ async function tReq(pin){
     try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC,ml:MAILLIVE}))}catch(e){}
     try{p.destroy()}catch(e){}tStart()}
    else if(d.t=='trej'){got=1;try{p.destroy()}catch(e){}showGate('⛔','رفضت السكرتارية دخولك. تواصل معها لمعرفة السبب.',1)}});
-  c.on('close',()=>{if(!got){showGate('⏳','جارٍ الاتصال بالسكرتارية...');setTimeout(go,3000)}});
+  c.on('close',()=>{if(!got){showGate('⏳','انقطع الاتصال بالسكرتارية — جارٍ إعادة المحاولة...');setTimeout(go,3000)}});
   c.on('error',()=>{})};
  p.on('open',go);
  p.on('error',e=>{if(got)return;
   if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');setTimeout(go,4000)}
-  else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','جارٍ الاتصال بالسكرتارية...');setTimeout(go,4000)}});
+  else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');setTimeout(go,4000)}});
 }
 function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();if(MAILLIVE)back?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn()}sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
@@ -678,7 +678,7 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  if(conn&&conn.open)return;
  try{conn&&conn.close()}catch(e){}
  const c=conn=peer.connect('itqan-'+room,{reliable:true});let ok=0;
- const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;showGate('⏳',cFail>=2?T('connHelp'):'جارٍ الاتصال بالغرفة...');rt=setTimeout(tryConn,2500)},20000);
+ const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
  c.on('open',()=>{ok=1;cFail=0;clearTimeout(ct);vOk=0;vNonce=rnd();c.send({t:'chal',n:vNonce})});
  c.on('data',sData);
  c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;if(admitted){admitted=0;sys('انقطع الاتصال بالمعلم')}dropCall();showGate('🔒',CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)});
@@ -690,7 +690,7 @@ async function initS(){
  const ice=await getIce();
  const p=peer=new Peer(undefined,{config:ice});let up=0;
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
- p.on('error',e=>{if(e.type=='peer-unavailable'){showGate('🔒',CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','جارٍ الاتصال بالغرفة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
+ p.on('error',e=>{if(e.type=='peer-unavailable'){showGate('🔒',CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
  p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn()});
  peer.on('call',c=>{c.answer();
@@ -706,7 +706,7 @@ async function vProof(d){const c=conn;
   if(conn!==c)return;vOk=1;c.send({t:'hello',n:name,id:sid()})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
-  showGate('⏳','جارٍ الاتصال بالغرفة...');
+  showGate('⛔','تعذر التحقق من هوية المعلم — تأكد أنك فتحت الرابط الأصلي من السكرتارية. جارٍ إعادة المحاولة...');
   clearTimeout(rt);rt=setTimeout(tryConn,6000)}}
 function sData(d){
  if(!d||typeof d!=='object')return;
