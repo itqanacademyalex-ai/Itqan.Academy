@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Itqan Academy – الفصل الافتراضي</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Itqan Academy">
+<meta name="application-name" content="Itqan Academy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0e1a2b">
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABTmlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8kZOcW8wkwMCQm1dSFOTupBARGaXA/oiBmUGEgZOBj0E2Mbm4wDfYLYQBCIoTy4uTS4pyGFDAt2sMjCD6sm5GYl7KllV35YVPMNt8DRRx1aia8YgBP+BMSS1OBtIfgFgmuaCohIGBkQfI5ikvKQCxJYBskSKgo4BsHRA7HcJ2ALGTIOwQsJqQIGcgOwPITkhHYichsaF2gQBLaYAxikNKUitKQLSzswEDKAwgop8DwX5jFDuDEGu+z8Bgu/////+7EWJe+xkYNpozMHDtRIhpWDAwCHIxMJzYmVxaVAa1RguIaxh+MM5hKmVuZjnJ5schxCXBk8T3RfC8yDeJLBk9BWeVNZpZenXGry03219zC/c1CymLEU+RzWkrDavr7dCZZDZn9fKeTbf3zTx1/Hrqk/KPP///BwAGcmcLNZGYvQAAEXdJREFUeNqtWn9QFGeafrp7pmE6Qs8MP4I66qIiDJkIyK5r+WsZNQqaFFk28URNSFkklbOcxGwFk4gxWW8xt8G6mEB5uZzFxaxbWl7ihU1QEpXhRCk1SwAzYUBUIo6GIMxMM2Qaeqa774+ZbmcQUW/3q5pihv76+57n/d73ed/v6yaCvl48YCMAUIAcFESApghQk9gkADYAWp7zLhoeurWkdxiSp9dFAoBhukmaPgnkpPikJh2rPwsgAKBKHOZuCaIMmgIAQgNABCA/EJgHIKACBwAyhkkktHQpz3mXnD3XurDhilMvO9pQb3dMOEi+1QIAWF5Y7F20IKdZx+qb5ICwXxr1D4SneSAi90uAAGRZEIFYhjESWvqlFme37dOqSqMCON9qEQlLtrxslpk0TDeR4w3i6XVJDVeckuxoI+rtDkohtLyw2L1ilbVKDggfSKN+d3hK4n5I3A8BShBlkaYIDTWJLQ8DT6i3O5BvtQSXFxYTCVnZJACik+PQ3B+a3z0qRA1ijKEBAAuTjchgWQCQB9vbpFO1h+R6u0OTb7XgKVvZYK45rUoc5ioEUQ7SFEGFV+P/TYASRFmMZRjjiN//ya43tq1RgD9lK6NIQyJR090D96gAv59Xb2IY3biDje1jjKGxKS0VkmdA/rSqUlSI7Hzn3bpYhnl2xO9334vERAS0gigHdKx+dYuz+8+lRSVGAIH9Rw9oFOAuDzcu4Fct6ejkOBzp6sHa9FTF4lDIGmPoKNImA6sSKS0qCQLQ7j96wJ1rTnuG57zHaIrQhgP/jkbeA/yak1/Z/1paVGLMt1rEGnud9uMBH7HrQhvcowJMhhCwx6elYD4lwu/nVVfJYFmYDCwyWBY13T0q+MenpeDduTNhjKHBMDqYDCxcHg67LrTh4wEfUWOv0xbYNoqlRSXGk1/Z/6pj9WsEUQ4A0I7rIju3vzKe2wTD4GvLtpYTlXsr5F/90zPUHkcXBn3DIYZaLarmpcFMazBIUMg1TcP/3uhD/owpSIyNBQDkJBgAADoNies/81g+JQkZLIuBINDq9mL5lCTYZk0GFatDDz+KQd8wvvFweP43eeTinEeksq3lRC85ui5/yZKWUX6kkyIJamxgk+OAl8eAR0JWNrnrQpu63GvTU+H38/i8zwvSkIgMlkV2wkPqinRyHGq6e9S/GSyL5xLjkMGy6OQ4ZOgINZi3XbyKDJaFMYaGycDC7+ex60Ibbv0ilazcW4HjVQeJk1/Za8MrIYekfPwYIAFZImMY5tvL126VFpUwlXsrJAU8w+jg9/OqT0ueAVwitchgWexxdOHxaSlo7nercTFRy4uj8cK8R9DJyyFCYWJPpujxeZ8XX17vU+dK+qFHKttaTlburfCvWGVNEoe9foAgAUiRBAhAJgEiVhDlwwsXrF5dYNsoP11UTCngFd8GgE1pqer3To5TJ1T6LUw2jgu8ud+tBi/D6PD4tBT1mgK+/+YNXNaERMHl4bBzfjb+++gh8XjVQaL53LFjNEWsA+QRgJAAyAoBLSAHqEn6t9/Y/MJb9XZHoMZep93j6FKDVFESxVLbLl69A8wcKYBLpBb9N28AAH5ytgMAHjZnAQCSp0xV+0Su1o40E0hDImq6e7Aw2Yh1M6fgpXMO9frO+dk4suu1AADtO/s++oM47H0bCCkTEfT1EoAMMoYxnGo42122tZzdf/QA+fGAj3B5ODCMDq9a0rHH0aXqtpKwXB4Oa9NTMUcK4ExfPxp9giqrkZo/9n95cTQWpyTjEqnFl9f77jASAHU+RXafS4yTS4tKpMq9FdyKVdY0nvN6aIoAEfT1agE5QMYwb8+bm/dWgW1j4OmiYu2uC20wGVjMDvJInjJV9fvMKUno5GXV75N+6EHDFSecJrNKNidlBvw8h9reawCAwukzwOhYtPZdg5I/zC4nHjZnIXnKVNUFTQY2MlMjQ0eg9JtONR6+O3UscLzqoPbbi41/kEb9bwOElvB7rxGxDJNwquHspbKt5Yb9Rw/IivV3zs9WraH4q1IqPJcYd4fVFfATtUgSymosNWdij6MrisSTKXp89O33KsFwgpQ3WdcQlXsrPCtWWefwnHdQQ1OQCS294VTtIUO+1RIgDYlaV7cLJkNIGQBg/68ysO3iVXXStempOHPzBhp9gqpK6awejI69K3A/z8H5w2XkmnPxJ1aPLs6rZms4O/D7qcn4txuDag1V+k0njDE6LGVZdYU6OY4osG0MnKo9ZFixyrqBpvA+ScYw2lvXu/Pr7Q48ZSsja7p71KJrjhRAc78b2y5exewgr4LvjwBfnD4XOSkzVPA81ws/z0VZHACaTzfC0+uCn+fA6FjkpMxAcfpcrE1PRaNPwJm+fjw+LQV+P48vr/epGVuJD4bRobnfjd9ZHyPr7Q60OLvzyRhGSxJa2vDeFyesAEAaEkklcJv73bhEarEpLRULk41o9IVKhzlSQFWXyKBTrHz2XCuaTzfCz3M4+VUtJM8AWpwtaLjiBAA4f7gcdY8yxk/OdsyRAmoyBIBtF69ij6NLdVuXhwNpSCTzrRZ8Zj9hJbS0QQNgi+xo0xTYNgY7OU6j3OweFXCkqycqByxMNuLMzRtqwKaz+ujKULht+T/+178DAJ7OysZgexuWzTIjISv7jnvSWT1MBhZOmPGZ/QQWLl+NI109qt+PLc07OY4gLNlB2dGmAbBFIw5zYr3dQVUWFgdrw0wjJdDv51WtnyMFcMQnqAE71ud17HSsWDU9RJbPAwB0cV4sXBr6Pl6MMLpQJVrT3QMnzPidFBhXhiOTYeEsM8qqDlI7Oa+ocXv6V4T3reQmQ6IauGObku6VcvluaqP4vHL99LlmnA67yNNFxVF9504igf7zyJm5EpsA7LrQhjN9/XjVkjkhDlNggASAjpu3VmjaO1yLlVrIFBiAiRlfRSbpCNR0u2EysCo4P8/hP8814ydnO/4lfzbIaXk47ezAT8525Gx+HQCw1BwCs9SciZyUGdi+71/VzGyanYz36i/jlSdSkTMtFyZDDy4DeEFHwBQIjA8kMKAWoZ5e12JNuCgiS4tKJtTvyr0VcFM6FTijY/Ha31rh8glg5szDm/Xf4uXpdcBDa+F7dIHab9eFNphdTnwHQLI+ht2bX0dr3zWcdnbApU2E02SGS5uIpPA8Lk9ICMq2lt/PXl3SjC2plVMDpUWeMih+2cV5kR6eLC+OxpN91fjc/M940WeG2dmO2WEL1/Zeg9nlxO7Nr+N9+3H8sduF/zHnopPj0OgTsBSA2eUE5mejte/auJXsRHgarjjJO8AvLywGYckGYcnG8sLicWmP9c/YuISo30o1qUhki7MFjT4BeXG3K1qzKyyrJvPEpw5hLMpnbFNdSGFXb7+9dMfHGZBhdGptkxdHo9EnoBFPAgpAcxbw3Tn8NmxNM4DP7CdgBvATgN/6BJhdTvgeXQBTYABmlxMZv8mBTLPjqs/xqoN3Jbdslvm2CxXYNt7T4ZQko8jhy9YCLHa24ExfPxanJCPXnAsAODRlKh4Ol9TJy1erCtZ/8wYeBgBzFnb8MgeMjsCyWS7oWD2AeDXfGKYm3BNPmBipMUw3nQGw+M0N66VYhiGlUf9db/r+m+9xQaTUIPbzHKZPAl6Y9wg6bt5Ca981ZOgIzJECmBMmxHO96ORlFKfPBdLnRo13qOsijowCKxAPP8/BPSpgPiUie1oSsp9dP5FjScerDpIAzmgypySdBLD47LlW6dHA5+TQ4I9RXWmahiAIiE+YjMWztqCx24XX/taKTWmpSGf1cGkTAV4GaUhEWJtDrvOL2WhxtsDT61IT2XiaviPNpFaofj+P5PRUDDS+hbE4lBafMBnfaZ+UAJBZmaaTmliGofKtFrHhihPW/DXoO/Ef0MffPucRBAE0TWNo8EdkZ/YA0MLlCW3W//TLnDsTWsTvXHMuEHar8VpOygwgZQZsTY23K13tJVwd/BE0Td/RXxCiTvvExJQZFElo6eqI2kJmYm9v+j9sYlBz/nbtMtBRh7XpqTC7nHB5OHRxXvy9rbXvGtyjocDOi6Mx0FGnXvMO8fiwiYF3KBTY/hERiZlr5FO1hzT5VkuQ0NLVpBwQPMtmme31dgfc2lRJYe4d4rEuaxDrsgZVVxoa/BFrtZfuKX0P2vx+Hk6TGVtm/IyhsPUVayvzA4A+Xge3NlWqtzuwvLDYDsBDSqN8wLpoXj0AvPfFCcn062fhHeKhj9dBH6/D4fYE1QIA4Dr/CT7KMak7tda+a1H1/32D5jnV95WNfaT1a87rcbg9QQUuCAJi4xLQ3uGSAGDRgpx6cZgLkIIoE9Qk9i8Fto2e41UHtW5tqupGCnBlIMUyUns1dqSZ1EOo58+eh62pUS3k7gXc1tSI58+ex64LbXB5OOxIM8F0pVq1vrL6d5yDZm2RT9Ue0hbYNnp0rP4vgigTJE1BIw5zA29uWP8BALR3uILxCZMhCAL08TrVjbxDfFRAm66ESADAjEvfqoGtrIZi4cgV8vNcqH7ycGrCGgteMdjh9gS8uMSvWj8+YTLaO1zBersDrzzx2AdyQBigKWiIoK+XEEQZOlZv2L5vX/fxqoPs118fIL0N5YRide8Qj8PtCViXNagqlDJoYuYaVF97KGpzryQkRVmU040LIhV1tLJ+djKk9uoov/ePiCqJTb/2qv/XL6uQV64skQpsG7ndmzenicNeD0CABCDTFKERhzn3mxvWVwGg3vviRHDmklJ1sMimqIKyEleb9mPdz0fwUY4JeXE0jDE0XB4uqjBzeULFmzGGRl4cjR1pJqz7+Qi8DeVRllf8noml8OISv2q8mUtK8d4XJ4IAqDc3rK8Shzl3uAySo44WyRgm9lTD2cNlW8tX7z96QDZdqab6brhUq3/YxKjKMF6uiI1LQGLmGgBA22gqPL0uhDdLyI7pUaV4xDeoCoUSa8oKR660d4hHylQTXLO2iKVFJUTl3opjK1ZZ1/Gcd4Smoo8WAYAURFnSsXpm+759t45XHWS+/vqAJLVXk2OXOHJiRSXGJhqFEACM+AajrkdKtdLu5qJk1hZp5coSssC20b978+YknvP6aer24W5kOS3RFEGJw96R3Zs3r823WsSVK0tAZm2R4hMmq24z1mrKd2UVlI8gCBjxDWLENxgFXHGLsQoXqTreIR7xCZMRv+QP0sqVJci3WsSK50vXisPeEZoCpYAf7/mACIAQh7m63e9XF+ZbLbJCImWqKcpikcnlcHsCas7rVWBKP+V7pMUVNxwLXMk7ituQWVukhQtWA4C88513C6VRvi7k6oR4H8/IZC1ABMgY3ZrtL2+prbc7qP1HD4jZMT3U1ab9UW4QqRxj3SESpD5eFxVDkQaIdK+ZS0rRNpoqlhaVUPlWi7jznXcLaYqoUzA9wEO+0A3UJHb19n37/ny86qCxwLYx8MoTj2mk9mqi74YLTCwVVXQpICIJRcrh2JiJNEDY6nJ7hytYtrVcm2+1uHe/X/2MNMofuxv4+3jMKlMARGqS3njyK/snZVvL14S3nUFrWoAa6KgjhgZ/hH9EvIPMRE0BzcRSSi6R20ZTxU+rKjX1dgcq91bUrVhlfTYklzI11m0e8EG3TAkiRB2r1/Cct3zXG9ts9XZHgkIkK9NEGAM95EBHHaEE7Hj5QylPIuRWdmtTpfYOl3yq9pAm/Px58PdvlFUlTUur4DlvMBSwxN/1oPv2qaEoy+EXO4wtzu6XPq2qtNXbHUZlO7psllnMyjTJxkAPOcHjWykMmmi44qSU/W6+1eJ+ylZWlWtO+0Ac5tyhF0D+ca8aRL4vQQkigrEMA0JLJ9663l3a3uFacqr20MJ6u0M/9ihEOUWQHW13HInkWy1ewpLd/MoTjzUlTUvbLweEgfB2VhO2+j/0ZY+JiABAEs95bWfPtWoBLGq44lwiO9qkiJWQCEs2CaBp2Szz2UULcgI6Vl8F4JYcEDDi94OmHgy40v4PIL5swO3MXUUAAAAASUVORK5CYII=">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -336,8 +344,11 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
 /* داخل تطبيق الكمبيوتر: prompt() من التطبيق، ودخول السكرتارية من المتصفح فقط */
+/* ===== تطبيق الموبايل (PWA): أيقونة على الشاشة الرئيسية ===== */
+const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.29-h';
+const VER='2026.10.29-i';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -385,10 +396,51 @@ const certMsg=c=>'C1|'+c.r+'|'+c.p+'|'+c.e;
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
  return(s&&k&&(r=='t'||r=='s')&&/^[a-z0-9]{4,16}$/.test(s)&&/^[A-Za-z0-9_-]{86,88}$/.test(k))?{room:s,k,r}:null})();
+pwaHome();pwaInstall();
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
+/* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
+const homeUrl=()=>location.origin+location.pathname+'?source=app';
+function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
+ if(u.origin!==location.origin||u.pathname!==location.pathname||!q.get('s')||!q.get('k')||!/^(t|s)$/.test(q.get('r')||''))return null;return u}catch(e){return null}}
+function pwaHome(){if(!PWA||window.itqanApp)return;
+ if(LK){const b=document.createElement('button');b.className='w';b.style.cssText='background:transparent;border:1px solid #27496b;margin-top:8px';b.textContent='🏠 الرجوع لشاشة البداية';b.onclick=()=>{location.href=homeUrl()};$('#jlink').append(b);return}
+ const j=$('#jnone');j.textContent='';let role='';
+ const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;width:100%';
+ const mk=(r,ic,t,bg)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:1;background:'+bg+';padding:16px 6px;font-weight:700;font-size:16px;display:flex;flex-direction:column;align-items:center;gap:4px;border:2px solid transparent';
+  const i=document.createElement('b');i.style.fontSize='30px';i.textContent=ic;b.append(i,t);b.onclick=()=>pick(r,b);row.append(b);return b};
+ mk('t','👨‍🏫','دخول المعلم','#1a9486');mk('s','🎓','دخول الطالب','#27496b');
+ const f=document.createElement('div');f.hidden=true;f.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%';
+ const h=document.createElement('small');h.style.lineHeight='1.8';const inp=document.createElement('input');inp.dir='ltr';inp.placeholder='الصق رابط الحصة هنا';inp.autocomplete='off';
+ const r2=document.createElement('div');r2.style.cssText='display:flex;gap:8px';const pa=document.createElement('button');pa.className='w';pa.style.cssText='background:#27496b;flex:none;padding:10px 14px';pa.textContent='📋 لصق';
+ const go=document.createElement('button');go.className='w';go.style.cssText='background:#1a9486;flex:1;font-weight:700';go.textContent='دخول';r2.append(pa,go);
+ const er=document.createElement('small');er.style.cssText='color:#fca5a5;min-height:20px;line-height:1.7';f.append(h,inp,r2,er);
+ function pick(r,b){role=r;f.hidden=false;f.style.display='flex';er.textContent='';row.querySelectorAll('button').forEach(x=>x.style.borderColor=x===b?'#e3c08d':'transparent');
+  h.textContent=r=='t'?'انسخ «رابط المعلم» من رسالة السكرتارية على واتساب، وبعدين اضغط «لصق».':'انسخ «رابط الحصة» من رسالة السكرتارية على واتساب، وبعدين اضغط «لصق».';inp.focus()}
+ pa.onclick=async()=>{try{inp.value=(await navigator.clipboard.readText()||'').trim();er.textContent=''}catch(e){er.textContent='اضغط مطوّلاً على الخانة واختار «لصق».';inp.focus()}};
+ const enter=()=>{const u=inviteOf(inp.value);if(!inp.value.trim())return er.textContent='الصق الرابط الأول.';
+  if(!u)return er.textContent='الرابط ده مش رابط حصة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.';
+  const r=u.searchParams.get('r');if(role&&r!==role)return er.textContent=r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.';
+  location.href=u.href};
+ go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
+ const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>secOpen();
+ j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec)}
+/* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
+var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;pwaInstall()});
+function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
+ try{if(Date.now()-(+localStorage.getItem('itqan_inst_x')||0)<7*864e5)return}catch(e){}
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+ if(!ios&&!instEv)return;
+ const d=document.createElement('div');d.id='inst';d.style.cssText='background:#1d3652;border:1px solid rgba(227,192,141,.35);border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;text-align:start;margin-top:4px';
+ const im=document.createElement('img');im.src='icons/apple-touch-icon.png';im.alt='';im.style.cssText='width:44px;height:44px;border-radius:10px;flex:none';
+ const t=document.createElement('small');t.style.cssText='flex:1;line-height:1.7';const x=document.createElement('button');x.textContent='✕';x.style.cssText='background:transparent;font-size:16px;flex:none;padding:4px';
+ x.onclick=()=>{d.remove();try{localStorage.setItem('itqan_inst_x',Date.now())}catch(e){}};
+ if(instEv){t.textContent='ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.';const b=document.createElement('button');b.textContent='📲 تثبيت';b.style.cssText='background:#1a9486;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';
+  b.onclick=async()=>{const e=instEv;instEv=null;d.remove();try{e.prompt();await e.userChoice}catch(x){}};d.append(im,t,b,x)}
+ else{t.textContent='ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».';d.append(im,t,x)}
+ $('#join .card').append(d)}
 /* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
-function appHelp(){if(window.itqanApp||MOB||!/Windows/i.test(navigator.userAgent))return;
+function appHelp(){if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent))return;
  const b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-bottom:10px';b.textContent='💻 افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)';
  b.onclick=()=>{location.href='itqan://open?u='+encodeURIComponent(location.href)};$('#jlink').prepend(b)}
 function inAppHelp(){if(!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
@@ -943,7 +995,7 @@ function up(){
  else if(w=='cs'){ins.c.armed=ins.c.r>8?1:0;sendIns()}
  drag=null;cur=null;redraw()}
 function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width;return[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S]}
-wb.onpointerdown=e=>{if(role!='t')return sDown(e);e.preventDefault();wb.setPointerCapture(e.pointerId);down(lp(e))};
+wb.onpointerdown=e=>{if(role!='t')return sDown(e);e.preventDefault();try{wb.setPointerCapture(e.pointerId)}catch(x){};down(lp(e))};
 wb.onpointermove=e=>{if(role!='t')return sMove(e);hov=lp(e);move(hov)};
 wb.onpointerup=wb.onpointercancel=e=>{if(role=='t')up();else sUp(e)};
 wb.onpointerleave=()=>{hov=null;if(!drag)redraw()};
@@ -1249,6 +1301,10 @@ const ENM=[
 ["اكتب كود الغرفة اللي أرسلته لك السكرتارية","Enter the room code sent to you by the secretary"],
 ["كود الغرفة غير صحيح — تأكد من الكود اللي أرسلته لك السكرتارية وحاول مرة أخرى.","Wrong room code — check the code the secretary sent you and try again."],
 ["اكتب اسمك","Enter your name"],
+["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
+["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
+["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
+["تثبيت","Install"],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
 ["رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)","Room code (teacher: leave empty to create a new room)"],
 ["دخول كمعلم","Join as teacher"],
@@ -1504,7 +1560,7 @@ function sbRef(){if(role!='s')return;const ok=!!(st.sw&&admitted);document.body.
  document.querySelectorAll('#tb [data-st]').forEach(b=>{b.classList.toggle('on',b.dataset.st==swTool);b.style.opacity=ok?1:.35});
  document.querySelectorAll('#tb [data-sc]').forEach(b=>b.classList.toggle('on',b.dataset.sc==swCol))}
 const swOk=()=>role=='s'&&admitted&&st.wb&&st.sw&&conn&&conn.open;
-function sDown(e){if(!swOk())return;e.preventDefault();wb.setPointerCapture(e.pointerId);const p=lp(e);
+function sDown(e){if(!swOk())return;e.preventDefault();try{wb.setPointerCapture(e.pointerId)}catch(x){};const p=lp(e);
  if(swTool=='pt'){sdr={pt:1};sendPt(p,1);return}sdr={c:swCol,w:swW,p:[p]};sPrev=sdr;redraw()}
 function sMove(e){if(!sdr)return;const p=lp(e);if(sdr.pt){sendPt(p);return}const l=sdr.p[sdr.p.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])<2)return;if(sdr.p.length<2500)sdr.p.push(p);redraw()}
 function sUp(e){if(!sdr)return;const d=sdr;sdr=null;sPrev=null;
@@ -2185,12 +2241,14 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  /* capture: نقرر قبل السبورة هل الحركة كتابة ولا تحريك/تكبير */
  stg.addEventListener('pointerdown',e=>{
   if(skip(e))return;const mid=e.pointerType=='mouse'&&e.button==1;
+  if(e.pointerType=='pen'){if(!window.PEN_T)try{toast('✏️','وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك')}catch(x){}window.PEN_T=Date.now()}
+  const penOn=!!window.PEN_T&&Date.now()-window.PEN_T<6e5;
   if(e.pointerType=='mouse'&&e.button!==0&&!mid)return;
   const touch=e.pointerType=='touch';
   if(touch&&P.size>=1){/* إصبع تاني: تكبير بإصبعين */
    if(!pinch){pinch=1;try{wbCancel()}catch(x){}}P.set(e.pointerId,rel(e));try{stg.setPointerCapture(e.pointerId)}catch(x){}
    const[a,b]=[...P.values()];pd=Math.hypot(a[0]-b[0],a[1]-b[1])||1;pc=[(a[0]+b[0])/2,(a[1]+b[1])/2];e.stopPropagation();e.preventDefault();return}
-  if(!mid&&!panMode()){if(touch)P.set(e.pointerId,rel(e));return}/* كتابة على السبورة */
+  if(!mid&&!panMode()&&!(touch&&penOn)){if(touch)P.set(e.pointerId,rel(e));return}/* كتابة على السبورة */
   P.set(e.pointerId,rel(e));moved=0;stg.classList.add('zgr');try{stg.setPointerCapture(e.pointerId)}catch(x){}e.stopPropagation();e.preventDefault()},true);
  stg.addEventListener('pointermove',e=>{
   if(!P.has(e.pointerId))return;const n=rel(e),o=P.get(e.pointerId);P.set(e.pointerId,n);
