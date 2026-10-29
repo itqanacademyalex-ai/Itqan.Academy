@@ -335,7 +335,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-d';
+const VER='2026.10.29-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1215,7 +1215,7 @@ window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
-function pfsSet(on){document.body.classList.toggle('pfs',!!on);const b=$('#fs');if(b)b.textContent=on?'🗗':'⛶';setTimeout(()=>{try{fit();relayout()}catch(e){}},150)}
+function pfsSet(on){document.body.classList.toggle('pfs',!!on);const b=$('#fs');if(b)b.textContent=on?'✕':'⛶';setTimeout(()=>{try{fit();relayout()}catch(e){}},150)}
 function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitFullscreenElement;
  if(on){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return}
  if(el.classList.contains('pfs'))return pfsSet(0);
@@ -1223,7 +1223,7 @@ function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitF
  if(!rq||en===false)return pfsSet(1);
  try{const p=rq.call(el);if(p&&p.catch)p.catch(()=>pfsSet(1))}catch(e){pfsSet(1)}}
 if(!('onfullscreenchange' in document))document.addEventListener('webkitfullscreenchange',()=>document.dispatchEvent(new Event('fullscreenchange')));
-document.addEventListener('fullscreenchange',()=>{const b=$('#fs');if(b)b.textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'🗗':'⛶'});
+document.addEventListener('fullscreenchange',()=>{const b=$('#fs');if(b)b.textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'✕':'⛶'});
 /* ===== ترجمة كاملة للواجهة (عربي ⇄ English): نصوص التطبيق فقط — أسماء وكتابات المستخدمين محمية بـ translate=no ===== */
 const ENM=[
 ["الفصل الافتراضي","Virtual Classroom"],
@@ -1957,6 +1957,12 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
 #msn{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.75);padding:6px 10px;border-radius:24px;color:#fff;direction:ltr}
 #msn button{width:38px;height:38px;border-radius:50%;background:#27496b;color:#fff;border:0;font-size:16px}
 #recb,#recs,#tr,#brc{display:none!important}
+/* شريط الأزرار: لا تنضغط الأيقونات فوق بعض على الشاشات الضيقة — تتحرك أفقياً لو مش كفاية */
+.bar{overflow-x:auto;overflow-y:hidden;justify-content:center;justify-content:safe center;scrollbar-width:none;-webkit-overflow-scrolling:touch}.bar::-webkit-scrollbar{display:none}.bar>*{flex:none}
+@media(max-width:600px){.bar{gap:6px;padding:6px 2px}.bar .c{width:40px;height:40px;font-size:17px}}
+/* ملء الشاشة: الأزرار في شريط مستقل تحت الشاشة بدل ما تغطي شريط التكبير والمحتوى */
+body.pfs #stage{bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+body.pfs .bar{bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:auto}
 body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#fca5a5}#sdu:empty{display:none}
 </style>
 <script>
@@ -2146,7 +2152,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  const lab=document.createElement('span'),mk=(t,f,ti)=>{const b=document.createElement('button');b.textContent=t;b.title=ti;b.onclick=f;return b};
  const cen=f=>zoomAt(f,stg.clientWidth/2,stg.clientHeight/2);
  const hb=mk('✋',()=>{hand=hand?0:1;ui2()},'تحريك الصورة (اليد)');
- lab.title='إعادة الحجم الأصلي';lab.onclick=()=>reset();
+ lab.title='إعادة الحجم الأصلي';lab.onclick=()=>reset();lab.textContent='100%';
  box.append(mk('－',()=>cen(1/1.25),'تصغير'),lab,mk('＋',()=>cen(1.25),'تكبير'),mk('⟲',()=>reset(),'إعادة الحجم الأصلي'),hb);
  stg.appendChild(box);
  const drawable=()=>!w.hidden&&(role=='t'||(role=='s'&&document.body.classList.contains('sw')));
