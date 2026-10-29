@@ -24,9 +24,16 @@ input:focus{border-color:#1a9486}
 #go{flex:1;background:#1a9486}#pa{background:#27496b}
 #e{color:#fca5a5;min-height:22px;font-size:14px;line-height:1.7}
 small{color:#a9bccd;line-height:1.8}
+#splash{position:fixed;inset:0;z-index:9999;background:#0e1a2b;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;transition:opacity .55s ease}#splash.show{display:flex}#splash.out{opacity:0;pointer-events:none}#splash img{width:min(46vw,190px);height:auto;opacity:0;transform:scale(.9);animation:splIn 1s cubic-bezier(.2,.7,.2,1) .1s forwards;filter:drop-shadow(0 10px 30px rgba(0,0,0,.45))}#splash b{font:700 18px Cairo,Tahoma,sans-serif;color:#e3c08d;letter-spacing:.5px;opacity:0;animation:splIn .9s ease .45s forwards}@keyframes splIn{to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
+<div id="splash"><img src="build/icon.png" alt="Itqan Academy"><b>Itqan Academy</b></div>
+<script>/* شاشة البداية: اللوجو بيظهر بالتدريج (fade in) أول ما التطبيق يتفتح من الأيقونة — مرة واحدة لكل فتحة */
+(function(){var s=document.getElementById('splash'),app=window.itqanApp||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,seen=0;
+ try{seen=sessionStorage.getItem('itqan_splash')}catch(e){}
+ if(!app||seen){s.remove();return}try{sessionStorage.setItem('itqan_splash','1')}catch(e){}
+ s.className='show';setTimeout(function(){s.className='show out';setTimeout(function(){s.remove()},600)},1700)})();</script>
 <div class="c">
  <img class="logo" src="build/icon.png" alt="Itqan Academy">
  <h1>أكاديمية إتقان</h1>
