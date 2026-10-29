@@ -423,6 +423,7 @@ function sys(m){if(SYS_HIDE.test(String(m)))return;chat.push({sys:1,m});render()
 
 /* ---------- المعلم ---------- */
 async function initT(){
+ document.addEventListener('visibilitychange',()=>{if(document.hidden||role!='t'||!peer)return;if(peer.destroyed){tTries=0;startTPeer()}else if(peer.disconnected){try{peer.reconnect()}catch(e){}}});
  tGrabMic();
  await startTPeer();
  refresh();
@@ -442,9 +443,17 @@ async function tAuth(pin){
 async function tReq(pin){
  showGate('⏳','جارٍ الاتصال بالسكرتارية...');
  const ice=await getIce();
- const p=new Peer(undefined,{config:ice});let c=null,got=0;
- const go=()=>{if(got||p.destroyed||(c&&c.open))return;
-  if(p.disconnected){try{p.reconnect()}catch(e){}setTimeout(go,2500);return}
+ let p=null,c=null,got=0,gt=0;
+ const mkP=()=>{try{p&&p.destroy()}catch(e){}c=null;const q=p=new Peer(undefined,{config:ice});
+  q.on('open',()=>{if(p===q)go()});
+  q.on('error',e=>{if(got||p!==q)return;
+   if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');later(4000)}
+   else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');later(4000)}})};
+ const later=ms=>{clearTimeout(gt);gt=setTimeout(go,ms)};
+ const go=()=>{if(got||(c&&c.open))return;
+  if(!p||p.destroyed){mkP();return}
+  if(p.disconnected){if(!p.id){mkP();return}try{p.reconnect()}catch(e){mkP();return}later(2500);return}
+  if(!p.open){later(2500);return}
   c=p.connect('itqan-reg-'+room,{reliable:true});
   c.on('open',()=>{c.send({t:'treq',n:name,p:TK.pub,pin});showGate('⏳','تم إرسال طلبك — في انتظار موافقة السكرتارية...')});
   c.on('data',async d=>{
@@ -453,12 +462,11 @@ async function tReq(pin){
     try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC,ml:MAILLIVE,ph:await pinH(pin)}))}catch(e){}
     try{p.destroy()}catch(e){}tStart()}
    else if(d.t=='trej'){got=1;try{p.destroy()}catch(e){}showGate('⛔',d.w=='pin'?'كود الغرفة غير صحيح — تأكد من الكود اللي أرسلته لك السكرتارية وحاول مرة أخرى.':'رفضت السكرتارية دخولك. تواصل معها لمعرفة السبب.',1)}});
-  c.on('close',()=>{if(!got){showGate('⏳','انقطع الاتصال بالسكرتارية — جارٍ إعادة المحاولة...');setTimeout(go,3000)}});
+  const cc=c;c.on('close',()=>{if(!got&&c===cc){c=null;showGate('⏳','انقطع الاتصال بالسكرتارية — جارٍ إعادة المحاولة...');later(3000)}});
   c.on('error',()=>{})};
- p.on('open',go);
- p.on('error',e=>{if(got)return;
-  if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');setTimeout(go,4000)}
-  else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');setTimeout(go,4000)}});
+ mkP();
+ /* لما المعلم يرجع للصفحة (بعد ما كان في تطبيق أو تبويب تاني) نعيد المحاولة فوراً */
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!got){if(c&&!c.open)c=null;later(300)}});
 }
 function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();if(MAILLIVE)back?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn()}sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
@@ -500,7 +508,7 @@ async function startTPeer(){
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
    tTries++;try{p.destroy()}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
-  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');return}
+  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');if(!opened||p.destroyed)setTimeout(()=>{if(peer===p){try{p.destroy()}catch(x){}startTPeer()}},4000);return}
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
@@ -1521,6 +1529,8 @@ function secOpen(){
  ok?sxHome():sxLogin();
 }
 let sxFail=0;
+/* السكرتارية رجعت للصفحة: لو الاتصال بالخادم اتقطع وهي في الخلفية نرجّعه فوراً */
+document.addEventListener('visibilitychange',()=>{if(document.hidden||!SX||!SX.peer)return;const p=SX.peer;if(p.destroyed)sxPeer();else if(p.disconnected){try{p.reconnect()}catch(e){}}});
 function sxLogin(){$('#sxst').textContent='🔒';$('#sxB').innerHTML='';
  $('#sxA').innerHTML='<h3>🔐 دخول السكرتارية</h3><input id="sxpw" type="password" placeholder="كلمة السر" autocomplete="current-password" onkeydown="if(event.key==\'Enter\')sxAuth()"><div id="sxpe" style="color:#fca5a5;min-height:20px"></div><button class="sxb g" id="sxpb" onclick="sxAuth()">دخول</button><button class="sxb d" onclick="location.reload()">رجوع</button>';
  setTimeout(()=>{const i=$('#sxpw');i&&i.focus()},50)}
@@ -1550,11 +1560,11 @@ async function sxPeer(){
  const ice=await getIce();
  const p=SX.peer=new Peer('itqan-reg-'+SX.room,{config:ice});
  p.on('open',()=>{SX.regOk=1;SX.err='';sxDraw();sxHub()});
- p.on('disconnected',()=>{if(p.destroyed)return;setTimeout(()=>{try{p.reconnect()}catch(e){}},2500)});
+ p.on('disconnected',()=>{if(p.destroyed)return;SX.regOk=0;const re=()=>{if(p.destroyed||!p.disconnected||!SX||SX.peer!==p)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1500)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){SX.err='الجلسة ما زالت مفتوحة في نافذة أخرى أو من محاولة سابقة — جارٍ إعادة المحاولة...';SX.regOk=0;sxDraw();try{p.destroy()}catch(x){}setTimeout(sxPeer,5000);return}
   if(e.type=='peer-unavailable'){SX.hubTry=null;return}
-  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){SX.err='مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...';sxDraw()}});
+  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){SX.err='مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...';sxDraw();if(!SX.regOk&&!p.id)setTimeout(()=>{if(SX&&SX.peer===p){try{p.destroy()}catch(x){}sxPeer()}},4000)}});
  p.on('call',sxOnCall);
  p.on('connection',c=>{
   c.on('data',async d=>{
