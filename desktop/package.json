@@ -27,8 +27,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Itqan Academy",
-      "artifactName": "ItqanAcademy-${version}-setup.${ext}"
+      "artifactName": "ItqanAcademy-Setup.${ext}"
     },
-    "portable": { "artifactName": "ItqanAcademy-${version}-portable.${ext}" }
+    "portable": { "artifactName": "ItqanAcademy-Portable.${ext}" }
   }
 }

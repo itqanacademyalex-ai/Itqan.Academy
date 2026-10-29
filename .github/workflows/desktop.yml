@@ -33,8 +33,23 @@ jobs:
           path: |
             desktop/dist/*.exe
           if-no-files-found: error
-      - name: Publish release (tags desktop-v*)
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
+      # تشغيل يدوي من Actions (Run workflow) أو tag باسم desktop-v* ← ينشر Release برقم إصدار التطبيق
+      - name: Read app version
+        id: ver
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Publish release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/desktop-v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('desktop-v{0}', steps.ver.outputs.v) }}
+          target_commitish: ${{ github.sha }}
+          name: Itqan Academy ${{ steps.ver.outputs.v }}
+          make_latest: true
+          body: |
+            تطبيق أكاديمية إتقان للكمبيوتر (Windows).
+            - **ItqanAcademy-Setup.exe** — برنامج التثبيت (مُوصى به).
+            - **ItqanAcademy-Portable.exe** — يشتغل من غير تثبيت.
+
+            أول مرة: لو ظهرت «Windows protected your PC» اضغط More info ← Run anyway.
           files: desktop/dist/*.exe
