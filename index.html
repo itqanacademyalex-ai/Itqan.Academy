@@ -334,7 +334,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.27-b';
+const VER='2026.10.29-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -443,10 +443,11 @@ async function tReq(pin){
   if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');setTimeout(go,4000)}
   else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');setTimeout(go,4000)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();mailTeacherIn();sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();tRestore()?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn();sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
+const SEEN=new Set(); /* معرّفات الطلاب الذين قبلهم المعلم في هذه الحصة */
 function coHello(c){c._cn=rnd();try{c.send({t:'conon',n:c._cn})}catch(e){}}
 async function coProof(c,d){const n=c._cn;c._cn=null;if(!n||typeof d.g!=='string')return;
  if(!await vfy(LK.k,'C|'+room+'|'+n,d.g)){try{c.close()}catch(e){}return}
@@ -480,8 +481,8 @@ async function startTPeer(){
  p.on('disconnected',()=>{if(p.destroyed)return;sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
-   if(tTries++<6){sys('⏳ الرمز لسه محجوز (غالباً من جلسة سابقة) — محاولة '+tTries+' من 6...');try{p.destroy()}catch(x){}setTimeout(startTPeer,5000);return}
-   sys('هذه الغرفة مفتوحة بالفعل عند معلم آخر — غيّر الرمز');return}
+   if(tTries++<12){sys('⏳ الرمز لسه محجوز (غالباً من جلسة سابقة) — محاولة '+tTries+' من 12...');try{p.destroy()}catch(x){}setTimeout(startTPeer,5000);return}
+   try{p.destroy()}catch(x){}sys('الغرفة ما زالت محجوزة على خادم الاتصال — أغلق أي نافذة أخرى مفتوح فيها رابط المعلم، ثم انتظر دقيقة واضغط 🔄');return}
   if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');return}
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
@@ -514,9 +515,12 @@ function tData(c,d){
  if(cohosts[c.peer]===c){if(d.t=='cmd')coCmd(d);return}
  if(d.t=='hello'){
   if(conns[c.peer])return;
-  if(gm==2){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
-  const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
-  if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
+  const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
+  if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
+  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){try{x.c.close()}catch(e){}}});
+  const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0,sid:sd};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
+  if(back){sys('↩️ '+o.name+' عاد للحصة تلقائياً');admit(c.peer)}
+  else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
   return}
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
@@ -525,9 +529,9 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- mailStu(o.name);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
-function deny(k,kick){const o=conns[k];if(!o)return;if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
+function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
 function tCamBan(){camBanAll=camBanAll?0:1;Object.values(conns).filter(o=>o.adm).forEach(o=>{o.cp=camBanAll?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+o.c.peer)}});render();sys(camBanAll?'تم منع كاميرات الطلاب':'تم السماح بكاميرات الطلاب')}
 function cycleGm(){gm=(gm+1)%3;if(gm==1)admitAll();sys('وضع الدخول: '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}
@@ -680,10 +684,12 @@ async function initS(){
   c.on('stream',s=>{const v=$('#v');{const ha=s.getAudioTracks().length;if(ha!==lastA){lastA=ha;sys(ha?'وصل البث مع الصوت ✓':'وصل البث بدون صوت — ميكروفون المعلم غير مفعّل أو مكتوم')}}v.muted=true;v.srcObject=s;v.play().catch(()=>{});A.srcObject=s;A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)})});
 }
 let vOk=0,vNonce='';
+/* معرّف ثابت للطالب في هذه الغرفة — يسمح للمعلم بإرجاعه تلقائياً بعد انقطاع النت بدون غرفة الانتظار */
+function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)||''}catch(e){}if(!/^[A-Za-z0-9_-]{16,32}$/.test(v)){v=rnd();try{localStorage.setItem(k,v)}catch(e){}}return v}
 async function vProof(d){const c=conn;
  try{
   if(!(d&&d.c&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'T|'+room+'|'+vNonce,d.g)))throw 0;
-  if(conn!==c)return;vOk=1;c.send({t:'hello',n:name})
+  if(conn!==c)return;vOk=1;c.send({t:'hello',n:name,id:sid()})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
   showGate('⛔','تعذر التحقق من هوية المعلم — تأكد أنك فتحت الرابط الأصلي من السكرتارية. جارٍ إعادة المحاولة...');
@@ -724,7 +730,7 @@ function hand(){
  myHand=myHand?0:1;conn&&conn.open&&conn.send({t:'hand',on:myHand});ui();
 }
 function sync(){
- if(role=='t'){refresh();sys('تمت مزامنة الاتصال');return}
+ if(role=='t'){if(!peer||peer.destroyed){tTries=0;startTPeer();return}refresh();sys('تمت مزامنة الاتصال');return}
  clearTimeout(rt);dropCall();stopCam();canTalk=1;canCam=1;try{peer.destroy()}catch(e){}initS();sys('جارٍ إعادة الاتصال...');
 }
 function endCall(){
@@ -1147,15 +1153,27 @@ const mailNow=()=>new Date().toLocaleString('ar-EG');
 function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return sys(T('mailOff'));mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
 function mailStu(n){mailNames.add(n);mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
 function mailFlush(keep){clearTimeout(mailTm);if(!mailQ.length)return;const q=mailQ.splice(0);mailSend('🎓 دخل '+q.length+' طالب الغرفة '+roomName,'دخل الطلاب التالية أسماؤهم:\n- '+q.join('\n- ')+'\nالوقت: '+mailNow(),keep)}
-function mailEnd(keep,sum,why){if(role!='t'||mailDone||!sessT0)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
+function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
  const en=!!sum&&aiLangOf(aiData())=='en',mn=Math.round((Date.now()-sessT0)/60000),dur=en?(mn?mn+' min':'< 1 min'):(mn?mn+' دقيقة':'أقل من دقيقة'),
- subj=(sum?(en?'✅ Class summary — ':'✅ ملخص الحصة — '):(en?'⏱ Class ended — ':'⏱ انتهت الحصة — '))+roomName+' — '+dur;
- let body=(en?'Room: ':'الغرفة: ')+roomName+'\n'+(en?'Duration: ':'المدة: ')+dur+'\n'+(en?'Ended at: ':'انتهت في: ')+mailNow()+'\n\n';
+ subj=(sum?(en?'✅ Class summary — ':'✅ ملخص الحصة — '):closed?'⚠️ أُغلقت صفحة المعلم بدون إنهاء الحصة — ':(en?'⏱ Class ended — ':'⏱ انتهت الحصة — '))+roomName+' — '+dur;
+ let body=(closed?'أُغلقت صفحة المعلم أو أُعيد تحميلها بدون الضغط على «إنهاء». لو عاد خلال دقائق سيصلك إيميل «عاد المعلم».\n\n':'')+(en?'Room: ':'الغرفة: ')+roomName+'\n'+(en?'Duration: ':'المدة: ')+dur+'\n'+(en?'Ended at: ':'انتهت في: ')+mailNow()+'\n\n';
  if(sum)body+=(en?'===== Class summary =====\n':'===== ملخص الحصة =====\n')+sum.slice(0,9000)+'\n\n';
  else{body+='⚠️ لم يتم توليد ملخص بالذكاء الاصطناعي'+(why?' ('+why+')':'')+'.\n';const tl=trLines().join('\n');if(tl)body+='\n===== آخر التفريغ الصوتي =====\n'+tl.slice(-2500)+'\n\n'}
  body+=attRep(en?'en':'eg');
  return mailSend(subj,body.slice(0,14000),keep)}
-window.addEventListener('pagehide',()=>mailEnd(1));
+/* حفظ حالة الحصة عند إعادة تحميل صفحة المعلم (Refresh) واستعادتها خلال 20 دقيقة */
+const tsKey=()=>'itqan_ts_'+room;
+function tSave(){if(role!='t'||!LOG.start||mailDone||endDone)return;
+ const now=Date.now(),att=LOG.att.concat(Object.values(conns).filter(o=>o.adm).map(o=>({ts:now,n:o.name,ev:'خرج'})));
+ const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300),att,seen:[...SEEN],strokes};
+ try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(e){o.strokes=[];try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(x){}}}
+function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()));sessionStorage.removeItem(tsKey())}catch(e){}
+ if(!o||!(Date.now()-o.at<20*60000))return false;
+ sessT0=o.t0||sessT0;LOG.start=o.ls||sessT0;if(Array.isArray(o.chat))chat=o.chat.concat(chat);if(Array.isArray(o.att))LOG.att=o.att;
+ if(Array.isArray(o.seen))o.seen.forEach(x=>SEEN.add(x));if(Array.isArray(o.strokes)&&o.strokes.length){strokes=o.strokes;try{rebuild()}catch(e){}}
+ sys('↩️ تمت استعادة الحصة بعد إعادة تحميل الصفحة — الطلاب سيعودون تلقائياً');render();return true}
+window.addEventListener('beforeunload',e=>{if(role=='t'&&LOG.start&&!mailDone&&!endDone){e.preventDefault();e.returnValue=''}});
+window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
@@ -1268,8 +1286,10 @@ const ENM=[
 ["الغرفة جاهزة ويمكن للطلاب الدخول","The room is ready and students can join"],
 ["انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً","Disconnected from the room server — reconnecting automatically"],
 ["الرمز لسه محجوز (غالباً من جلسة سابقة) — محاولة","The code is still reserved (probably from a previous session) — attempt"],
-["من 6...","of 6..."],
-["هذه الغرفة مفتوحة بالفعل عند معلم آخر — غيّر الرمز","This room is already open with another teacher — change the code"],
+["من 12...","of 12..."],
+["الغرفة ما زالت محجوزة على خادم الاتصال — أغلق أي نافذة أخرى مفتوح فيها رابط المعلم، ثم انتظر دقيقة واضغط 🔄","The room is still reserved on the connection server — close any other window with the teacher link, wait a minute, then press 🔄"],
+["عاد للحصة تلقائياً","rejoined automatically"],
+["تمت استعادة الحصة بعد إعادة تحميل الصفحة — الطلاب سيعودون تلقائياً","The lesson was restored after reloading — students will rejoin automatically"],
 ["مشكلة في الوصول لخادم الغرف","Problem reaching the room server"],
 ["سنعيد المحاولة تلقائياً","we will retry automatically"],
 ["خطأ في الاتصال","Connection error"],
@@ -1452,7 +1472,11 @@ try{setLang(localStorage.getItem('itqan_lang')||'ar')}catch(e){setLang('ar')}
 <script>
 /* ================= لوحة السكرتارية ================= */
 let SX=null;
-function sxSaved(){try{const j=JSON.parse(localStorage.getItem('itqan_sx'));if(j&&j.room&&Date.now()-j.ts<18*36e5)return j}catch(e){}return null}
+/* كل الجلسات المحفوظة (آخر 18 ساعة) — كل حصة يمكن فتحها في تبويب منفصل */
+function sxPut(a){try{localStorage.setItem('itqan_sxs',JSON.stringify(a))}catch(e){}}
+function sxList(){let a=[];try{a=JSON.parse(localStorage.getItem('itqan_sxs'))||[]}catch(e){}if(!Array.isArray(a))a=[];
+ try{const o=JSON.parse(localStorage.getItem('itqan_sx'));if(o&&o.room&&!a.some(x=>x.room===o.room))a.push(o);localStorage.removeItem('itqan_sx')}catch(e){}
+ const b=a.filter(x=>x&&x.room&&Date.now()-x.ts<18*36e5);if(b.length!==a.length)sxPut(b);return b}
 function secOpen(){
  if(!(window.crypto&&crypto.subtle))return alert('المتصفح لا يدعم التشفير — افتح الصفحة من Chrome/Safari عبر https');
  if(typeof Peer==='undefined')return alert('تعذر تحميل مكتبة الاتصال — تأكد من الإنترنت');
@@ -1470,19 +1494,20 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
  if(h&&h===SEC_HASH){sxFail=0;try{sessionStorage.setItem('itqan_su',SEC_HASH)}catch(e){}sxHome();return}
  sxFail++;i.value='';$('#sxpe').textContent='كلمة السر غير صحيحة'+(sxFail>2?' — انتظر '+Math.min(sxFail*3,30)+' ثانية':'');
  setTimeout(()=>{b.disabled=false;i.focus()},sxFail>2?Math.min(sxFail*3,30)*1000:600)}
-function sxHome(){const s=sxSaved();
+function sxHome(){const L=sxList(),K=k=>'data-k="'+esc(k)+'"';
  $('#sxst').textContent='';
  $('#sxA').innerHTML='<h3>➕ جلسة جديدة</h3><input id="sxn" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الجلسة وتوليد الروابط</button>'+
-  (s?'<hr style="border-color:#27496b;width:100%"><div class="sxr"><span>جلسة سابقة: <b>'+U(s.title||s.room)+'</b></span><span class="bt"><button class="sxb" onclick="sxResume()">استكمال</button><button class="sxb d" onclick="sxForget()">حذف</button></span></div>':'');
+  (L.length?'<hr style="border-color:#27496b;width:100%"><h3>📋 الجلسات المفتوحة ('+L.length+')</h3><small style="color:#a9bccd;line-height:1.8">لإدارة أكثر من حصة في نفس الوقت افتحي كل حصة في تبويب منفصل.</small>'+
+   L.slice().reverse().map(s=>'<div class="sxr"><span><b>'+U(s.title||s.room)+'</b>'+(s.tn?' — '+U(s.tn):'')+'</span><span class="bt"><button class="sxb" '+K(s.room)+' onclick="sxResume(this.dataset.k)">استكمال</button><button class="sxb d" '+K(s.room)+' onclick="sxForget(this.dataset.k)">حذف</button></span></div>').join(''):'');
  $('#sxB').innerHTML='';rcDraw()}
-function sxForget(){try{localStorage.removeItem('itqan_sx')}catch(e){}sxHome()}
+function sxForget(r){if(!confirm('حذف هذه الجلسة من القائمة؟ لن تتمكني من التحكم فيها بعد ذلك.'))return;sxPut(sxList().filter(x=>x.room!==r));sxHome()}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  const s={room:genCode(),pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),jwk:await crypto.subtle.exportKey('jwk',kp.privateKey),
   pin:String(1000+crypto.getRandomValues(new Uint32Array(1))[0]%9000),title:$('#sxn').value.trim(),tn:$('#sxt').value.trim(),ts:Date.now()};
- try{localStorage.setItem('itqan_sx',JSON.stringify(s))}catch(e){}
+ sxPut(sxList().concat([s]));
  sxStart(s,kp.privateKey)}
-async function sxResume(){const s=sxSaved();if(!s)return;sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}
+async function sxResume(r){const s=sxList().find(x=>x.room===r);if(!s)return sxHome();sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}
 function sxStart(s,priv){SX={...s,priv,reqs:{},hub:null,hubTry:null,snap:null,peer:null,regOk:0,err:'',acc:null,msg:''};
  $('#sxA').innerHTML='';sxDraw();sxPeer();SX.pt=setInterval(()=>{if(SX&&SX.regOk&&!SX.hub&&!SX.hubTry)sxHub()},5000)}
 async function sxPeer(){
@@ -1533,12 +1558,13 @@ function sxLink(r){if(!/^https?:$/.test(location.protocol)||window!==top)return'
 function sxFlash(m){SX.msg=m;sxDraw();setTimeout(()=>{if(SX){SX.msg='';sxDraw()}},2500)}
 async function sxCopy(r){const u=sxLink(r);try{await navigator.clipboard.writeText(u);sxFlash('✓ تم نسخ الرابط')}catch(e){prompt('انسخ الرابط:',u)}}
 function sxWa(r){const u=sxLink(r),t=SX.title?' ('+SX.title+')':'';
- const m=r=='t'?'مرحباً'+(SX.tn?' '+SX.tn:'')+'، رابط دخولك للحصة'+t+':\n'+u+'\nكود المعلم: '+SX.pin+'\nبعد فتح الرابط سأقوم بالسماح لك بالدخول.':'رابط الدخول للحصة'+t+':\n'+u+'\nاكتب اسمك ثم انتظر حتى يتم السماح لك بالدخول.';
+ const ob='\n⚠️ مهم: افتح الرابط في Chrome أو Safari وليس داخل واتساب (اضغط ⋮ أو زر المشاركة ← «فتح في المتصفح»)، وإلا قد لا يعمل الميكروفون.';
+ const m=r=='t'?'مرحباً'+(SX.tn?' '+SX.tn:'')+'، رابط دخولك للحصة'+t+':\n'+u+'\nكود المعلم: '+SX.pin+'\nبعد فتح الرابط سأقوم بالسماح لك بالدخول.'+ob:'رابط الدخول للحصة'+t+':\n'+u+'\nاكتب اسمك ثم انتظر حتى يتم السماح لك بالدخول.'+ob;
  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
 function sxEnd(){if(!confirm('إنهاء الجلسة وحذف الروابط؟ لن يعمل أي رابط بعد ذلك.'))return;
  SX.bye=1;clearTimeout(SX.dropT);
  if(SX.hub){sxCmd('end');setTimeout(sxClose,400)}else sxClose()}
-async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;try{localStorage.removeItem('itqan_sx')}catch(e){}try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);clearTimeout(SX.dropT);SX=null;sxHome();recRefresh()}
+async function sxClose(){try{SX.rec&&await SX.rec.stop()}catch(e){}SX.rec=null;sxPut(sxList().filter(x=>x.room!==SX.room));try{SX.peer.destroy()}catch(e){}clearInterval(SX.pt);clearTimeout(SX.dropT);SX=null;sxHome();recRefresh()}
 function sxDraw(){if(!SX)return;
  const tl=sxLink('t'),sl=sxLink('s'),sn=SX.snap,reqs=Object.entries(SX.reqs);
  $('#sxst').textContent=window.sxStat();
