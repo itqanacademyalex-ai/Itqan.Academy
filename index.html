@@ -348,7 +348,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.29-m';
+const VER='2026.10.29-n';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -401,24 +401,23 @@ if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHe
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
 const homeUrl=()=>location.origin+location.pathname+'?source=app';
-/* ===== كود الحصة بدل الرابط: 6 حروف رقم الحصة + حرفين بصمة مفتاح السكرتارية (مثال K7M2-QP4X) =====
-   الكود بيجيب مفتاح الحصة من السكرتارية أو المعلم، والبصمة بتتأكد إنه المفتاح الصح، وبعدين نكمّل بنفس طريقة الرابط */
+/* ===== كود الحصة بدل الرابط: 4 حروف وأرقام = رقم الحصة نفسه (مثال K7M2) — حروف مش بتتلخبط (من غير O/0/I/1/L) =====
+   الكود بيجيب مفتاح الحصة من السكرتارية أو المعلم، وبعدين نكمّل بنفس طريقة الرابط (الحصص القديمة كودها 6 حروف) */
 const CA='abcdefghjkmnpqrstuvwxyz23456789';
-async function codeOf(room,pub){const b=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pub)));return room+CA[b[0]%31]+CA[b[1]%31]}
-function fmtCode(c){return String(c||'').toUpperCase().replace(/^(.{4})(.{4})$/,'$1-$2')}
-function parseCode(v){v=String(v||'');const m=v.match(/([A-Za-z0-9]{4})\s*-\s*([A-Za-z0-9]{4})/);const c=(m?m[1]+m[2]:v).toLowerCase().replace(/[^a-z0-9]/g,'');return new RegExp('^['+CA+']{8}$').test(c)?c:null}
+function fmtCode(c){return String(c||'').toUpperCase()}
+function parseCode(v){v=String(v||'');const m=v.match(/كود الحصة\s*[:：]?\s*([A-Za-z0-9]{4,6})/);const c=(m?m[1]:v).toLowerCase().replace(/[^a-z0-9]/g,'');return new RegExp('^['+CA+']{4}(['+CA+']{2})?$').test(c)?c:null}
 function linkOf(room,k,r){return location.origin+location.pathname+'?s='+room+'&k='+k+'&r='+r}
 function resolveCode(code){return new Promise(async(ok,no)=>{
  if(typeof Peer==='undefined')return no('تعذر تحميل مكتبة الاتصال — تأكد من الإنترنت');
- const room=code.slice(0,6);let p,done=0,miss=0,bad=0;
+ const room=code;let p,done=0,miss=0;
  const end=(k,e)=>{if(done)return;done=1;clearTimeout(tm);try{p.destroy()}catch(x){}k?ok({room,k}):no(e)};
  const tm=setTimeout(()=>end(null,'مش لاقي الحصة دي — اتأكد من الكود، أو إن السكرتارية فاتحة الحصة.'),15000);
  let ice;try{ice=await getIce()}catch(x){}
  p=new Peer(undefined,{config:ice});
  p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{const c=p.connect(id,{reliable:true});
   c.on('open',()=>{try{c.send({t:'pk?'})}catch(x){}});
-  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k)){if(await codeOf(room,d.k)===code)end(d.k);else if(++bad+miss>=2)end(null,'الكود ده مش صحيح — اتأكد منه من رسالة السكرتارية.')}})}));
- p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss+bad>=2)end(null,bad?'الكود ده مش صحيح — اتأكد منه من رسالة السكرتارية.':'الحصة دي مش مفتوحة دلوقتي — اتأكد من الكود، أو اسأل السكرتارية.')})})}
+  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k))end(d.k)})}));
+ p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss>=2)end(null,'مفيش حصة مفتوحة بالكود ده — اتأكد من الكود، أو اسأل السكرتارية.')})})}
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  $('#join').hidden=true;showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
@@ -433,7 +432,7 @@ function pwaHome(){if(window.itqanApp)return;
   const i=document.createElement('b');i.style.fontSize='30px';i.textContent=ic;b.append(i,t);b.onclick=()=>pick(r,b);row.append(b);return b};
  mk('t','👨‍🏫','دخول المعلم','#1a9486');mk('s','🎓','دخول الطالب','#27496b');
  const f=document.createElement('div');f.hidden=true;f.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%';
- const h=document.createElement('small');h.style.lineHeight='1.8';const inp=document.createElement('input');inp.dir='ltr';inp.placeholder='كود الحصة — مثال: K7M2-QP4X';inp.autocomplete='off';inp.setAttribute('autocapitalize','characters');inp.spellcheck=false;inp.style.cssText='text-align:center;font-size:20px;letter-spacing:3px;font-weight:700';
+ const h=document.createElement('small');h.style.lineHeight='1.8';const inp=document.createElement('input');inp.dir='ltr';inp.placeholder='كود الحصة — مثال: K7M2';inp.autocomplete='off';inp.setAttribute('autocapitalize','characters');inp.spellcheck=false;inp.style.cssText='text-align:center;font-size:24px;letter-spacing:8px;font-weight:700';
  const r2=document.createElement('div');r2.style.cssText='display:flex;gap:8px';const pa=document.createElement('button');pa.className='w';pa.style.cssText='background:#27496b;flex:none;padding:10px 14px';pa.textContent='📋 لصق';
  const go=document.createElement('button');go.className='w';go.style.cssText='background:#1a9486;flex:1;font-weight:700';go.textContent='دخول';r2.append(pa,go);
  const er=document.createElement('small');er.style.cssText='color:#fca5a5;min-height:20px;line-height:1.7';f.append(h,inp,r2,er);
@@ -445,7 +444,7 @@ function pwaHome(){if(window.itqanApp)return;
   if(/^https?:\/\/\S+$/i.test(v)){const u=inviteOf(v);if(!u)return msg('الرابط ده مش رابط حصة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.',1);
    const r=u.searchParams.get('r');if(role&&r!==role)return msg(r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.',1);
    return location.href=u.href}
-  const c=parseCode(v);if(!c)return msg('الكود لازم يكون 8 حروف وأرقام — زي K7M2-QP4X.',1);
+  const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;msg(String(e),1)})};
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
@@ -487,7 +486,7 @@ function pop(){const r=$('#room').value.trim()||'main';
  const w=window.open(URL.createObjectURL(new Blob([SRC],{type:'text/html'}))+'#'+encodeURIComponent(r),'_blank');
  if(!w)alert('اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة');}
 
-function genCode(){const a='abcdefghjkmnpqrstuvwxyz23456789',b=new Uint8Array(6);crypto.getRandomValues(b);return[...b].map(x=>a[x%a.length]).join('')}
+function genCode(){const a='abcdefghjkmnpqrstuvwxyz23456789',b=new Uint8Array(4);crypto.getRandomValues(b);return[...b].map(x=>a[x%a.length]).join('')}
 function micRetry(){(role=='t'?tGrabMic():prepMic(1)).then(ok=>{if(ok){$('#mg').hidden=true;if(role=='s')sendMic()}})}
 function join(r){
  if(!LK||LK.r!==r)return alert('افتح الرابط الذي أرسلته لك السكرتارية');
@@ -1653,14 +1652,15 @@ function sxHome(){$('#sec').classList.add('sxwide');
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender()}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
- const s={room:genCode(),pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),jwk:await crypto.subtle.exportKey('jwk',kp.privateKey),
+ let rm=genCode();while(sxList().some(x=>x.room===rm))rm=genCode();
+ const s={room:rm,pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),jwk:await crypto.subtle.exportKey('jwk',kp.privateKey),
   pin:String(1000+crypto.getRandomValues(new Uint32Array(1))[0]%9000),title:$('#sxn').value.trim(),tn:$('#sxt').value.trim(),ts:Date.now()};
  sxPut(sxList().concat([s]));$('#sxn').value='';$('#sxt').value='';
  SXV=s.room;sxStart(s,kp.privateKey)}
 async function sxResume(r){const s=sxList().find(x=>x.room===r);if(!s||SXS[r])return;try{sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}catch(e){}}
 function sxStart(s,priv){if(SXS[s.room])return;
  const X=SXS[s.room]={...s,priv,reqs:{},hub:null,hubTry:null,snap:null,peer:null,regOk:0,err:'',acc:null,msg:'',rv:{}};
- codeOf(X.room,X.pub).then(c=>{X.code=c;sxRender()});
+ X.code=X.room;
  sxPeer(X);X.pt=setInterval(()=>{if(SXS[X.room]===X&&X.regOk&&!X.hub&&!X.hubTry)sxHub(X)},5000);sxRender()}
 const sxLive=X=>SXS[X.room]===X;
 async function sxPeer(X){
