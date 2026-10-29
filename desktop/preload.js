@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld('itqanApp', {
   /* نافذة اختيار الشاشة */
   pickerSources: () => ipcRenderer.invoke('picker:get'),
   pickerDone: v => ipcRenderer.send('picker:done', v),
+  /* الرسم على الشاشة المشاركة */
+  share: on => ipcRenderer.send('share', !!on),
+  ann: m => ipcRenderer.send('ann', m),
+  onAnn: cb => { ipcRenderer.on('ann', (e, m) => cb(m)); },
   /* نافذة الإدخال */
   promptGet: () => ipcRenderer.invoke('prompt:get'),
   promptDone: v => ipcRenderer.send('prompt:done', v)

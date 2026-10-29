@@ -348,7 +348,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.29-n';
+const VER='2026.10.29-o';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -701,7 +701,9 @@ function sendMic(){
  ui()}
 function dropCall(){if(micS)micS.enabled=false;if(myCall){const c=myCall;myCall=null;try{c.close()}catch(e){}}ui()}
 function stopMic(){if(micS){const t=micS;micS=null;t.stop()}if(sSr){sSr.stop();sSr=null}stopSScr();dropCall()}
-function refresh(){
+/* تطبيق الكمبيوتر: بنبلّغه ببداية/نهاية مشاركة الشاشة عشان يظهر زر القلم للرسم على الشاشة */
+const shareSig=on=>{try{window.itqanApp&&window.itqanApp.share&&window.itqanApp.share(on)}catch(e){}};
+function refresh(){shareSig(!!scrT);
  stream.getVideoTracks().forEach(t=>stream.removeTrack(t));
  stream.addTrack(scrT||(stuS&&stuS.t)||dummy);
  $('#v').srcObject=stream;
@@ -1967,9 +1969,9 @@ async function sScr(){if(sScrT)return stopSScr();if(!canScr)return alert('اطل
  let t;sScrA=null;try{{const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}t=ms.getVideoTracks()[0];sScrA=ms.getAudioTracks()[0]||null}}
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
  if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
- sScrT=t;t.contentHint='detail';t.onended=stopSScr;sScrCall=peer.call('itqan-'+room,new MediaStream([t,...(sScrA?[sScrA]:[])]),{metadata:{k:'scr'}});
+ sScrT=t;t.contentHint='detail';t.onended=stopSScr;shareSig(true);sScrCall=peer.call('itqan-'+room,new MediaStream([t,...(sScrA?[sScrA]:[])]),{metadata:{k:'scr'}});
  setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution'),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}
-function stopSScr(){if(sScrA){try{sScrA.stop()}catch(e){}sScrA=null}if(sScrT){const t=sScrT;sScrT=null;t.onended=null;try{t.stop()}catch(e){}sys('🖥 توقفت مشاركة شاشتك')}if(sScrCall){try{sScrCall.close()}catch(e){}sScrCall=null}}
+function stopSScr(){shareSig(false);if(sScrA){try{sScrA.stop()}catch(e){}sScrA=null}if(sScrT){const t=sScrT;sScrT=null;t.onended=null;try{t.stop()}catch(e){}sys('🖥 توقفت مشاركة شاشتك')}if(sScrCall){try{sScrCall.close()}catch(e){}sScrCall=null}}
 function ssDrop(k){if(stuS&&stuS.k==k){mxSrcDel('SS:'+k);try{stuS.au&&(stuS.au.srcObject=null)}catch(e){}try{stuS.call.close()}catch(e){}stuS=null;refreshSoon()}}
 function ssp(k){const o=conns[k];if(!o||!o.adm)return;o.sp=o.sp?0:1;try{o.c.send({t:'ssp',on:o.sp})}catch(e){}if(!o.sp)ssDrop(k);render();sys((o.sp?'🖥 سمحت بمشاركة الشاشة لـ ':'🚫 أوقفت مشاركة الشاشة لـ ')+o.name)}
 function ib(bg,ic,ti,fn){return '<button class="ib" style="background:'+bg+'" title="'+ti+'" aria-label="'+ti+'" onclick="'+fn+'">'+ic+'</button>'}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>قلم الرسم</title>
+<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+.w{position:fixed;inset:2px;border-radius:50%;-webkit-app-region:drag;cursor:move;background:rgba(227,192,141,.55)}
+button{-webkit-app-region:no-drag;position:fixed;inset:7px;border-radius:50%;border:0;background:#1a9486;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+button.on{background:#d4605a}
+</style>
+</head>
+<body>
+<div class="w" title="اسحب لتحريك الزر"></div>
+<button id="b" title="الرسم على الشاشة">✏️</button>
+<script>
+/* زر القلم العايم — بيفتح/يقفل الرسم على الشاشة المشاركة (مستخبي عن الطلاب) */
+const b=document.getElementById('b');
+b.onclick=()=>window.itqanApp.ann({t:'toggle'});
+window.itqanApp.onAnn(m=>{if(m.t=='mode'){b.classList.toggle('on',!!m.on);b.textContent=m.on?'🖱':'✏️';b.title=m.on?'رجوع للماوس':'الرسم على الشاشة'}});
+</script>
+</body>
+</html>
