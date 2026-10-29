@@ -335,7 +335,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-e';
+const VER='2026.10.29-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -512,7 +512,7 @@ async function startTPeer(){
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
-  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
+  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});o&&o.adm&&!o.rep&&sdNote('🚪 '+o.name+' خرج من الحصة');hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
  });
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='scr'){
@@ -542,10 +542,10 @@ function tData(c,d){
   if(conns[c.peer])return;
   const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
   if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
-  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){try{x.c.close()}catch(e){}}});
+  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){x.rep=1;try{x.c.close()}catch(e){}}});
   const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0,sid:sd};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
   if(back){sys('↩️ '+o.name+' عاد للحصة تلقائياً');admit(c.peer)}
-  else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
+  else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sdNote('⏳ '+o.name+' ينتظر الدخول — اضغط ☰ للقبول');sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
   return}
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
@@ -554,7 +554,7 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
@@ -808,6 +808,11 @@ function render(){
 /* القائمة الجانبية (الشات والطلاب): إخفاء/إظهار — السبورة والشاشة المشاركة تأخذ العرض كاملاً */
 let sdSeen=0;
 function sideT(){const h=document.body.classList.toggle('nos');try{localStorage.setItem('itqan_side',h?'0':'1')}catch(e){}sdUp();setTimeout(()=>{try{fit();relayout()}catch(e){}},60)}
+/* لما القائمة الجانبية مقفولة: رسالة صغيرة فوق الشاشة عند دخول/خروج/انتظار طالب (عند المعلم فقط) */
+function sdNote(m){if(role!='t'||!document.body.classList.contains('nos'))return;let w=$('#sdn');
+ if(!w){w=document.createElement('div');w.id='sdn';document.body.append(w)}
+ const d=document.createElement('div');d.textContent=m;d.setAttribute('translate','no');w.append(d);while(w.children.length>3)w.firstChild.remove();
+ setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)},2600)}
 function sdUp(){const b=$('#sdu');if(!b)return;const n=chat.filter(x=>!x.sys).length;if(!document.body.classList.contains('nos')){sdSeen=n;b.textContent='';return}
  const wn=role=='t'?Object.values(conns).filter(x=>!x.adm).length:0,hd=role=='t'?roster.h.length:0;b.textContent=[n>sdSeen?'💬'+(n-sdSeen):'',wn?'🔔'+wn:'',hd?'✋'+hd:''].filter(Boolean).join(' ')}
 try{if(localStorage.getItem('itqan_side')=='0')document.body.classList.add('nos')}catch(e){}
@@ -1963,6 +1968,7 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
 /* ملء الشاشة: الأزرار في شريط مستقل تحت الشاشة بدل ما تغطي شريط التكبير والمحتوى */
 body.pfs #stage{bottom:calc(56px + env(safe-area-inset-bottom,0px))}
 body.pfs .bar{bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:auto}
+#sdn{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}#sdn div{background:rgba(10,20,34,.92);color:#fff;border:1px solid rgba(227,192,141,.5);border-radius:999px;padding:7px 16px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.35);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s,transform .4s;animation:sdi .25s ease-out}#sdn div.out{opacity:0;transform:translateY(-8px)}@keyframes sdi{from{opacity:0;transform:translateY(-8px)}}
 body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#fca5a5}#sdu:empty{display:none}
 </style>
 <script>
