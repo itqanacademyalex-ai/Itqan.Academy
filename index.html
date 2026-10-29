@@ -335,7 +335,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-e';
+const VER='2026.10.29-e2';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -764,7 +764,10 @@ function endCall(){
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
- mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin();
+ const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};
+ /* نستنى إيميل تقرير الحصة يتبعت (لحد 15 ثانية) قبل إعادة التحميل — وإلا الطلب بيتقطع ومايوصلش */
+ const ml=role=='t'?mailEnd(1):null;if(ml)showGate('⏳','جارٍ إنهاء الحصة وإرسال التقرير على الإيميل…');
+ Promise.race([Promise.resolve(ml).catch(()=>{}),new Promise(r=>setTimeout(r,15000))]).then(()=>recSelfEng?recSelfEng.stop().then(fin,fin):fin());
 }
 
 /* ---------- الشات والواجهة ---------- */
@@ -1185,7 +1188,7 @@ let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
 function mailEJ(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
  try{return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
 function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
- if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,0)}).catch(()=>mailEJ(sub,msg,0))}catch(e){}}
+ if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,keep)}).catch(()=>mailEJ(sub,msg,keep))}catch(e){}}
  return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
 function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
@@ -1939,7 +1942,7 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;
  try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
  let sum='',why='';
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
- try{await Promise.race([Promise.resolve(mailEnd(0,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
+ try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
  try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ إنهاء الحصة… لا تغلق الصفحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
