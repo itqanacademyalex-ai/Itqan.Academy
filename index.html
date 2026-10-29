@@ -223,7 +223,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
   <h2 data-i18n="academy">أكاديمية إتقان</h2>
   <div class="brand">ITQAN ACADEMY</div>
   <small data-i18n="sub">غرفة فصل افتراضي — بث مباشر</small>
-  <input id="nm" data-i18n-p="name" placeholder="اسمك">
+  <input id="nm" data-i18n-p="name" placeholder="الاسم ثنائي (مثال: أحمد محمد)" maxlength="40" autocomplete="name">
   <input id="room" type="hidden">
   <input id="tpin" inputmode="numeric" maxlength="6" placeholder="كود المعلم (من السكرتارية)" hidden>
   <div id="jlink" hidden><div id="jrole" style="margin-bottom:8px;font-weight:700"></div><small id="jrecn" hidden style="display:block;margin-bottom:8px;line-height:1.8;color:#e3c08d">⚠️ قد يتم تسجيل الحصة (صوت وفيديو) وتفريغ الكلام نصياً لأغراض تعليمية. بدخولك توافق على ذلك.</small><button class="w" style="background:#1a9486;width:100%;font-weight:700;padding:12px" onclick="join(LK.r)">دخول</button></div>
@@ -334,7 +334,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-a';
+const VER='2026.10.29-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -382,7 +382,16 @@ const certMsg=c=>'C1|'+c.r+'|'+c.p+'|'+c.e;
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
  return(s&&k&&(r=='t'||r=='s')&&/^[a-z0-9]{4,16}$/.test(s)&&/^[A-Za-z0-9_-]{86,88}$/.test(k))?{room:s,k,r}:null})();
-if(LK){$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
+/* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
+function inAppHelp(){if(!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
+ const d=document.createElement('div');d.style.cssText='display:flex;flex-direction:column;gap:6px;margin-bottom:10px';
+ const t=document.createElement('small');t.style.cssText='line-height:1.8;color:#e3c08d';const b=document.createElement('button');b.className='w';b.style.background='#1a9486';
+ if(/Android/i.test(navigator.userAgent)){t.textContent='الرابط مفتوح داخل تطبيق — افتحه في Chrome عشان الصوت والميكروفون يشتغلوا.';b.textContent='🌐 افتح في Chrome';
+  b.onclick=()=>{location.href='intent://'+location.host+location.pathname+location.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.href)+';end'}}
+ else{t.textContent='الرابط مفتوح داخل تطبيق — انسخ الرابط والصقه في Safari عشان الصوت والميكروفون يشتغلوا.';b.textContent='📋 انسخ الرابط';
+  b.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);b.textContent='✓ تم النسخ — الصقه في Safari'}catch(e){prompt('انسخ الرابط:',location.href)}}}
+ d.append(t,b);$('#jlink').prepend(d)}
 function pop(){const r=$('#room').value.trim()||'main';
  const w=window.open(URL.createObjectURL(new Blob([SRC],{type:'text/html'}))+'#'+encodeURIComponent(r),'_blank');
  if(!w)alert('اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة');}
@@ -394,7 +403,9 @@ function join(r){
  if(typeof Peer==='undefined')return alert('تعذر تحميل مكتبة الاتصال — تأكد من الإنترنت');
  if(!(window.crypto&&crypto.subtle))return alert('المتصفح لا يدعم التحقق الآمن — افتح الرابط من Chrome/Safari عبر https');
  const rn=LK.room;
- name=$('#nm').value.trim()||(r=='t'?'المعلم':'طالب');
+ const nm=$('#nm').value.trim().replace(/\s+/g,' ');
+ if(nm.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length<2){$('#nm').focus();return alert('اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد')}
+ name=nm.slice(0,40);try{localStorage.setItem('itqan_nm',name)}catch(e){}
  roomName=rn;room=rn;
  role=r;sessT0=Date.now();if(r=='t')try{mxAC()}catch(e){}{const tb=$('#bt');tb.dataset.i18nT=r=='t'?'board':'tools';if(r=='s')tb.textContent='🧮'}document.body.dataset.role=r;A.src=SIL;A.play().catch(()=>{});$('#join').hidden=true;
  if(r=='s')prepMic(1).then(ok=>ok&&sendMic());
@@ -403,7 +414,9 @@ function join(r){
 }
 const bc=o=>Object.values(conns).filter(x=>x.adm).forEach(x=>{try{x.c.send(o)}catch(e){}});
 const bst=()=>bc({t:'st',st});
-function sys(m){chat.push({sys:1,m});render()}
+/* رسائل التعذّر والتسجيل لا تظهر للمعلم أو الطالب */
+const SYS_HIDE=/⚠️|🔴|تعذر|خطأ في الاتصال|انقطع|مشكلة في الوصول|توقف (الميكروفون|ميكروفون|التفريغ)|بدون صوت|غير متصل|لا يمكن مشاركة|محجوز|تسجيل/;
+function sys(m){if(SYS_HIDE.test(String(m)))return;chat.push({sys:1,m});render()}
 
 /* ---------- المعلم ---------- */
 async function initT(){
@@ -416,7 +429,7 @@ let TC=null,TK=null;
 async function tAuth(pin){
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&await certOk(sv.c,sv.s,room,LK.k)){
-  try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;return tStart()}catch(e){}
+  try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
  }
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  TK={priv:kp.privateKey,pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),j:await crypto.subtle.exportKey('jwk',kp.privateKey)};
@@ -432,8 +445,8 @@ async function tReq(pin){
   c.on('open',()=>{c.send({t:'treq',n:name,p:TK.pub,pin});showGate('⏳','تم إرسال طلبك — في انتظار موافقة السكرتارية...')});
   c.on('data',async d=>{
    if(!d)return;
-   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;
-    try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC}))}catch(e){}
+   if(d.t=='tok'){if(!(d.c&&d.c.p===TK.pub&&await certOk(d.c,d.s,room,LK.k)))return;got=1;TC={c:d.c,s:d.s};RC=recCfgOk(d.rc)||RC;MAILLIVE=d.ml?1:0;
+    try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c:d.c,s:d.s,j:TK.j,rc:RC,ml:MAILLIVE}))}catch(e){}
     try{p.destroy()}catch(e){}tStart()}
    else if(d.t=='trej'){got=1;try{p.destroy()}catch(e){}showGate('⛔','رفضت السكرتارية دخولك. تواصل معها لمعرفة السبب.',1)}});
   c.on('close',()=>{if(!got){showGate('⏳','انقطع الاتصال بالسكرتارية — جارٍ إعادة المحاولة...');setTimeout(go,3000)}});
@@ -443,7 +456,7 @@ async function tReq(pin){
   if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');setTimeout(go,4000)}
   else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول للخادم — جارٍ إعادة المحاولة...');setTimeout(go,4000)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();tRestore()?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn();sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();if(MAILLIVE)back?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn()}sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
@@ -469,6 +482,7 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'muteAll':tMuteAll();break;
   case 'gm':if(d.v===0||d.v===2){gm=d.v;sys('وضع الدخول (من السكرتارية): '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}break;
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
+  case 'ml':MAILLIVE=d.v?1:0;try{const k='itqan_tc_'+room,o=JSON.parse(localStorage.getItem(k));if(o){o.ml=MAILLIVE;localStorage.setItem(k,JSON.stringify(o))}}catch(e){}break;
   case 'rc':{const r=recCfgOk(d.v);if(r&&(!RC||RC.k!==r.k||RC.u!==r.u)){const first=!RC;RC=r;if(first&&hubT0&&Date.now()-hubT0>12000)recPlan()}break}
   case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
@@ -481,8 +495,7 @@ async function startTPeer(){
  p.on('disconnected',()=>{if(p.destroyed)return;sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
-   if(tTries++<12){sys('⏳ الرمز لسه محجوز (غالباً من جلسة سابقة) — محاولة '+tTries+' من 12...');try{p.destroy()}catch(x){}setTimeout(startTPeer,5000);return}
-   try{p.destroy()}catch(x){}sys('الغرفة ما زالت محجوزة على خادم الاتصال — أغلق أي نافذة أخرى مفتوح فيها رابط المعلم، ثم انتظر دقيقة واضغط 🔄');return}
+   tTries++;try{p.destroy()}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
   if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');return}
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
@@ -540,8 +553,9 @@ function roster2(){
  roster={s:o.map(([k,x])=>x.name),h:o.filter(([k])=>hands.has(k)).map(([k,x])=>x.name)};
  bc({t:'roster',...roster});render();
 }
-function tuneCall(call,br,pref){try{const pc=call&&call.peerConnection;if(!pc)return;pc.getSenders().forEach(se=>{if(!se.track||se.track.kind!='video')return;const q=se.getParameters();if(!q.encodings||!q.encodings.length)q.encodings=[{}];q.encodings[0].maxBitrate=br;q.degradationPreference=pref;se.setParameters(q).catch(()=>{})})}catch(e){}}
-function tune(o){const n=Object.values(conns).filter(x=>x.adm).length;tuneCall(o.call,n<=4?3e6:n<=10?1.8e6:1e6,(scrT||stuS)?'maintain-resolution':'balanced')}
+function tuneCall(call,br,pref,fps){try{const pc=call&&call.peerConnection;if(!pc)return;pc.getSenders().forEach(se=>{if(!se.track||se.track.kind!='video')return;const q=se.getParameters();if(!q.encodings||!q.encodings.length)q.encodings=[{}];q.encodings[0].maxBitrate=br;if(fps)q.encodings[0].maxFramerate=fps;else delete q.encodings[0].maxFramerate;q.degradationPreference=pref;se.setParameters(q).catch(()=>{})})}catch(e){}}
+function tuneBr(){const n=Object.values(conns).filter(x=>x.adm).length;return n<=4?3e6:n<=10?1.8e6:1e6}
+function tune(o){const lt=window.LITE&&window.LITE();tuneCall(o.call,tuneBr()*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',lt?10:0)}
 function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,4e5,'balanced'),900)}
 function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream([mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
@@ -621,7 +635,7 @@ async function tScr(){
   scrT=ms.getVideoTracks()[0];scrT.contentHint='detail';
   if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
   const a=ms.getAudioTracks()[0];
-  if(a){scrAT=a;mxSrc('S',a);a.onended=()=>{if(scrAT===a)scrAEnd()};sys('🔊 صوت الشاشة المشاركة يصل للطلاب ويُسجَّل')}
+  if(a){scrAT=a;mxSrc('S',a);a.onended=()=>{if(scrAT===a)scrAEnd()};sys('🔊 صوت الشاشة المشاركة يصل للطلاب')}
   else sys('⚠️ لم يتم مشاركة صوت الشاشة. في Chrome: اختر «علامة تبويب» وفعّل «مشاركة صوت علامة التبويب»، أو اختر «الشاشة بالكامل» وفعّل «مشاركة صوت النظام» (ويندوز). على ماك الصوت متاح لعلامة التبويب فقط.');
   scrT.onended=()=>{scrT=null;scrAEnd();refresh()}}
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
@@ -910,7 +924,7 @@ function buildTb(){const t=$('#tb');t.innerHTML='';
  COLS.forEach(c=>{const b=B('','لون',()=>{col=c;refTb()},'sw');b.style.background=c;b.dataset.col=c});SP();
  ['#ffe600','#7CFC00','#ff7ad9','#4cc9ff'].forEach(c=>{const b=B('','هايلايتر',()=>{hcol=c;tool='hl';refTb()},'sw');b.style.background=c;b.style.borderRadius='4px';b.dataset.hc=c});SP();
  [[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>{B('<i style="display:block;border-radius:9px;background:#fff;width:20px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;refTb()}).dataset.w=w});SP();
- B('↩','تراجع',undo);B('🗑','مسح الكل',wclr);B('✍️',T('swOn'),tSw).dataset.sw='1';SP();B('◐','خلفية: بيضاء / شفافة',tBg);B('▦',T('bgs'),function(){bgMenu(this)});SP();B('🧮',T('calc'),()=>calcT());B('📈',T('desmos'),()=>dsmT());refTb()}
+ B('↩','تراجع',undo);B('🗑','مسح الكل',wclr);B('✍️',T('swOn'),tSw).dataset.sw='1';SP();B('◐','خلفية: بيضاء / شفافة',tBg);B('▦',T('bgs'),function(){bgMenu(this)});SP();B('🧮',T('calc'),()=>calcT());if(DESMOS_KEY)B('📈',T('desmos'),()=>dsmT());refTb()}
 function refTb(){document.querySelectorAll('#tb [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool==tool));
  document.querySelectorAll('#tb [data-col]').forEach(b=>b.classList.toggle('on',b.dataset.col==col));
  document.querySelectorAll('#tb [data-hc]').forEach(b=>b.classList.toggle('on',tool=='hl'&&b.dataset.hc==hcol));
@@ -1015,8 +1029,8 @@ function insTog(k){ins[k].on=ins[k].on?0:1;if(ins[k].on)tool='mv';refTb();sendIn
 <div id="toast" hidden></div>
 <script>
 /* ===== اللغة (AR/EN) — قاموس مركزي، تفضيل مستقل لكل جهاز/متصفح ===== */
-const I18={ar:{name:'اسمك',room:'رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)',tch:'دخول كمعلم',stu:'دخول كطالب',sub:'غرفة فصل افتراضي — بث مباشر',academy:'أكاديمية إتقان',mic:'الميكروفون',cam:'الكاميرا',hand:'رفع اليد',end:'إنهاء',calc:'الحاسبة العلمية',stkAll:'استيكر للجميع',stkTo:'استيكر إلى: ',all:'كل الطلاب',custom:'رسالة تشجيع قصيرة (اختياري)',nudged:'🔔 تم تنبيه الطالب: ',flood:'انتظر بضع ثوانٍ قبل التنبيه مرة أخرى',fail:'تعذر الإرسال',attn:'المعلم يطلب انتباهك',inv:'تعبير غير صحيح',div0:'لا يمكن القسمة على صفر',hist:'السجل',stkSent:'⭐ تم إرسال الاستيكر'},
-en:{name:'Your name',room:'Room code (teacher: leave empty to create a new room)',tch:'Join as teacher',stu:'Join as student',sub:'Virtual classroom — live streaming',academy:'Itqan Academy',mic:'Microphone',cam:'Camera',hand:'Raise hand',end:'End',calc:'Scientific calculator',stkAll:'Sticker for everyone',stkTo:'Sticker to: ',all:'All students',custom:'Short encouragement (optional)',nudged:'🔔 Student notified: ',flood:'Please wait a few seconds before notifying again',fail:'Could not send',attn:'Your teacher needs your attention',inv:'Invalid expression',div0:'Division by zero',hist:'History',stkSent:'⭐ Sticker sent'}};
+const I18={ar:{name:'الاسم ثنائي (مثال: أحمد محمد)',room:'رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)',tch:'دخول كمعلم',stu:'دخول كطالب',sub:'غرفة فصل افتراضي — بث مباشر',academy:'أكاديمية إتقان',mic:'الميكروفون',cam:'الكاميرا',hand:'رفع اليد',end:'إنهاء',calc:'الحاسبة العلمية',stkAll:'استيكر للجميع',stkTo:'استيكر إلى: ',all:'كل الطلاب',custom:'رسالة تشجيع قصيرة (اختياري)',nudged:'🔔 تم تنبيه الطالب: ',flood:'انتظر بضع ثوانٍ قبل التنبيه مرة أخرى',fail:'تعذر الإرسال',attn:'المعلم يطلب انتباهك',inv:'تعبير غير صحيح',div0:'لا يمكن القسمة على صفر',hist:'السجل',stkSent:'⭐ تم إرسال الاستيكر'},
+en:{name:'Full name (first and last)',room:'Room code (teacher: leave empty to create a new room)',tch:'Join as teacher',stu:'Join as student',sub:'Virtual classroom — live streaming',academy:'Itqan Academy',mic:'Microphone',cam:'Camera',hand:'Raise hand',end:'End',calc:'Scientific calculator',stkAll:'Sticker for everyone',stkTo:'Sticker to: ',all:'All students',custom:'Short encouragement (optional)',nudged:'🔔 Student notified: ',flood:'Please wait a few seconds before notifying again',fail:'Could not send',attn:'Your teacher needs your attention',inv:'Invalid expression',div0:'Division by zero',hist:'History',stkSent:'⭐ Sticker sent'}};
 const STK=[['🌟','Excellent!','ممتاز!'],['👏','Great Job!','أحسنت!'],['✅','Well Done!','برافو!'],['🤩','Amazing!','رائع!'],['💪','Keep Going!','واصل!'],['💯','Perfect!','مثالي!'],['🧠','Brilliant!','عبقري!'],['👍','Good Effort!','مجهود جيد!']];
 let LANG='ar';const T=k=>(I18[LANG]&&I18[LANG][k])||I18.ar[k]||k;
 function setLang(l){LANG=I18[l]?l:'ar';try{localStorage.setItem('itqan_lang',LANG)}catch(e){}
@@ -1116,6 +1130,7 @@ setInterval(()=>{const b=[$('#tr'),$('#brc')];if(rec){rec.t0=rec.t0||Date.now();
 window.addEventListener('beforeunload',e=>{if(rec){e.preventDefault();e.returnValue=''}});
 /* ===== Desmos الرسمي (يحتاج مفتاح API من desmos.com/my-api) ===== */
 const DESMOS_KEY='';
+if(!DESMOS_KEY){const b=$('#bd');if(b)b.remove()}
 let dsmC=null,dsmLoad=0;
 function dsmT(){const p=$('#dsm');p.hidden=!p.hidden;if(!p.hidden)dsmInit()}
 function dsmClose(){$('#dsm').hidden=true}
@@ -1137,12 +1152,13 @@ setInterval(()=>{if(sessT0)$('#tmr').textContent='⏱ '+fmtT(Date.now()-sessT0)}
 function toolsMenu(btn){if(role=='t'){tWb();return}
  let m=$('#tlm');if(m&&!m.hidden){m.hidden=true;return}
  if(!m){m=document.createElement('div');m.id='tlm';document.body.append(m)}m.textContent='';
- [['🧮',T('calc'),()=>calcT()],['📈',T('desmos'),()=>dsmT()]].forEach(([ic,tx,fn])=>{const b=document.createElement('button');b.textContent=ic+' '+tx;b.onclick=()=>{m.hidden=true;fn()};m.append(b)});
+ [['🧮',T('calc'),()=>calcT()],...(DESMOS_KEY?[['📈',T('desmos'),()=>dsmT()]]:[])].forEach(([ic,tx,fn])=>{const b=document.createElement('button');b.textContent=ic+' '+tx;b.onclick=()=>{m.hidden=true;fn()};m.append(b)});
  const r=btn.getBoundingClientRect();m.style.left=Math.max(6,Math.min(r.left,innerWidth-216))+'px';m.style.bottom=(innerHeight-r.top+8)+'px';m.style.top='auto';m.hidden=false}
 document.addEventListener('click',e=>{['tlm','bgm'].forEach(id=>{const m=document.getElementById(id);if(m&&!m.hidden&&!m.contains(e.target)&&!e.target.closest('#bt')&&!(id=='bgm'&&e.target.closest('#tb')))m.hidden=true})});
 /* ===== إشعارات الإيميل عبر EmailJS (emailjs.com — حساب مجاني، اربطه بجيميل الأكاديمية) =====
    قالب EmailJS: To Email = {{to_email}} ، Subject = {{subject}} ، المحتوى = {{message}} */
 const MAIL={service:'service_vy75i8g',template:'template_aro2n43',key:'-1tdu7CnVQ_bg0uRY',to:'itqanacademy.alex@gmail.com'};
+let MAILLIVE=0; /* إيميلات فورية أثناء الحصة — تتحكم فيها السكرتارية (الافتراضي: إيميل واحد في النهاية) */
 let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
 function mailEJ(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
  try{return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
@@ -1150,8 +1166,8 @@ function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
  if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,0)}).catch(()=>mailEJ(sub,msg,0))}catch(e){}}
  return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
-function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return sys(T('mailOff'));mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
-function mailStu(n){mailNames.add(n);mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
+function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
+function mailStu(n){mailNames.add(n);if(!MAILLIVE)return;mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
 function mailFlush(keep){clearTimeout(mailTm);if(!mailQ.length)return;const q=mailQ.splice(0);mailSend('🎓 دخل '+q.length+' طالب الغرفة '+roomName,'دخل الطلاب التالية أسماؤهم:\n- '+q.join('\n- ')+'\nالوقت: '+mailNow(),keep)}
 function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
  const en=!!sum&&aiLangOf(aiData())=='en',mn=Math.round((Date.now()-sessT0)/60000),dur=en?(mn?mn+' min':'< 1 min'):(mn?mn+' دقيقة':'أقل من دقيقة'),
@@ -1193,6 +1209,7 @@ const ENM=[
 ["غرفة فصل افتراضي — بث مباشر","Virtual classroom — live streaming"],
 ["مباشر","Live"],
 ["اسمك","Your name"],
+["اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد","Please enter your full name (first and last) — e.g. Ahmed Mohamed"],
 ["رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)","Room code (teacher: leave empty to create a new room)"],
 ["دخول كمعلم","Join as teacher"],
 ["دخول كطالب","Join as student"],
@@ -1439,7 +1456,7 @@ function buildTbS(){const t=$('#tb');t.innerHTML='';
  const gr=B('⠿','اسحب لتحريك الشريط (يمكن وضعه خارج السبورة)',()=>{},'grip');mkDrag(t,'tb',gr);
  B('✏️',T('swPen'),()=>{swTool='pen';sbRef()}).dataset.st='pen';B('👆',T('swPt'),()=>{swTool='pt';sbRef()}).dataset.st='pt';SP();
  ['#111827','#d4605a','#2563eb','#16a34a'].forEach(c=>{const b=B('','لون',()=>{swCol=c;sbRef()},'sw');b.style.background=c;b.dataset.sc=c});SP();
- B('🧮',T('calc'),()=>calcT());B('📈',T('desmos'),()=>dsmT());sbRef()}
+ B('🧮',T('calc'),()=>calcT());if(DESMOS_KEY)B('📈',T('desmos'),()=>dsmT());sbRef()}
 function sbRef(){if(role!='s')return;const ok=!!(st.sw&&admitted);document.body.classList.toggle('sw',ok&&!!st.wb);
  if(ok!==lastSw){lastSw=ok;if(ok)toast('✍️',T('swNow'));else{sdr=null;sPrev=null}}
  document.querySelectorAll('#tb [data-st]').forEach(b=>{b.classList.toggle('on',b.dataset.st==swTool);b.style.opacity=ok?1:.35});
@@ -1533,7 +1550,7 @@ async function sxAcc(k){const r=SX.reqs[k];if(!r)return;
  if(!r.ok&&!confirm('كود المعلم غير مطابق! هل تريد قبوله رغم ذلك؟'))return;
  if(!r.c.open){delete SX.reqs[k];sxDraw();return alert('انقطع اتصال المعلم — اطلب منه فتح الرابط من جديد')}
  const cert={r:SX.room,p:r.p,e:Date.now()+14*36e5};
- try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher()})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
+ try{r.c.send({t:'tok',c:cert,s:await sgn(SX.priv,certMsg(cert)),rc:rcForTeacher(),ml:mlOn()?1:0})}catch(e){return alert('تعذر الإرسال، حاول مرة أخرى')}
  SX.acc={n:r.n};delete SX.reqs[k];sxDraw()}
 function sxRej(k){const r=SX.reqs[k];if(!r)return;try{r.c.send({t:'trej'})}catch(e){}delete SX.reqs[k];sxDraw()}
 function sxHub(){
@@ -1672,7 +1689,7 @@ async function recRecover(onSt){try{
 function hubCamEl(){if(!camT){_hcT=null;return null}
  if(_hcT!==camT){_hcT=camT;if(!_hc){_hc=document.createElement('video');_hc.muted=true;_hc.playsInline=true;_hc.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none';document.body.appendChild(_hc)}_hc.srcObject=new MediaStream([camT]);_hc.play().catch(()=>{})}
  return _hc}
-function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(o=>{try{o.c.send({t:'recon',on})}catch(e){}});if(on)sys('🔴 بدأ تسجيل الحصة (يظهر مؤشر للجميع)')}
+function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(o=>{try{o.c.send({t:'recon',on})}catch(e){}});}
 function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
  const c=Object.values(cohosts)[0];
  if(c){try{c.send({t:'rec',on:1})}catch(e){}coMedia();recWait=setTimeout(()=>{if(!recOwner)recSelf()},9000)}else recSelf()}
@@ -1703,13 +1720,16 @@ function sxRecOn(on){if(!SX)return;
 function sxRecEnd(){if(SX&&SX.rec){const r=SX.rec;SX.rec=null;r.stop().then(recRefresh)}rcStatus()}
 function sxRecStop(){if(SX&&SX.rec){sxRecEnd();sxCmd('recst','',0)}}
 function rcForTeacher(){return RCFG&&RCFG.on&&RCFG.u?{u:RCFG.u,k:RCFG.k||'',n:(SX&&SX.title)||'حصة'}:null}
-function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r)}
+function sxRcPush(){const r=rcForTeacher();if(r)sxCmd('rc','',r);sxCmd('ml','',mlOn()?1:0)}
+function mlOn(){try{return localStorage.getItem('itqan_ml')=='1'}catch(e){return false}}
+function mlToggle(){try{localStorage.setItem('itqan_ml',mlOn()?'0':'1')}catch(e){}rcDraw();if(SX)sxCmd('ml','',mlOn()?1:0)}
+function mlRow(){return '<div class="sxc"><h3>📧 إشعارات الإيميل</h3><div class="sxr"><span>'+(mlOn()?'🟢 إيميلات فورية مفعّلة (دخول المعلم والطلاب، انقطاع المعلم)':'⚪ إيميل واحد فقط في نهاية الحصة (الحضور + الملخص)')+'</span><span class="bt"><button class="sxb d" onclick="mlToggle()">'+(mlOn()?'إيقاف الفورية':'تفعيل الفورية')+'</button></span></div></div>'}
 /* ---- واجهة الإعداد والحالة (لوحة السكرتارية) ---- */
 function rcDraw(){const e=$('#sxR');if(!e)return;const c=RCFG;
  e.innerHTML='<div class="sxc"><h3>🎥 تسجيل الحصص على Google Drive</h3>'+
  (c&&c.u&&!rcEd?'<div class="sxr"><span>'+(c.on?'🟢 التسجيل التلقائي مفعّل':'⚪ التسجيل متوقف')+'</span><span class="bt"><button class="sxb d" onclick="rcToggle()">'+(c.on?'إيقاف':'تفعيل')+'</button><button class="sxb d" onclick="rcEdit()">تعديل</button><button class="sxb" onclick="rcTest()">اختبار</button></span></div>'
  :'<input id="rcu" dir="ltr" placeholder="رابط السكريبت (ينتهي بـ /exec)" value="'+esc(c?c.u:'')+'"><input id="rck" placeholder="كلمة سر السكريبت (اختيارية)" value="'+esc(c?c.k:'')+'"><button class="sxb g" onclick="rcSave()">حفظ</button><small style="color:#a9bccd;line-height:1.8">كلمة السر اختيارية: اتركها فارغة لو السكريبت من غير SECRET</small>')+
- '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>';rcStatus()}
+ '<div id="rcst" style="display:flex;flex-direction:column;gap:6px"></div></div>'+mlRow();rcStatus()}
 function rcSave(){const u=$('#rcu').value.trim(),k=$('#rck').value.trim();
  if(!RE_URL.test(u))return alert('الرابط غير صحيح — لازم يكون رابط Web app وينتهي بـ /exec');
  RCFG={u,k,on:1};try{localStorage.setItem('itqan_rc',JSON.stringify(RCFG))}catch(e){}rcEd=0;rcMsg='';rcDraw();if(SX)sxRcPush()}
@@ -1856,7 +1876,7 @@ async function trRun(it){let tx;
 function trLines(){const f=t=>new Date(t).toLocaleTimeString('en-GB');return LOG.tr.map(x=>'['+f(x.ts)+'] '+(x.n?x.n+': ':'')+x.t)}
 function trUi(){const b=$('#ai_tgo'),s=$('#ai_trs'),o=$('#ai_script');if(!b)return;
  b.textContent=TR.on?'⏹ إيقاف التفريغ بالـ API':'▶ بدء التفريغ بالـ API';
- if(s)s.textContent=TR.on?('● يعمل — '+TR.ok+' مقطع • انتظار '+TR.q.length+(TR.err?' • أخطاء '+TR.err+(TR.last?' ('+TR.last+')':''):'')+(TR.drops?' • تخطّي '+TR.drops:'')):'';
+ if(s)s.textContent=TR.on?('● يعمل — '+TR.ok+' مقطع • انتظار '+TR.q.length):'';
  if(o&&!$('#aip').hidden){const L=trLines().slice(-300).join('\n'),near=o.scrollTop+o.clientHeight>=o.scrollHeight-30;if(o.value!==L){o.value=L;if(near)o.scrollTop=o.scrollHeight}}}
 function trCopy(){const t=trLines().join('\n');if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){const o=$('#ai_script');o.select();document.execCommand('copy')}aiSt('تم النسخ ✓')}
 function trDl(){const t=trLines().join('\n');if(!t)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}));a.download='transcript-'+room+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
@@ -1890,11 +1910,11 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;
  let sum='',why='';
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
  try{await Promise.race([Promise.resolve(mailEnd(0,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
- try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ رفع التسجيل على Drive… لا تغلق الصفحة ('+recMB(RUPS[0].meta.off)+' ميجا)';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ إنهاء الحصة… لا تغلق الصفحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
- aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'تعذر توليد الملخص تلقائياً ('+why+') — تم إرسال إيميل بالحضور وآخر النص. أغلق النافذة (✕) للإنهاء.',!sum)}
-function sxDropWatch(){clearTimeout(SX.dropT);if(SX.bye||!SX.had)return;
+ aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'انتهت الحصة وتم إرسال تقرير الحضور على الإيميل. أغلق النافذة (✕) للإنهاء.',0)}
+function sxDropWatch(){clearTimeout(SX.dropT);if(SX.bye||!SX.had||!mlOn())return;
  SX.dropT=setTimeout(()=>{if(!SX||SX.hub||SX.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(SX.title||SX.room),'انقطع اتصال المعلم'+(SX.tn?' ('+SX.tn+')':'')+' عن الحصة ('+(SX.title||SX.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
 <style>
@@ -1906,6 +1926,7 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
 #msm button[data-a=x]{background:#27496b}
 #msn{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.75);padding:6px 10px;border-radius:24px;color:#fff;direction:ltr}
 #msn button{width:38px;height:38px;border-radius:50%;background:#27496b;color:#fff;border:0;font-size:16px}
+#recb,#recs,#tr,#brc{display:none!important}
 </style>
 <script>
 /* ===== 1) حفظ ما هو معروض على الشاشة فعلياً (سبورة / شاشة مشاركة / كاميرا كبيرة) مع الكتابة فوقها ===== */
@@ -2051,29 +2072,35 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
   if(admitted&&!wasAdm)window.T_HB=Date.now();wasAdm=admitted;
   if(!admitted){badge.hidden=true;was=0;return}
   const ok=Date.now()-(window.T_HB||0)<STALE;
-  badge.hidden=false;badge.className=ok?'on':'off';badge.textContent=ok?'🟢 المعلم متصل':'🔴 المعلم غير متصل';
-  if(was&&ok!=was-1)sys(ok?'✅ عاد اتصال المعلم':'⚠️ المعلم غير متصل حالياً — انتظر عودته');
+  badge.hidden=!ok;badge.className='on';badge.textContent='🟢 المعلم متصل';
   was=ok?2:1;
  },1000);
 })();
 
-/* ===== 4) الوضع الخفيف للأجهزة الضعيفة (720p و10 إطارات) ===== */
+/* ===== 4) الوضع الخفيف التلقائي: يقيس قدرة نت/جهاز المعلم ويخفّض الجودة بصمت عند الحاجة ===== */
 (function(){
- window.LITE=()=>{try{return localStorage.getItem('itqan_lite')=='1'}catch(e){return false}};
+ let on=0,bad=0,good=0;try{localStorage.removeItem('itqan_lite')}catch(e){}
+ window.LITE=()=>!!on;
  const md=navigator.mediaDevices;
  if(md&&md.getDisplayMedia){const g0=md.getDisplayMedia.bind(md);
   md.getDisplayMedia=c=>{if(window.LITE()&&c&&c.video){c={...c,video:{...(typeof c.video=='object'?c.video:{}),width:{ideal:1280},height:{ideal:720},frameRate:{ideal:10,max:10}}}}return g0(c)}}
  if(md&&md.getUserMedia){const u0=md.getUserMedia.bind(md);
   md.getUserMedia=c=>{if(window.LITE()&&c&&c.video){c={...c,video:{...(typeof c.video=='object'?c.video:{}),width:{ideal:640},height:{ideal:360},frameRate:{ideal:15,max:15}}}}return u0(c)}}
- const css=document.createElement('style');
- css.textContent='#lite{font:700 12px inherit;font-family:inherit;padding:3px 10px;border-radius:999px;border:1px solid #5b7a99;background:transparent;color:inherit;cursor:pointer;white-space:nowrap}#lite.on{background:#c98a14;border-color:#c98a14;color:#fff}';
- document.head.appendChild(css);
- const iv=setInterval(()=>{
-  const a=$('#tmr');if(!a)return;clearInterval(iv);
-  const b=document.createElement('button');b.id='lite';b.title='وضع خفيف: دقة 720p و10 إطارات للأجهزة الضعيفة';
-  const up=()=>{b.textContent=window.LITE()?'⚡ خفيف: يعمل':'⚡ خفيف';b.className=window.LITE()?'on':''};
-  b.onclick=()=>{try{localStorage.setItem('itqan_lite',window.LITE()?'0':'1')}catch(e){}up();sys(window.LITE()?'⚡ الوضع الخفيف يعمل — يسري عند بدء مشاركة شاشة أو كاميرا جديدة':'تم إيقاف الوضع الخفيف')};
-  up();a.after(b)},500);
+ function apply(){
+  try{scrT&&scrT.applyConstraints(on?{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:10,max:10}}:{width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}}).catch(()=>{})}catch(e){}
+  try{camT&&camT.applyConstraints(on?{width:{ideal:640},height:{ideal:360},frameRate:{ideal:15,max:15}}:{width:{ideal:1280},height:{ideal:720}}).catch(()=>{})}catch(e){}
+  try{Object.values(conns).filter(o=>o.adm).forEach(tune)}catch(e){}}
+ setInterval(async()=>{
+  if(role!='t'||typeof conns=='undefined')return;
+  const L=Object.values(conns).filter(o=>o.adm&&o.call&&o.call.peerConnection);if(!L.length){bad=good=0;return}
+  const need=tuneBr();let lim=0,minAv=Infinity;
+  for(const o of L){try{(await o.call.peerConnection.getStats()).forEach(x=>{
+   if(x.type=='outbound-rtp'&&x.kind=='video'&&(x.qualityLimitationReason=='bandwidth'||x.qualityLimitationReason=='cpu'))lim++;
+   if(x.type=='candidate-pair'&&x.nominated&&x.availableOutgoingBitrate)minAv=Math.min(minAv,x.availableOutgoingBitrate)})}catch(e){}}
+  const low=lim>0||minAv<need*.6;
+  if(low){good=0;if(!on&&++bad>=2){on=1;bad=0;apply()}}
+  else{bad=0;if(on&&minAv!==Infinity&&minAv>need*2&&++good>=45){on=0;good=0;apply()}}
+ },4000);
 })();
 
 /* ===== 5) تكبير وتصغير الشاشة المشاركة (محلي عند كل مشاهد) ===== */
