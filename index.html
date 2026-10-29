@@ -335,7 +335,9 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <script>
 const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
-const VER='2026.10.29-e';
+/* داخل تطبيق الكمبيوتر: prompt() من التطبيق، ودخول السكرتارية من المتصفح فقط */
+if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
+const VER='2026.10.29-h';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -383,8 +385,12 @@ const certMsg=c=>'C1|'+c.r+'|'+c.p+'|'+c.e;
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
  return(s&&k&&(r=='t'||r=='s')&&/^[a-z0-9]{4,16}$/.test(s)&&/^[A-Za-z0-9_-]{86,88}$/.test(k))?{room:s,k,r}:null})();
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
+/* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
+function appHelp(){if(window.itqanApp||MOB||!/Windows/i.test(navigator.userAgent))return;
+ const b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-bottom:10px';b.textContent='💻 افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)';
+ b.onclick=()=>{location.href='itqan://open?u='+encodeURIComponent(location.href)};$('#jlink').prepend(b)}
 function inAppHelp(){if(!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
  const d=document.createElement('div');d.style.cssText='display:flex;flex-direction:column;gap:6px;margin-bottom:10px';
  const t=document.createElement('small');t.style.cssText='line-height:1.8;color:#e3c08d';const b=document.createElement('button');b.className='w';b.style.background='#1a9486';
@@ -512,7 +518,7 @@ async function startTPeer(){
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
-  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
+  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});o&&o.adm&&!o.rep&&sdNote('🚪 '+o.name+' خرج من الحصة');hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
  });
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='scr'){
@@ -542,10 +548,10 @@ function tData(c,d){
   if(conns[c.peer])return;
   const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
   if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
-  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){try{x.c.close()}catch(e){}}});
+  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){x.rep=1;try{x.c.close()}catch(e){}}});
   const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0,sid:sd};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
   if(back){sys('↩️ '+o.name+' عاد للحصة تلقائياً');admit(c.peer)}
-  else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
+  else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sdNote('⏳ '+o.name+' ينتظر الدخول — اضغط ☰ للقبول');sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
   return}
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
@@ -554,7 +560,7 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
@@ -764,7 +770,10 @@ function endCall(){
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
- mailEnd();const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};recSelfEng?recSelfEng.stop().then(fin,fin):fin();
+ const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};
+ /* نستنى إيميل تقرير الحصة يتبعت (لحد 15 ثانية) قبل إعادة التحميل — وإلا الطلب بيتقطع ومايوصلش */
+ const ml=role=='t'?mailEnd(1):null;if(ml)showGate('⏳','جارٍ إنهاء الحصة وإرسال التقرير على الإيميل…');
+ Promise.race([Promise.resolve(ml).catch(()=>{}),new Promise(r=>setTimeout(r,15000))]).then(()=>recSelfEng?recSelfEng.stop().then(fin,fin):fin());
 }
 
 /* ---------- الشات والواجهة ---------- */
@@ -808,6 +817,11 @@ function render(){
 /* القائمة الجانبية (الشات والطلاب): إخفاء/إظهار — السبورة والشاشة المشاركة تأخذ العرض كاملاً */
 let sdSeen=0;
 function sideT(){const h=document.body.classList.toggle('nos');try{localStorage.setItem('itqan_side',h?'0':'1')}catch(e){}sdUp();setTimeout(()=>{try{fit();relayout()}catch(e){}},60)}
+/* لما القائمة الجانبية مقفولة: رسالة صغيرة فوق الشاشة عند دخول/خروج/انتظار طالب (عند المعلم فقط) */
+function sdNote(m){if(role!='t'||!document.body.classList.contains('nos'))return;let w=$('#sdn');
+ if(!w){w=document.createElement('div');w.id='sdn';document.body.append(w)}
+ const d=document.createElement('div');d.textContent=m;d.setAttribute('translate','no');w.append(d);while(w.children.length>3)w.firstChild.remove();
+ setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),400)},2600)}
 function sdUp(){const b=$('#sdu');if(!b)return;const n=chat.filter(x=>!x.sys).length;if(!document.body.classList.contains('nos')){sdSeen=n;b.textContent='';return}
  const wn=role=='t'?Object.values(conns).filter(x=>!x.adm).length:0,hd=role=='t'?roster.h.length:0;b.textContent=[n>sdSeen?'💬'+(n-sdSeen):'',wn?'🔔'+wn:'',hd?'✋'+hd:''].filter(Boolean).join(' ')}
 try{if(localStorage.getItem('itqan_side')=='0')document.body.classList.add('nos')}catch(e){}
@@ -1185,7 +1199,7 @@ let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
 function mailEJ(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
  try{return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
 function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
- if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,0)}).catch(()=>mailEJ(sub,msg,0))}catch(e){}}
+ if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,keep)}).catch(()=>mailEJ(sub,msg,keep))}catch(e){}}
  return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
 function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
@@ -1235,6 +1249,7 @@ const ENM=[
 ["اكتب كود الغرفة اللي أرسلته لك السكرتارية","Enter the room code sent to you by the secretary"],
 ["كود الغرفة غير صحيح — تأكد من الكود اللي أرسلته لك السكرتارية وحاول مرة أخرى.","Wrong room code — check the code the secretary sent you and try again."],
 ["اكتب اسمك","Enter your name"],
+["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
 ["رمز الغرفة (المعلم: اتركه فارغاً لإنشاء غرفة جديدة)","Room code (teacher: leave empty to create a new room)"],
 ["دخول كمعلم","Join as teacher"],
 ["دخول كطالب","Join as student"],
@@ -1939,7 +1954,7 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;
  try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
  let sum='',why='';
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
- try{await Promise.race([Promise.resolve(mailEnd(0,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
+ try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
  try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ إنهاء الحصة… لا تغلق الصفحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
@@ -1963,6 +1978,7 @@ body[data-role=s] #bdl.tonly{display:flex;opacity:1;pointer-events:auto}
 /* ملء الشاشة: الأزرار في شريط مستقل تحت الشاشة بدل ما تغطي شريط التكبير والمحتوى */
 body.pfs #stage{bottom:calc(56px + env(safe-area-inset-bottom,0px))}
 body.pfs .bar{bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--bg);pointer-events:auto}
+#sdn{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}#sdn div{background:rgba(10,20,34,.92);color:#fff;border:1px solid rgba(227,192,141,.5);border-radius:999px;padding:7px 16px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.35);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s,transform .4s;animation:sdi .25s ease-out}#sdn div.out{opacity:0;transform:translateY(-8px)}@keyframes sdi{from{opacity:0;transform:translateY(-8px)}}
 body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#fca5a5}#sdu:empty{display:none}
 </style>
 <script>

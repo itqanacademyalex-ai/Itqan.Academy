@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: file:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Itqan Academy</title>
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:radial-gradient(1200px 600px at 50% -10%,#1b3554,#0e1a2b);color:#e9eff5;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;padding:16px}
+.c{background:#14283f;border:1px solid rgba(227,192,141,.18);box-shadow:0 10px 30px rgba(0,0,0,.35);border-radius:22px;padding:30px;width:100%;max-width:440px;text-align:center;display:flex;flex-direction:column;gap:14px}
+.logo{width:120px;height:120px;border-radius:50%;margin:0 auto;box-shadow:0 8px 28px rgba(0,0,0,.4),0 0 0 4px rgba(255,255,255,.06)}
+h1{font-size:24px}.brand{font-size:13px;letter-spacing:.4px;color:#a9bccd;margin-top:-10px}
+.r{display:flex;gap:12px}
+.r button{flex:1;padding:18px 8px;border-radius:16px;border:2px solid transparent;font:inherit;font-size:17px;font-weight:700;color:#fff;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}
+.r button b{font-size:34px}
+#bt{background:#1a9486}#bs{background:#27496b}
+.r button.on{border-color:#e3c08d}
+#f{display:flex;flex-direction:column;gap:10px}#f[hidden]{display:none}
+input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #27496b;background:#1d3652;color:#fff;font:inherit;outline:0;direction:ltr;text-align:left}
+input:focus{border-color:#1a9486}
+.row{display:flex;gap:8px}
+.row button{padding:12px;border-radius:12px;border:0;font:inherit;font-weight:700;color:#fff;cursor:pointer}
+#go{flex:1;background:#1a9486}#pa{background:#27496b}
+#e{color:#fca5a5;min-height:22px;font-size:14px;line-height:1.7}
+small{color:#a9bccd;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="c">
+ <img class="logo" src="build/icon.png" alt="Itqan Academy">
+ <h1>أكاديمية إتقان</h1>
+ <div class="brand">ITQAN ACADEMY</div>
+ <div class="r">
+  <button id="bt"><b>👨‍🏫</b>دخول المعلم</button>
+  <button id="bs"><b>🎓</b>دخول الطالب</button>
+ </div>
+ <div id="f" hidden>
+  <small id="h"></small>
+  <input id="u" placeholder="https://itqanacademyalex-ai.github.io/Itqan.Academy/?s=..." autocomplete="off" spellcheck="false">
+  <div class="row"><button id="pa">📋 لصق</button><button id="go">دخول</button></div>
+  <div id="e"></div>
+ </div>
+</div>
+<script>
+let role='';const f=document.getElementById('f'),u=document.getElementById('u'),e=document.getElementById('e');
+const roleOf=s=>{try{const q=new URL(String(s).trim()).searchParams;return q.get('r')}catch(x){return null}};
+function pick(r){role=r;f.hidden=false;e.textContent='';
+ document.getElementById('bt').classList.toggle('on',r=='t');document.getElementById('bs').classList.toggle('on',r=='s');
+ document.getElementById('h').textContent=r=='t'?'الصق رابط المعلم اللي بعتته السكرتارية، وبعدها هتكتب اسمك وكود الغرفة.':'الصق رابط الحصة اللي بعتته السكرتارية.';
+ window.itqanApp.clipRead().then(t=>{if(!u.value&&roleOf(t)==r)u.value=t.trim()});u.focus()}
+function go(){const v=u.value.trim(),r=roleOf(v);
+ if(!v)return e.textContent='الصق الرابط الأول.';
+ if(r&&r!==role)return e.textContent=r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.';
+ window.itqanApp.openInvite(v).then(ok=>{if(!ok)e.textContent='الرابط ده مش رابط دعوة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.'})}
+document.getElementById('bt').onclick=()=>pick('t');document.getElementById('bs').onclick=()=>pick('s');
+document.getElementById('go').onclick=go;
+document.getElementById('pa').onclick=()=>window.itqanApp.clipRead().then(t=>{u.value=(t||'').trim();e.textContent=''});
+u.addEventListener('keydown',x=>{if(x.key=='Enter')go()});
+</script>
+</body>
+</html>

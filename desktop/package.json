@@ -1,0 +1,34 @@
+{
+  "name": "itqan-academy",
+  "productName": "Itqan Academy",
+  "version": "1.0.0",
+  "description": "أكاديمية إتقان — الفصل الافتراضي (تطبيق الكمبيوتر)",
+  "author": "Itqan Academy",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.itqanacademy.desktop",
+    "productName": "Itqan Academy",
+    "files": ["main.js", "preload.js", "home.html", "picker.html", "prompt.html", "offline.html", "build/icon.png"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "protocols": [{ "name": "Itqan Academy", "schemes": ["itqan"] }],
+    "win": { "icon": "build/icon.ico" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Itqan Academy",
+      "artifactName": "ItqanAcademy-${version}-setup.${ext}"
+    },
+    "portable": { "artifactName": "ItqanAcademy-${version}-portable.${ext}" }
+  }
+}
