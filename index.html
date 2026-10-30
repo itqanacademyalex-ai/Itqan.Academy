@@ -371,7 +371,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.31-f';
+const VER='2026.10.31-g';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -389,13 +389,34 @@ function meter(t){try{const ac=new(window.AudioContext||window.webkitAudioContex
  const iv=setInterval(()=>{if(t.readyState!='live'){clearInterval(iv);b.style.boxShadow='none';ac.close();return}
   if(!t.enabled){b.style.boxShadow='none';return}
   an.getByteTimeDomainData(d);let m=0;d.forEach(x=>m=Math.max(m,Math.abs(x-128)));b.style.boxShadow='0 0 0 '+Math.min(8,Math.round(m/128*40))+'px #22c55e66'},150)}catch(e){}}
-function micErr(e,what,gate){what=what||'الميكروفون';
+function micErr(e,what,gate){if(!what){window.MERR=(e&&e.name)||'x';setTimeout(mbarUpd,0)}what=what||'الميكروفون';
  const n=e&&e.name,emb=window!==top,ok=window.isSecureContext&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia,
  app=/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent);
  const w=n=='NotAllowedError'?'رفض المتصفح الإذن':n=='NotFoundError'?'لا يوجد ميكروفون':n=='NotReadableError'?'الميكروفون مستخدم من تطبيق آخر':'غير مدعوم هنا';
  const h=emb?'الصفحة داخل إطار مدمج — افتح رابط الصفحة مباشرة في Safari/Chrome':location.protocol=='blob:'?'افتح الملف من رابط استضافة https حقيقي بدل النافذة المؤقتة':app?'أنت داخل متصفح تطبيق — افتح الرابط في Safari/Chrome':!ok?'الصفحة ليست على https':'اسمح بالميكروفون من إعدادات الموقع (زر aA في شريط عنوان Safari ← إعدادات الموقع)';
  const m='تعذر تشغيل '+what+' ('+w+'). '+h+'.';if(gate){$('#mgt').textContent=m;$('#mg').hidden=false}else sys(m+' ما زال بإمكانك سماع الدرس.')}
 let lastA=-1,micP=null,roomName='',tTries=0,rfT=0;
+/* ===== شريط ثابت «اسمح بالميكروفون»: يفضل ظاهر للمعلم أو الطالب طول ما المايك مش شغّال بسبب الإذن أو الجهاز =====
+   بيختفي لوحده أول ما المايك يشتغل، وبيقول الخطوة المناسبة للجهاز (آيفون / أندرويد / كمبيوتر / تطبيق الكمبيوتر) */
+window.MERR='';
+function mbarHow(n){const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform)),and=/Android/i.test(ua);
+ if(n=='NotFoundError')return'مفيش ميكروفون متوصل بالجهاز — وصّل سماعة بمايك واضغط هنا.';
+ if(n=='NotReadableError'||n=='ended')return'الميكروفون مستخدم في برنامج تاني (مكالمة، زووم، واتساب…) — اقفله واضغط هنا.';
+ if(window.itqanApp)return'لو مفيش رسالة طلعت: إعدادات ويندوز ← الخصوصية والأمان ← الميكروفون ← شغّل «السماح للتطبيقات بالوصول للميكروفون»، وبعدين اضغط هنا.';
+ if(ios)return PWA?'افتح «الإعدادات» في الآيفون ← Safari ← الميكروفون ← «سماح»، وارجع اضغط هنا.':'اضغط «aA» في شريط العنوان ← إعدادات الموقع ← الميكروفون ← «سماح»، وبعدين اضغط هنا.';
+ if(and)return PWA?'اضغط مطوّلاً على أيقونة إتقان ← معلومات التطبيق ← الأذونات ← الميكروفون ← «سماح»، وارجع اضغط هنا.':'اضغط علامة القفل 🔒 جنب العنوان ← الأذونات ← الميكروفون ← «سماح»، وبعدين اضغط هنا.';
+ return'اضغط علامة القفل 🔒 جنب عنوان الموقع ← الميكروفون ← «سماح»، وبعدين اضغط هنا.'}
+function mbarUpd(){let b=document.getElementById('mbar');
+ const live=role=='t'?!!(micT&&micT.readyState=='live'):!!(micS&&micS.readyState=='live');
+ const need=!!window.MERR&&!live&&!final&&(role=='t'?$('#join').hidden:role=='s'&&admitted&&canTalk);
+ if(!need){if(b)b.hidden=true;return}
+ if(!b){b=document.createElement('button');b.id='mbar';b.style.cssText='position:fixed;z-index:58;top:calc(8px + env(safe-area-inset-top));inset-inline:10px;margin-inline:auto;max-width:560px;background:#b5473f;color:#fff;border:2px solid #fff;border-radius:16px;padding:10px 14px;font:inherit;text-align:center;line-height:1.7;box-shadow:0 8px 28px #000a;cursor:pointer';
+  b.onclick=()=>{b.disabled=true;micRetry();setTimeout(()=>{b.disabled=false;mbarUpd()},2500)};document.body.appendChild(b)}
+ b.textContent='';const t=document.createElement('b');t.style.cssText='display:block;font-size:15px';t.textContent=role=='t'?'🎤 الطلاب مش سامعينك — الميكروفون مش مسموح':'🎤 المعلم مش هيسمعك — الميكروفون مش مسموح';
+ const h=document.createElement('small');h.style.cssText='display:block;font-size:12.5px;opacity:.95';h.textContent='اضغط هنا للسماح بالوصول للميكروفون. '+mbarHow(window.MERR);b.append(t,h);b.hidden=false}
+setInterval(mbarUpd,2000);
+/* لو المستخدم سمح من إعدادات المتصفح من غير ما يضغط، نشغّل المايك لوحده */
+try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{p.onchange=()=>{if(p.state=='granted'&&window.MERR&&(role=='t'||role=='s'&&admitted&&canTalk))micRetry()}}).catch(()=>{})}catch(e){}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const U=s=>'<span translate="no">'+esc(s)+'</span>';
 let role,name,room,peer,conn,conns={},chat=[],roster={s:[],h:[]},tab='chat',canTalk=1,micS,myCall,camS,camCall,canCam=1,camBanAll=0,allMuted=0,gm=0,admitted=0,final=0,rt,st={cam:0,scr:0,mic:1,wb:0,bg:1,lock:0},
@@ -780,8 +801,8 @@ function prepMic(g){
  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){micErr({name:'NotSupportedError'},0,g);return Promise.resolve(false)}
  micP=navigator.mediaDevices.getUserMedia(MC).then(x=>{
   const t=x.getAudioTracks()[0];t.enabled=false;
-  t.onended=()=>{if(micS!==t)return;micS=null;dropCall();if(admitted)sys('توقف الميكروفون (ربما استخدمه تطبيق آخر) — اضغط 🎤 لإعادة تشغيله')};
-  micS=t;meter(t);$('#mg').hidden=true;return true
+  t.onended=()=>{if(micS!==t)return;micS=null;window.MERR='ended';dropCall();if(admitted)sys('توقف الميكروفون (ربما استخدمه تطبيق آخر) — اضغط 🎤 لإعادة تشغيله')};
+  micS=t;meter(t);$('#mg').hidden=true;window.MERR='';mbarUpd();return true
  }).catch(e=>{micErr(e,0,g);return false}).finally(()=>{micP=null});
  return micP}
 /* بيفتح المايك ويبعته للمعلم — يتنفذ تلقائياً أول ما الطالب يتقبل */
@@ -810,8 +831,8 @@ async function tGrabMic(){
  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){st.mic=0;micErr({name:'NotSupportedError'},0,1);return false}
  try{
   const t=(await navigator.mediaDevices.getUserMedia(MC)).getAudioTracks()[0];
-  t.onended=()=>{if(micT!==t)return;stream.removeTrack(t);mxSrcDel('T');micT=null;st.mic=0;bst();ui();sys('توقف ميكروفون المعلم — اضغط 🎤 لإعادة تشغيله')};
-  micT=t;stream.addTrack(t);mxSrc('T',t);meter(t);st.mic=1;$('#mg').hidden=true;if(Object.keys(conns).length){bst();ui()}else refresh();return true
+  t.onended=()=>{if(micT!==t)return;window.MERR='ended';stream.removeTrack(t);mxSrcDel('T');micT=null;st.mic=0;bst();ui();sys('توقف ميكروفون المعلم — اضغط 🎤 لإعادة تشغيله')};
+  micT=t;stream.addTrack(t);mxSrc('T',t);meter(t);st.mic=1;$('#mg').hidden=true;window.MERR='';mbarUpd();if(Object.keys(conns).length){bst();ui()}else refresh();return true
  }catch(e){st.mic=0;micErr(e,0,1);ui();return false}
 }
 async function tCam(){
@@ -1459,7 +1480,7 @@ const ENM=[
 ["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
 ["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
 ["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
-["تثبيت","Install"],["📲 تحميل التطبيق على الجهاز","📲 Install the app on this device"],["من قايمة Chrome ⋮ (فوق) اختار «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية». لو اتثبّت قبل كده افتحه من أيقونة إتقان على الشاشة.","From the Chrome menu ⋮ (top), choose “Install app” or “Add to Home screen”. If it is already installed, open it from the Itqan icon."],["افتح الموقع من Chrome، وبعدين اضغط الزرار ده تاني أو من قايمة Chrome ⋮ اختار «تثبيت التطبيق».","Open the site in Chrome, then tap this button again or choose “Install app” from the Chrome menu ⋮."],["اتثبّت التطبيق — افتحه من أيقونة إتقان على الشاشة","App installed — open it from the Itqan icon"],["مؤقت وساعة إيقاف","Timer & stopwatch"],["⏱ المؤقت","⏱ Timer"],["⏳ مؤقت تنازلي","⏳ Countdown"],["⏱ ساعة إيقاف","⏱ Stopwatch"],["دقايق","min"],["▶ ابدأ","▶ Start"],["⏸ إيقاف مؤقت","⏸ Pause"],["↺ من الأول","↺ Reset"],["إخفاء من على الشاشة","Hide from screen"],["⏰ انتهى الوقت","⏰ Time is up"],["1 د","1 m"],["3 د","3 m"],["5 د","5 m"],["10 د","10 m"],["15 د","15 m"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
+["تثبيت","Install"],["🎤 الطلاب مش سامعينك — الميكروفون مش مسموح","🎤 Students can’t hear you — microphone access is blocked"],["🎤 المعلم مش هيسمعك — الميكروفون مش مسموح","🎤 The teacher can’t hear you — microphone access is blocked"],["📲 تحميل التطبيق على الجهاز","📲 Install the app on this device"],["من قايمة Chrome ⋮ (فوق) اختار «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية». لو اتثبّت قبل كده افتحه من أيقونة إتقان على الشاشة.","From the Chrome menu ⋮ (top), choose “Install app” or “Add to Home screen”. If it is already installed, open it from the Itqan icon."],["افتح الموقع من Chrome، وبعدين اضغط الزرار ده تاني أو من قايمة Chrome ⋮ اختار «تثبيت التطبيق».","Open the site in Chrome, then tap this button again or choose “Install app” from the Chrome menu ⋮."],["اتثبّت التطبيق — افتحه من أيقونة إتقان على الشاشة","App installed — open it from the Itqan icon"],["مؤقت وساعة إيقاف","Timer & stopwatch"],["⏱ المؤقت","⏱ Timer"],["⏳ مؤقت تنازلي","⏳ Countdown"],["⏱ ساعة إيقاف","⏱ Stopwatch"],["دقايق","min"],["▶ ابدأ","▶ Start"],["⏸ إيقاف مؤقت","⏸ Pause"],["↺ من الأول","↺ Reset"],["إخفاء من على الشاشة","Hide from screen"],["⏰ انتهى الوقت","⏰ Time is up"],["1 د","1 m"],["3 د","3 m"],["5 د","5 m"],["10 د","10 m"],["15 د","15 m"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
 ["ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap “Share”, then “Add to Home Screen”."],
 ["لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.","If “Add to Home Screen” isn’t listed, use the Share button ⬆️ in Safari’s toolbar."],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
