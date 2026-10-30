@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="itqan_bg">#0e1a2b</color>
+    <style name="Theme.Itqan" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/itqan_bg</item>
+        <item name="android:colorPrimary">@color/itqan_bg</item>
+        <item name="android:colorAccent">#1a9486</item>
+        <item name="android:statusBarColor">@color/itqan_bg</item>
+        <item name="android:navigationBarColor">@color/itqan_bg</item>
+    </style>
+</resources>

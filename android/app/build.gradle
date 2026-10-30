@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+/* التوقيع: من أسرار GitHub (ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASS) — لازم نفس المفتاح دايماً عشان التحديث يتثبت فوق القديم */
+def ksFile = System.getenv('ITQAN_KEYSTORE')
+def ksPass = System.getenv('ITQAN_KEYSTORE_PASS')
+
+android {
+    namespace 'com.itqanacademy.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.itqanacademy.app'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        if (ksFile && ksPass) {
+            release {
+                storeFile file(ksFile)
+                storePassword ksPass
+                keyAlias 'itqan'
+                keyPassword ksPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig (ksFile && ksPass) ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
