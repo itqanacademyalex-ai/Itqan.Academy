@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.31-k';
+const VER='2026.11.01-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -396,7 +396,7 @@ function meter(t){try{const ac=new(window.AudioContext||window.webkitAudioContex
  const iv=setInterval(()=>{if(t.readyState!='live'){clearInterval(iv);b.style.boxShadow='none';ac.close();return}
   if(!t.enabled){b.style.boxShadow='none';return}
   an.getByteTimeDomainData(d);let m=0;d.forEach(x=>m=Math.max(m,Math.abs(x-128)));b.style.boxShadow='0 0 0 '+Math.min(8,Math.round(m/128*40))+'px #22c55e66'},150)}catch(e){}}
-function micErr(e,what,gate){if(!what){window.MERR=(e&&e.name)||'x';setTimeout(mbarUpd,0)}what=what||'الميكروفون';
+function micErr(e,what,gate){if(!what){window.MERR=(e&&e.name)||'x';setTimeout(mbarUpd,0);try{if(role=='t'){H.t.mic=window.MERR;hEv('❌ مايك المعلم مش شغّال ('+window.MERR+')')}else dg('mic',window.MERR)}catch(x){}}what=what||'الميكروفون';
  const n=e&&e.name,emb=window!==top,ok=window.isSecureContext&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia,
  app=/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent);
  const w=n=='NotAllowedError'?'رفض المتصفح الإذن':n=='NotFoundError'?'لا يوجد ميكروفون':n=='NotReadableError'?'الميكروفون مستخدم من تطبيق آخر':'غير مدعوم هنا';
@@ -417,6 +417,7 @@ function mbarUpd(){let b=document.getElementById('mbar');
  const tk=role=='t'?micT:micS,live=!!(tk&&tk.readyState=='live'&&!tk.muted);
  /* خلاط صوت المعلم متوقف (الآيفون) = الطلاب مش سامعين حتى لو المايك شغّال */
  const sus=role=='t'&&$('#join').hidden&&!final&&typeof MX!='undefined'&&MX.ac&&MX.ac.state!='running'&&MX.ac.state!='closed';
+ if(sus&&!window._susOn){window._susOn=1;try{H.t.sus++;hEv('🔇 محرّك صوت المعلم اتوقف — الطلاب ماكانوش سامعين لحد ما لمس الشاشة')}catch(e){}}else if(!sus)window._susOn=0;
  const need=sus||!!window.MERR&&!live&&!final&&(role=='t'?$('#join').hidden:role=='s'&&admitted&&canTalk);
  if(!need){if(b)b.hidden=true;return}
  if(!b){b=document.createElement('button');b.id='mbar';b.style.cssText='position:fixed;z-index:58;top:calc(8px + env(safe-area-inset-top));inset-inline:10px;margin-inline:auto;max-width:560px;background:#b5473f;color:#fff;border:2px solid #fff;border-radius:16px;padding:10px 14px;font:inherit;text-align:center;line-height:1.7;box-shadow:0 8px 28px #000a;cursor:pointer';
@@ -434,7 +435,7 @@ async function micHeal(){const t=role=='t'?micT:micS;if(!t||t.readyState!='live'
  if(role=='t'){try{stream.removeTrack(t)}catch(e){}mxSrcDel('T');micT=null;const ok=await tGrabMic();if(ok&&!on){micT.enabled=false;st.mic=0;bst();ui()}}
  else{micS=null;const c=myCall;myCall=null;try{c&&c.close()}catch(e){}if(await prepMic(0)&&on)sendMic()}
  const n=role=='t'?micT:micS;
- if(n&&n.muted){if(++mhN>=2){window.MERR='ended';mbarUpd()}}else if(n){mhN=0;sys('🎤 الميكروفون كان متوقف من الجهاز — اتشغّل تاني')}}
+ if(n&&n.muted){if(++mhN>=2){window.MERR='ended';mbarUpd()}}else if(n){mhN=0;sys('🎤 الميكروفون كان متوقف من الجهاز — اتشغّل تاني');try{role=='t'?(H.t.heal++,hEv('🎤 مايك المعلم كان مكتوم من الجهاز — اتفتح تاني')):dg('heal')}catch(e){}}}
 setInterval(micHeal,3000);
 /* ===== بعد مكالمة تليفون (أو Siri / تطبيق تاني خد الصوت): الآيفون بيغيّر إعدادات الصوت أثناء المكالمة،
    ولما نرجع المايك بيفضل مكتوم أو صوته مشوّه (بيتقري بسرعة غلط). الحل: نعيد تشغيل المايك ومحرّك الصوت من الأول لوحدنا ===== */
@@ -444,7 +445,7 @@ async function audioReset(){if(role!='t'&&role!='s')return;window.auInt=0;
   const ok=await tGrabMic();if(ok&&!on){micT.enabled=false;st.mic=0;bst();ui()}if(!ok)return}
  else{const t=micS;if(!t||!admitted)return;const on=t.enabled;micS=null;try{t.onended=null;t.stop()}catch(e){}const c=myCall;myCall=null;try{c&&c.close()}catch(e){}
   if(!(await prepMic(0)))return;if(on)sendMic()}
- window.acUnlock&&acUnlock();sys('🔄 الصوت اتظبط تاني بعد المكالمة')}
+ window.acUnlock&&acUnlock();sys('🔄 الصوت اتظبط تاني بعد المكالمة');try{role=='t'?(H.t.reset++,hEv('📞 المعلم رجع من مكالمة/مقاطعة — الصوت اتظبط تاني')):dg('reset')}catch(e){}}
 setInterval(()=>{if(window.auInt&&!document.hidden&&(role=='t'||role=='s'&&admitted))audioReset()},3000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;setTimeout(()=>{window.acUnlock&&acUnlock();if(window.auInt)audioReset();else micHeal()},1000)});
 /* لو المستخدم سمح من إعدادات المتصفح من غير ما يضغط، نشغّل المايك لوحده */
@@ -701,7 +702,7 @@ async function startTPeer(){
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
  const p=peer=new Peer('itqan-'+room,{config:ice});let opened=0;
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
- p.on('disconnected',()=>{if(p.destroyed)return;sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
+ p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
    tTries++;try{p.destroy()}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
@@ -748,7 +749,7 @@ function tData(c,d){
   return}
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
- else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='recall'){if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
@@ -788,12 +789,12 @@ let tCall=null,auBad=0,auLast=-1,auAsk=0,auTry=0,auPL=[0,0],auBuf=0;
 /* نت الطالب متذبذب (بيضيع منه صوت أو بيوصل متقطّع): نكبّر مخزن الصوت عنده لثلث ثانية —
    الصوت بيتأخر شوية صغيرة بس بيوصل متصل بدل ما يتقطّع */
 function auJB(lo,rc,ji){const dl=lo-auPL[0],dr=rc-auPL[1];auPL=[lo,rc];if(dr<=0||auBuf)return;
- if(dl/(dl+dr)>.03||ji>.04){auBuf=1;try{tCall.peerConnection.getReceivers().forEach(r=>{if(r.track&&r.track.kind=='audio'){if('jitterBufferTarget' in r)r.jitterBufferTarget=350;else r.playoutDelayHint=.35}})}catch(e){}}}
+ if(dl/(dl+dr)>.03||ji>.04){auBuf=1;dg('jb');try{tCall.peerConnection.getReceivers().forEach(r=>{if(r.track&&r.track.kind=='audio'){if('jitterBufferTarget' in r)r.jitterBufferTarget=350;else r.playoutDelayHint=.35}})}catch(e){}}}
 const pcSt=c=>{const pc=c&&c.peerConnection;return pc?(pc.connectionState||pc.iceConnectionState):''};
 setInterval(()=>{if(role!='t'||!peer||peer.destroyed)return;
  Object.values(conns).forEach(o=>{if(!o.adm||!o.c||!o.c.open)return;const q=pcSt(o.call),bad=q=='failed'||q=='closed';
   o.bd=bad||!q||q=='disconnected'?(o.bd||0)+1:0;
-  if((bad||o.bd>=2)&&Date.now()-(o.rcT||0)>10000){o.rcT=Date.now();o.bd=0;callOne(o);if(camT)callCam(o)}})},5000);
+  if((bad||o.bd>=2)&&Date.now()-(o.rcT||0)>10000){o.rcT=Date.now();o.bd=0;hEv('🔌 اتصال الصوت مع '+o.name+' وقع ('+(q||'مفيش')+') — اتعمل من جديد');callOne(o);if(camT)callCam(o)}})},5000);
 setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
  const q=pcSt(tCall);let bad=q=='failed'||q=='closed'?3:!q||q=='disconnected'?1:0;
  if(!bad&&tCall&&st.mic&&lastA>0)try{let b=-1,lo=0,rc=0,ji=0;(await tCall.peerConnection.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio'){b=r.bytesReceived;lo=r.packetsLost||0;rc=r.packetsReceived||0;ji=r.jitter||0}});
@@ -801,20 +802,22 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   if(b>=0&&b===auLast)bad=1;auLast=b}catch(e){}
  auBad=bad?auBad+bad:0;
  if(auBad>=3){auBad=0;auLast=-1;if(Date.now()-auAsk<9000)return;auAsk=Date.now();
-  if(++auTry>3){auTry=0;sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync();return}
+  if(++auTry>3){auTry=0;dg('full');sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync();return}
   try{conn.send({t:'recall'})}catch(e){}}
  else if(!bad)auTry=0;
  if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},3000);
 /* ===== المعلم مش سامع طالب: اتصال مايك الطالب (طالب ← معلم) منفصل عن اللي بيسمع منه، فممكن يقع لوحده =====
    المعلم: كل 5 ثواني — لو الطالب مايكه مفتوح ومسموح له يتكلم بس مفيش صوت بيوصل منه ~15 ثانية (أو الاتصال فشل) يطلب منه يبعت المايك تاني.
    الطالب: لو اتصال المايك بتاعه فشل أو اتقفل وهو فاتح المايك، يبعته تاني لوحده. */
+/* الطالب بيبلّغ المعلم بالمشاكل اللي حصلت عنده عشان تتكتب في تقرير نهاية الحصة */
+function dg(k,v){try{if(role=='s'&&conn&&conn.open)conn.send({t:'dg',k,v})}catch(e){}}
 function micResend(){if(role!='s'||!micS||!micS.enabled)return;const c=myCall;myCall=null;try{c&&c.close()}catch(e){}sendMic()}
 setInterval(async()=>{if(role!='t'||!peer||peer.destroyed)return;
  for(const o of Object.values(conns)){if(!o.adm||!o.can||!o.mic||!o.c||!o.c.open){o.mb=0;continue}
   const pc=o.mc&&o.mc.peerConnection,q=pcSt(o.mc);let bad=!pc||q=='failed'||q=='closed';
   if(!bad)try{let b=-1;(await pc.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio')b=r.bytesReceived});if(b>=0&&b===o.mbl)bad=1;o.mbl=b}catch(e){}
   o.mb=bad?(o.mb||0)+1:0;
-  if(o.mb>=3&&Date.now()-(o.mrT||0)>12000){o.mb=0;o.mrT=Date.now();try{o.c.send({t:'remic'})}catch(e){}}}},5000);
+  if(o.mb>=3&&Date.now()-(o.mrT||0)>12000){o.mb=0;o.mrT=Date.now();hS(o.name).remic++;hEv('🎤 صوت '+o.name+' مش واصل للمعلم — اتطلب منه يبعته تاني');try{o.c.send({t:'remic'})}catch(e){}}}},5000);
 setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)return;const q=pcSt(myCall);
  if(!myCall||q=='failed'||q=='closed'){if(Date.now()-(window._mrS||0)>8000){window._mrS=Date.now();micResend()}}},4000);
 /* الآيفون بيوقف الصوت لو جت مكالمة أو رسالة صوتية أو اتغيّرت السماعة: نشغّله تاني على طول، ولو اترفض يظهر زرار تشغيل الصوت */
@@ -961,7 +964,7 @@ async function initS(){
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='cam'){c.on('stream',s=>showCam('T',s,'المعلم'));c.on('close',()=>hideCam('T'));return}
   tCall=c;auBad=0;auBuf=0;auPL=[0,0];
-  c.on('stream',s=>{const v=$('#v');{const ha=s.getAudioTracks().length;if(ha!==lastA){lastA=ha;sys(ha?'وصل البث مع الصوت ✓':'وصل البث بدون صوت — ميكروفون المعلم غير مفعّل أو مكتوم')}}v.muted=true;v.srcObject=s;v.play().catch(()=>{});A.srcObject=s;A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)})});
+  c.on('stream',s=>{const v=$('#v');{const ha=s.getAudioTracks().length;if(ha!==lastA){lastA=ha;sys(ha?'وصل البث مع الصوت ✓':'وصل البث بدون صوت — ميكروفون المعلم غير مفعّل أو مكتوم')}}v.muted=true;v.srcObject=s;v.play().catch(()=>{});A.srcObject=s;A.play().then(()=>$('#unm').hidden=true).catch(()=>{$('#unm').hidden=false;dg('blk')})})});
 }
 let vOk=0,vNonce='';
 /* معرّف ثابت للطالب في هذه الغرفة — يسمح للمعلم بإرجاعه تلقائياً بعد انقطاع النت بدون غرفة الانتظار */
@@ -980,7 +983,7 @@ function sData(d){
  if(d.t=='recon'){$('#recb').hidden=!d.on;return}if(d.t=='hb'){window.T_HB=Date.now();return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
  else if(d.t=='denied'||d.t=='kicked'){final=1;lastDel();stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
- else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
+ else if(d.t=='init'){admitted=1;if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){chat.push(d)}
  else if(d.t=='roster'){roster=d}
  else if(d.t=='st'){st=d.st;tmFix();ui()}
@@ -1482,6 +1485,53 @@ const mailNow=()=>new Date().toLocaleString('ar-EG');
 function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
 function mailStu(n){mailNames.add(n);if(!MAILLIVE)return;mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
 function mailFlush(keep){clearTimeout(mailTm);if(!mailQ.length)return;const q=mailQ.splice(0);mailSend('🎓 دخل '+q.length+' طالب الغرفة '+roomName,'دخل الطلاب التالية أسماؤهم:\n- '+q.join('\n- ')+'\nالوقت: '+mailNow(),keep)}
+/* ===== تقرير صحة النظام في إيميل نهاية الحصة: أي خلل في الصوت/الاتصال، وهل اتستخدم TURN ومع مين ===== */
+const H={ev:[],stu:{},t:{lite:0,bwf:1,sus:0,heal:0,reset:0,peer:0,mic:''}};
+const hT=()=>new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+function hEv(m){if(role!='t')return;const l=H.ev[H.ev.length-1];if(l&&l.m===m&&Date.now()-l.ts<60000)return;H.ev.push({ts:Date.now(),t:hT(),m});if(H.ev.length>120)H.ev.splice(0,H.ev.length-120)}
+function hS(n){n=String(n||'؟');return H.stu[n]||(H.stu[n]={relay:'',loss:0,rtt:0,weak:0,recall:0,remic:0,reset:0,heal:0,jb:0,blk:0,full:0,mic:''})}
+/* من إحصائيات الاتصال: نوع المسار (مباشر ولا عبر TURN) + أقصى فقد صوت وتأخير */
+function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
+ stats.forEach(x=>{if(x.type=='transport'&&x.selectedCandidatePairId)pair=stats.get(x.selectedCandidatePairId)});
+ if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
+ if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
+  if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';
+   if(rl&&!S.relay){S.relay=(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
+   else if(!rl&&S.relay==='')S.relay='direct';
+   /* استهلاك TURN: البيانات اللي عدّت في الاتصال ده وهو ماشي عبر TURN (بنجمع الزيادة بس، عشان الاتصال ممكن يتعمل من جديد) */
+   const tot=(pair.bytesSent||0)+(pair.bytesReceived||0);if(pc){const d=Math.max(0,tot-(pc._hb||0));pc._hb=tot;if(rl)S.mb=(S.mb||0)+d/1048576}}}
+ stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'){if(x.fractionLost>S.loss)S.loss=x.fractionLost;if(x.roundTripTime>S.rtt)S.rtt=x.roundTripTime}
+  if(x.type=='inbound-rtp'&&x.kind=='audio'&&x.packetsReceived>50){const f=(x.packetsLost||0)/((x.packetsLost||0)+x.packetsReceived);if(f>S.loss)S.loss=f}})}catch(e){}}
+function hDg(o,d){const S=hS(o.name),k=String(d.k||'');
+ if(k=='mic'){S.mic=String(d.v||'').slice(0,40);hEv('❌ مايك '+o.name+' مش شغّال ('+S.mic+')')}
+ else if(k=='reset'){S.reset++;hEv('📞 '+o.name+' رجع من مكالمة — الصوت اتظبط تاني')}
+ else if(k=='heal'){S.heal++;hEv('🎤 مايك '+o.name+' كان مكتوم من الجهاز — اتفتح تاني')}
+ else if(k=='jb'){S.jb=1;hEv('〰️ نت '+o.name+' متذبذب — مخزن الصوت اتكبّر')}
+ else if(k=='blk'){S.blk=1;hEv('🔇 متصفح '+o.name+' منع الصوت لحد ما يلمس الشاشة')}
+ else if(k=='full'){S.full++;hEv('🔄 '+o.name+' عمل إعادة اتصال كاملة عشان الصوت')}}
+function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%',ms=v=>Math.round(v*1000)+'ms';
+ const relay=stu.filter(([n,x])=>x.relay&&x.relay!=='direct');
+ const issues=H.ev.filter(e=>!/^(🔁|↩️)/.test(e.m)).length;
+ L.push('===== صحة النظام (الصوت والاتصال) =====');
+ L.push(issues?'⚠️ اتسجّل '+issues+' مشكلة واتعالجت تلقائياً — التفاصيل تحت.':'✅ مفيش أي خلل اتسجّل في الصوت أو الاتصال.');
+ L.push('');
+ L.push('🔁 خادم TURN: '+(hasTurn?'متاح':'❌ مش متاح (مفيش بيانات TURN)'));
+ const mbF=v=>v>=1024?(v/1024).toFixed(2)+' جيجا':(v>=10?Math.round(v):v.toFixed(1))+' ميجا',mbT=relay.reduce((a,[n,x])=>a+(x.mb||0),0);
+ L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
+ if(relay.length)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
+ if(stu.length){L.push('');L.push('👥 الطلاب:');
+  stu.forEach(([n,x])=>{const p=[];p.push(x.relay&&x.relay!=='direct'?'عبر TURN ('+mbF(x.mb||0)+')':x.relay==='direct'?'مباشر':'غير معروف');
+   p.push('أقصى فقد صوت '+pct(x.loss));if(x.rtt)p.push('أقصى تأخير '+ms(x.rtt));
+   if(x.weak)p.push('نت ضعيف '+x.weak+' مرة');if(x.recall)p.push('صوت المعلم رجع لوحده '+x.recall+' مرة');if(x.remic)p.push('صوت الطالب رجع لوحده '+x.remic+' مرة');
+   if(x.full)p.push('إعادة اتصال كاملة '+x.full+' مرة');if(x.reset)p.push('الصوت اتظبط بعد مكالمة '+x.reset+' مرة');if(x.heal)p.push('المايك اتفتح تاني '+x.heal+' مرة');
+   if(x.jb)p.push('مخزن صوت أكبر (نت متذبذب)');if(x.blk)p.push('المتصفح منع الصوت لحد ما لمس الشاشة');if(x.mic)p.push('❌ مشكلة مايك: '+x.mic);
+   L.push(' • '+n+': '+p.join(' — '))})}
+ const t=H.t,tp=[];if(t.lite)tp.push('نت المعلم اتخنق والجودة اتخفّضت تلقائياً '+t.lite+' مرة');if(t.bwf<1)tp.push('أقل جودة صورة وصلت '+pct(t.bwf));
+ if(t.sus)tp.push('محرّك الصوت اتوقف '+t.sus+' مرة (لحد ما المعلم لمس الشاشة)');if(t.reset)tp.push('الصوت اتظبط بعد مكالمة '+t.reset+' مرة');if(t.heal)tp.push('المايك اتفتح تاني '+t.heal+' مرة');
+ if(t.peer)tp.push('خادم الغرف فصل '+t.peer+' مرة');if(t.mic)tp.push('❌ مشكلة مايك: '+t.mic);
+ L.push('');L.push('👨‍🏫 المعلم: '+(tp.length?tp.join(' — '):'✅ مفيش مشاكل'));
+ if(H.ev.length){L.push('');L.push('🕒 سجل الأحداث:');H.ev.slice(-50).forEach(e=>L.push(' '+e.t+'  '+e.m))}
+ return L.join('\n')+'\n\n'}
 function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
  const en=!!sum&&aiLangOf(aiData())=='en',mn=Math.round((Date.now()-sessT0)/60000),dur=en?(mn?mn+' min':'< 1 min'):(mn?mn+' دقيقة':'أقل من دقيقة'),
  subj=(sum?(en?'✅ Class summary — ':'✅ ملخص الحصة — '):closed?'⚠️ أُغلقت صفحة المعلم بدون إنهاء الحصة — ':(en?'⏱ Class ended — ':'⏱ انتهت الحصة — '))+roomName+' — '+dur;
@@ -1489,17 +1539,18 @@ function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;
  if(sum)body+=(en?'===== Class summary =====\n':'===== ملخص الحصة =====\n')+sum.slice(0,9000)+'\n\n';
  else{body+='⚠️ لم يتم توليد ملخص بالذكاء الاصطناعي'+(why?' ('+why+')':'')+'.\n';const tl=trLines().join('\n');if(tl)body+='\n===== آخر التفريغ الصوتي =====\n'+tl.slice(-2500)+'\n\n'}
  body+=attRep(en?'en':'eg');
- return mailSend(subj,body.slice(0,14000),keep)}
+ try{body+='\n'+hRep()}catch(e){}
+ return mailSend(subj,body.slice(0,16000),keep)}
 /* حفظ حالة الحصة عند إعادة تحميل صفحة المعلم (Refresh) واستعادتها خلال 20 دقيقة */
 const tsKey=()=>'itqan_ts_'+room;
 function tSave(){if(role!='t'||!LOG.start||mailDone||endDone)return;
  const now=Date.now(),att=LOG.att.concat(Object.values(conns).filter(o=>o.adm).map(o=>({ts:now,n:o.name,ev:'خرج'})));
- const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300),att,seen:[...SEEN],strokes};
+ const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300),att,seen:[...SEEN],strokes,h:H};
  try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(e){o.strokes=[];try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(x){}}}
 function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()));sessionStorage.removeItem(tsKey())}catch(e){}
  if(!o||!(Date.now()-o.at<20*60000))return false;
  sessT0=o.t0||sessT0;LOG.start=o.ls||sessT0;if(Array.isArray(o.chat))chat=o.chat.concat(chat);if(Array.isArray(o.att))LOG.att=o.att;
- if(Array.isArray(o.seen))o.seen.forEach(x=>SEEN.add(x));if(Array.isArray(o.strokes)&&o.strokes.length){strokes=o.strokes;try{rebuild()}catch(e){}}
+ if(Array.isArray(o.seen))o.seen.forEach(x=>SEEN.add(x));if(o.h&&o.h.stu){H.ev=o.h.ev||[];H.stu=o.h.stu;Object.assign(H.t,o.h.t||{})}hEv('↩️ صفحة المعلم اتعملها إعادة تحميل');if(Array.isArray(o.strokes)&&o.strokes.length){strokes=o.strokes;try{rebuild()}catch(e){}}
  sys('↩️ تمت استعادة الحصة بعد إعادة تحميل الصفحة — الطلاب سيعودون تلقائياً');render();return true}
 window.addEventListener('beforeunload',e=>{if(role=='t'&&LOG.start&&!mailDone&&!endDone){e.preventDefault();e.returnValue=''}});
 window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
@@ -2472,18 +2523,18 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(role!='t'||typeof conns=='undefined')return;
   const L=Object.values(conns).filter(o=>o.adm&&o.call&&o.call.peerConnection);if(!L.length){bad=good=0;return}
   const need=tuneBr();let lim=0,minAv=Infinity,aLoss=0,rr=0;
-  for(const o of L){let wk=0;try{(await o.call.peerConnection.getStats()).forEach(x=>{
+  for(const o of L){let wk=0;try{const ST=await o.call.peerConnection.getStats();hPc(o,ST,'',o.call.peerConnection);for(const [x,w] of [[o.mc,'مايك الطالب'],[o.cc,'كاميرا المعلم'],[o.sc,'كاميرا الطالب'],[stuS&&stuS.k===o.c.peer?stuS.call:null,'شاشة الطالب']])if(x&&x.peerConnection)try{hPc(o,await x.peerConnection.getStats(),w,x.peerConnection)}catch(e){}ST.forEach(x=>{
    if(x.type=='outbound-rtp'&&x.kind=='video'&&(x.qualityLimitationReason=='bandwidth'||x.qualityLimitationReason=='cpu'))lim++;
    /* الطالب بيبلّغ عن الصوت اللي ضاع منه في الطريق — لو أكتر من 5% أو التأخير كبير يبقى النت عنده ضعيف */
    if(x.type=='remote-inbound-rtp'&&x.kind=='audio'&&(x.fractionLost>.05||x.roundTripTime>.8))wk=1;
    if(x.type=='candidate-pair'&&x.nominated&&x.availableOutgoingBitrate)minAv=Math.min(minAv,x.availableOutgoingBitrate)})}catch(e){}
    /* طالب واحد نته ضعيف: نخفّف الصورة اللي رايحة له هو بس (عشان صوته يعدّي)، من غير ما نبوّظ الصورة على الباقي */
    if(wk){aLoss++;o.wg=0;if((o.wf||1)>.15){o.wf=Math.max(.15,(o.wf||1)*.6);tune(o)}}else if((o.wf||1)<1&&++o.wg%8==0){o.wf=Math.min(1,o.wf*1.25);tune(o)}
-   if(!!o.wk!==!!wk){o.wk=wk;rr=1}}
+   if(!!o.wk!==!!wk){o.wk=wk;rr=1;if(wk){hS(o.name).weak++;hEv('📶 نت ضعيف عند '+o.name+' (الصوت ممكن يتقطّع عنده)')}}}
   if(rr)try{render()}catch(e){}
   /* لو أغلب الطلاب بيفقدوا صوت مع بعض يبقى المشكلة في رفع المعلم نفسه */
   const low=lim>0||aLoss>=Math.max(2,Math.ceil(L.length/2))||minAv<need*.6;
-  if(low){good=0;if(window.BWF>.15){window.BWF=Math.max(.15,window.BWF*.6);try{L.forEach(tune)}catch(e){}}if(!on&&++bad>=2){on=1;bad=0;apply()}}
+  if(low){good=0;if(window.BWF>.15){window.BWF=Math.max(.15,window.BWF*.6);H.t.bwf=Math.min(H.t.bwf,window.BWF);try{L.forEach(tune)}catch(e){}}if(!on&&++bad>=2){on=1;bad=0;apply();H.t.lite++;hEv('🐢 نت المعلم مش مكفّي — الجودة اتخفّضت تلقائياً')}}
   else{bad=0;if(window.BWF<1&&++good%8==0){window.BWF=Math.min(1,window.BWF*1.25);try{L.forEach(tune)}catch(e){}}
    if(on&&window.BWF>=1&&minAv!==Infinity&&minAv>need*2&&good>=45){on=0;good=0;apply()}}
  },4000);
