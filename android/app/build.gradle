@@ -32,7 +32,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig (ksFile && ksPass) ? signingConfigs.release : signingConfigs.debug
+            signingConfig = (ksFile && ksPass) ? signingConfigs.getByName('release') : signingConfigs.getByName('debug')
         }
     }
 
