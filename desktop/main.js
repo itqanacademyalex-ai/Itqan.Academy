@@ -118,6 +118,19 @@ function showPicker(parent, sources) {
 }
 
 /* ---------- شاشة البداية (دخول المعلم / دخول الطالب) ---------- */
+/* آخر حصة: الموقع بيبلّغ بيها وهو جوه الحصة، وبتتمسح لما الحصة تخلص — صالحة 3 ساعات من آخر تواجد */
+const LAST = () => path.join(app.getPath('userData'), 'last-class.json');
+ipcMain.on('last:set', (e, o) => {
+  if (!isSite(e.sender.getURL())) return;
+  try {
+    if (!o) return require('fs').rmSync(LAST(), { force: true });
+    if (!inviteUrl(o.u) || !/^(t|s)$/.test(o.r) || !/^[a-z0-9]{4,16}$/.test(o.room)) return;
+    require('fs').writeFileSync(LAST(), JSON.stringify({ u: o.u, room: o.room, r: o.r, ts: Date.now() }));
+  } catch (x) {}
+});
+ipcMain.handle('last:get', () => {
+  try { const o = JSON.parse(require('fs').readFileSync(LAST(), 'utf8')); return o && inviteUrl(o.u) && Date.now() - o.ts < 3 * 36e5 ? o : null; } catch (x) { return null; }
+});
 ipcMain.handle('clip:read', () => clipboard.readText());
 ipcMain.handle('invite:open', (e, raw, role) => {
   /* كود الحصة (4 حروف وأرقام) بدل الرابط */
