@@ -230,10 +230,28 @@ function buildMenu() {
     ]},
     { label: 'مساعدة', submenu: [
       { label: 'عن التطبيق', click: () => dialog.showMessageBox({ type: 'info', title: 'Itqan Academy', message: 'أكاديمية إتقان — تطبيق الكمبيوتر', detail: 'إصدار التطبيق: ' + app.getVersion() + '\nالموقع: ' + SITE + '\n\nالتطبيق بيفتح نسخة الموقع الحالية، فأي تحديث للموقع بيوصل لوحده.' }) },
-      { label: 'فتح الموقع في المتصفح', click: () => shell.openExternal(SITE) }
+      { label: 'فتح الموقع في المتصفح', click: () => shell.openExternal(SITE) },
+      { label: 'التحقق من وجود تحديث', click: () => checkUpdate(true) }
     ]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
+}
+
+/* ---------- التحديث: التطبيق مابيتحدّثش لوحده، فبنقول للمستخدم لما يكون فيه إصدار جديد ---------- */
+const DL = 'https://github.com/itqanacademyalex-ai/Itqan.Academy/releases/latest/download/ItqanAcademy-Setup.exe';
+const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+async function checkUpdate(manual) {
+  try {
+    const { net } = require('electron');
+    const r = await net.fetch('https://api.github.com/repos/itqanacademyalex-ai/Itqan.Academy/releases/latest', { headers: { 'User-Agent': 'ItqanAcademy' } });
+    const j = await r.json(), v = String(j.tag_name || '').replace(/^desktop-v/, '');
+    if (/^\d+\.\d+\.\d+$/.test(v) && newer(v, app.getVersion())) {
+      const w = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      const { response } = await dialog.showMessageBox(w, { type: 'info', title: 'Itqan Academy', buttons: ['تحميل التحديث', 'بعدين'], defaultId: 0, cancelId: 1,
+        message: 'فيه إصدار جديد من تطبيق إتقان (' + v + ')', detail: 'إصدارك الحالي ' + app.getVersion() + '. نزّل التحديث وثبّته فوق القديم — الحصص والإعدادات مش هتتأثر.' });
+      if (response === 0) shell.openExternal(DL);
+    } else if (manual) dialog.showMessageBox({ type: 'info', title: 'Itqan Academy', message: 'عندك أحدث إصدار (' + app.getVersion() + ') ✓' });
+  } catch (e) { if (manual) dialog.showMessageBox({ type: 'warning', title: 'Itqan Academy', message: 'تعذّر التحقق من التحديث — اتأكد من الإنترنت.' }); }
 }
 
 /* ---------- روابط itqan:// (زر «افتح في تطبيق إتقان» في الموقع) + نسخة واحدة من التطبيق ---------- */
@@ -257,6 +275,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     setupSession(); buildMenu(); keepAwake();
     createWindow(fromArgv(process.argv));
+    setTimeout(() => checkUpdate(false), 8000);
     app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
   });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
