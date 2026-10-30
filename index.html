@@ -295,7 +295,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
    <button id="fs" onclick="fsToggle()" title="ملء الشاشة">⛶</button>
    <div id="tag">Itqan Academy 🎤</div>
    <div id="tmx" hidden></div>
-   <button id="unm" hidden onclick="A.play();$('#v').play();this.hidden=true" style="position:absolute;z-index:6;top:60px;left:50%;transform:translateX(-50%);background:#1a9486;border-radius:12px;padding:10px 18px">🔊 اضغط لتفعيل الصوت</button>
+   <button id="unm" hidden onclick="A.play().catch(()=>{});$('#v').play().catch(()=>{});if(role=='t')Object.values(conns).forEach(o=>{o.au&&o.au.play().catch(()=>{})});this.hidden=true" style="position:absolute;z-index:6;top:60px;left:50%;transform:translateX(-50%);background:#1a9486;border-radius:12px;padding:10px 18px">🔊 اضغط لتفعيل الصوت</button>
    <div id="poll" hidden></div>
   </div>
   <div class="bar">
@@ -371,7 +371,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.31-e';
+const VER='2026.10.31-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -403,7 +403,9 @@ let role,name,room,peer,conn,conns={},chat=[],roster={s:[],h:[]},tab='chat',canT
 const dcv=document.createElement('canvas');dcv.width=dcv.height=16;const dx=dcv.getContext('2d');let df=0;
 setInterval(()=>{dx.fillStyle=(df^=1)?'#000':'#020202';dx.fillRect(0,0,16,16)},200);
 const dummy=dcv.captureStream(5).getVideoTracks()[0],A=new Audio(),MOB=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform)),SIL='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
-document.addEventListener('pointerdown',()=>{if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>{})});
+document.addEventListener('pointerdown',()=>{if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>{});
+ /* المعلم: لو المتصفح منع تشغيل صوت طالب (مثلاً بعد إعادة تحميل الصفحة من غير لمسة) نشغّله مع أول لمسة */
+ if(role=='t')Object.values(conns).forEach(o=>{if(o.au&&o.au.paused)o.au.play().then(()=>$('#unm').hidden=true).catch(()=>{})})});
 
 /* ===== هوية الجلسة (مفاتيح تشفير) ===== */
 const SEC_HASH='4f8d493a1e7a0d267069b9a22f50fd0d3954128b1827024f68d356e9142da19e'; /* بصمة (PBKDF2) لكلمة سر السكرتارية — لتغييرها اطلب إعادة توليدها */
@@ -653,7 +655,8 @@ async function startTPeer(){
    if(c.metadata&&c.metadata.k=='cam'){
    c.on('stream',s=>{const o=conns[c.peer];if(!o||!o.adm||!o.cp){c.close();return}o.sc=c;if(!boxes['s:'+c.peer])sys('📷 '+o.name+' فتح الكاميرا');showCam('s:'+c.peer,s,o.name)});
    c.on('close',()=>hideCam('s:'+c.peer));return}
-  c.on('stream',s=>{const o=conns[c.peer];if(!o||!o.adm||!o.can)return;attachMic(o,s)});
+  {const o=conns[c.peer];if(o)o.mc=c}
+  c.on('stream',s=>{const o=conns[c.peer];if(!o||!o.adm||!o.can)return;o.mc=c;attachMic(o,s)});
   c.on('close',()=>{const o=conns[c.peer];o&&dropMic(o)});
  });
 }
@@ -732,12 +735,24 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   try{conn.send({t:'recall'})}catch(e){}}
  else if(!bad)auTry=0;
  if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},3000);
+/* ===== المعلم مش سامع طالب: اتصال مايك الطالب (طالب ← معلم) منفصل عن اللي بيسمع منه، فممكن يقع لوحده =====
+   المعلم: كل 5 ثواني — لو الطالب مايكه مفتوح ومسموح له يتكلم بس مفيش صوت بيوصل منه ~15 ثانية (أو الاتصال فشل) يطلب منه يبعت المايك تاني.
+   الطالب: لو اتصال المايك بتاعه فشل أو اتقفل وهو فاتح المايك، يبعته تاني لوحده. */
+function micResend(){if(role!='s'||!micS||!micS.enabled)return;const c=myCall;myCall=null;try{c&&c.close()}catch(e){}sendMic()}
+setInterval(async()=>{if(role!='t'||!peer||peer.destroyed)return;
+ for(const o of Object.values(conns)){if(!o.adm||!o.can||!o.mic||!o.c||!o.c.open){o.mb=0;continue}
+  const pc=o.mc&&o.mc.peerConnection,q=pcSt(o.mc);let bad=!pc||q=='failed'||q=='closed';
+  if(!bad)try{let b=-1;(await pc.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio')b=r.bytesReceived});if(b>=0&&b===o.mbl)bad=1;o.mbl=b}catch(e){}
+  o.mb=bad?(o.mb||0)+1:0;
+  if(o.mb>=3&&Date.now()-(o.mrT||0)>12000){o.mb=0;o.mrT=Date.now();try{o.c.send({t:'remic'})}catch(e){}}}},5000);
+setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)return;const q=pcSt(myCall);
+ if(!myCall||q=='failed'||q=='closed'){if(Date.now()-(window._mrS||0)>8000){window._mrS=Date.now();micResend()}}},4000);
 /* الآيفون بيوقف الصوت لو جت مكالمة أو رسالة صوتية أو اتغيّرت السماعة: نشغّله تاني على طول، ولو اترفض يظهر زرار تشغيل الصوت */
 A.addEventListener('pause',()=>{if(role=='s'&&A.srcObject)setTimeout(()=>{if(A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},300)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&role=='s'&&A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)});
 function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream([mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
-function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=new Audio();a.srcObject=s;a.play().catch(()=>{});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
+function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=new Audio();a.srcObject=s;a.play().catch(()=>{if(role=='t')$('#unm').hidden=false});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
 function dropMic(o){if(o.mt){mxSrcDel(o.c.peer);o.mt=null}if(o.au){o.au.srcObject=null;o.au=null}}
 function allow(k){const o=conns[k];if(!o)return;o.can=o.can?0:1;o.c.send({t:'mic',on:o.can});if(!o.can)dropMic(o);render()}
 function tMuteAll(){allMuted=allMuted?0:1;Object.values(conns).filter(o=>o.adm).forEach(o=>{o.can=allMuted?0:1;o.c.send({t:'mic',on:o.can});if(!o.can)dropMic(o)});ui();render();sys(allMuted?'تم كتم صوت جميع الطلاب':'تم إلغاء كتم الطلاب')}
@@ -900,7 +915,7 @@ function sData(d){
  else if(d.t=='roster'){roster=d}
  else if(d.t=='st'){st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
- else if(d.t=='pm'&&typeof d.m=='string'){pmGotS(d)}else if(d.t=='pma'){pmAck(pmS,d.ts);pmRender()}else if(d.t=='att'){attn()}else if(d.t=='stk'){showStk(d)}else if(d.t=='poll'){showPoll(d.q)}
+ else if(d.t=='pm'&&typeof d.m=='string'){pmGotS(d)}else if(d.t=='pma'){pmAck(pmS,d.ts);pmRender()}else if(d.t=='remic'){micResend()}else if(d.t=='att'){attn()}else if(d.t=='stk'){showStk(d)}else if(d.t=='poll'){showPoll(d.q)}
  else if(d.t=='pollend'){$('#poll').hidden=true}
  else if(d.t=='cam'){canCam=d.on;if(!d.on)stopCam();sys(d.on?'يمكنك فتح الكاميرا':'أوقف المعلم كاميرات الطلاب');ui()}
  else if(d.t=='sb'){cur=d.s;strokes.push(cur);penSeg(lx,cur,0);redraw()}
