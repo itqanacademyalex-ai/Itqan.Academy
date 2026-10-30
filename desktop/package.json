@@ -1,7 +1,7 @@
 {
   "name": "itqan-academy",
   "productName": "Itqan Academy",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "أكاديمية إتقان — الفصل الافتراضي (تطبيق الكمبيوتر)",
   "author": "Itqan Academy",
   "main": "main.js",
