@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.01-b';
+const VER='2026.11.01-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -447,6 +447,17 @@ async function audioReset(){if(role!='t'&&role!='s')return;window.auInt=0;
   if(!(await prepMic(0)))return;if(on)sendMic()}
  window.acUnlock&&acUnlock();sys('🔄 الصوت اتظبط تاني بعد المكالمة');try{role=='t'?(H.t.reset++,hEv('📞 المعلم رجع من مكالمة/مقاطعة — الصوت اتظبط تاني')):dg('reset')}catch(e){}}
 setInterval(()=>{if(window.auInt&&!document.hidden&&(role=='t'||role=='s'&&admitted))audioReset()},3000);
+/* الآيفون بيقفل المايك خالص لما المعلم/الطالب يخرج من التطبيق (مفيش مايك في الخلفية لتطبيقات الويب) —
+   لو كان فاتح المايك قبل ما يخرج، نرجّعه لوحده أول ما يرجع، من غير ما يدوس 🎤 */
+let mwT=0;
+async function micBack(){if(!window.micWant||document.hidden||final||Date.now()-mwT<5000)return;
+ if(role=='t'){if(micT&&micT.readyState=='live'){window.micWant=0;return}mwT=Date.now();if(await tGrabMic()){window.micWant=0;window.acUnlock&&acUnlock();sys('🎤 المايك رجع لوحده بعد ما رجعت للتطبيق');try{H.t.heal++;hEv('📱 المعلم خرج من التطبيق والمايك اتقفل — رجع لوحده لما رجع')}catch(e){}}}
+ else if(role=='s'&&admitted&&canTalk){if(micS&&micS.readyState=='live'){window.micWant=0;return}mwT=Date.now();if(await prepMic(0)){window.micWant=0;sendMic();sys('🎤 المايك رجع لوحده بعد ما رجعت للتطبيق');dg('heal')}}}
+setInterval(micBack,2500);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(micBack,700)});
+/* لما يرجع: رسالة واضحة إن الآيفون كان قافل الصوت وهو برّه */
+let hidAt=0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hidAt=Date.now();return}
+ if(hidAt&&Date.now()-hidAt>4000&&(role=='t'||role=='s'&&admitted)&&/iPhone|iPad|iPod/.test(navigator.userAgent)&&!final)sys(role=='t'?'📱 الآيفون بيوقف المايك طول ما إنت برّه التطبيق — الطلاب ماكانوش سامعينك الفترة دي':'📱 الآيفون بيوقف الصوت طول ما إنت برّه التطبيق');hidAt=0});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;setTimeout(()=>{window.acUnlock&&acUnlock();if(window.auInt)audioReset();else micHeal()},1000)});
 /* لو المستخدم سمح من إعدادات المتصفح من غير ما يضغط، نشغّل المايك لوحده */
 try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{p.onchange=()=>{if(p.state=='granted'&&window.MERR&&(role=='t'||role=='s'&&admitted&&canTalk))micRetry()}}).catch(()=>{})}catch(e){}
@@ -853,7 +864,7 @@ function prepMic(g){
  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){micErr({name:'NotSupportedError'},0,g);return Promise.resolve(false)}
  micP=navigator.mediaDevices.getUserMedia(MC).then(x=>{
   const t=x.getAudioTracks()[0];t.enabled=false;
-  t.onended=()=>{if(micS!==t)return;micS=null;window.MERR='ended';dropCall();if(admitted)sys('توقف الميكروفون (ربما استخدمه تطبيق آخر) — اضغط 🎤 لإعادة تشغيله')};
+  t.onended=()=>{if(micS!==t)return;if(t.enabled)window.micWant=1;micS=null;window.MERR='ended';dropCall();if(admitted)sys('توقف الميكروفون (ربما استخدمه تطبيق آخر) — اضغط 🎤 لإعادة تشغيله')};
   micS=t;t.addEventListener('mute',()=>{window.auInt=1});meter(t);$('#mg').hidden=true;window.MERR='';mbarUpd();return true
  }).catch(e=>{micErr(e,0,g);return false}).finally(()=>{micP=null});
  return micP}
@@ -883,7 +894,7 @@ async function tGrabMic(){
  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){st.mic=0;micErr({name:'NotSupportedError'},0,1);return false}
  try{
   const t=(await navigator.mediaDevices.getUserMedia(MC)).getAudioTracks()[0];
-  t.onended=()=>{if(micT!==t)return;window.MERR='ended';stream.removeTrack(t);mxSrcDel('T');micT=null;st.mic=0;bst();ui();sys('توقف ميكروفون المعلم — اضغط 🎤 لإعادة تشغيله')};
+  t.onended=()=>{if(micT!==t)return;if(t.enabled)window.micWant=1;window.MERR='ended';stream.removeTrack(t);mxSrcDel('T');micT=null;st.mic=0;bst();ui();sys('توقف ميكروفون المعلم — اضغط 🎤 لإعادة تشغيله')};
   micT=t;t.addEventListener('mute',()=>{window.auInt=1});stream.addTrack(t);mxSrc('T',t);meter(t);st.mic=1;$('#mg').hidden=true;window.MERR='';mbarUpd();if(Object.keys(conns).length){bst();ui()}else refresh();return true
  }catch(e){st.mic=0;micErr(e,0,1);ui();return false}
 }
