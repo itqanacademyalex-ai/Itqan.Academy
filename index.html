@@ -384,10 +384,21 @@ $('#ver').textContent='الإصدار '+VER;
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
 const EXP_HOST='free.expressturn.com',EXP_USER='000000002108147160',EXP_PASS='D7J7GfSpiCux0A+tN3gbDbZ2OW4=';
 const TURN_STATIC=EXP_USER?[{urls:['turn:'+EXP_HOST+':3478?transport=udp','turn:'+EXP_HOST+':3478?transport=tcp','turns:'+EXP_HOST+':443?transport=tcp'],username:EXP_USER,credential:EXP_PASS}]:[]; // مثال: {urls:['turn:host:80','turns:host:443?transport=tcp'],username:'..',credential:'..'}
-const STUN=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}];
+const STUN=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}];
 let ICE={iceServers:STUN},hasTurn=0,iceWhy='';
+/* ===== TURN احتياطي: Metered (metered.ca) — لو ExpressTURN علق أو مااشتغلش عند طالب معيّن، المتصفح بيجرب Metered لوحده =====
+   الاتنين بيتحطوا في نفس القايمة: ExpressTURN الأول (المفضّل)، وMetered بعده. المتصفح بيجرب كل الطرق ويختار أول واحدة تشتغل.
+   الطريقة 1 (المفضّلة): MET_APP + MET_KEY من لوحة Metered ← بيانات مؤقتة بتتجاب أوتوماتيك.
+   الطريقة 2: MET_USER + MET_PASS (بيانات ثابتة من لوحة Metered ← TURN Credentials). */
+const MET_APP='',MET_KEY='',MET_USER='',MET_PASS='';
+const MET_STATIC=MET_USER?[{urls:['turn:global.relay.metered.ca:80','turn:global.relay.metered.ca:80?transport=tcp','turns:global.relay.metered.ca:443?transport=tcp'],username:MET_USER,credential:MET_PASS}]:[];
+let metC=null,metT=0;
+async function metIce(){if(MET_APP&&MET_KEY){if(metC&&Date.now()-metT<30*60000)return metC;
+  try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),3500);const r=await fetch('https://'+MET_APP+'.metered.live/api/v1/turn/credentials?apiKey='+encodeURIComponent(MET_KEY),{signal:ac.signal});clearTimeout(tm);
+   const a=await r.json();if(Array.isArray(a)&&a.length){metC=a.filter(x=>JSON.stringify(x.urls||'').indexOf('turn')>-1);metT=Date.now();return metC}}catch(e){}}
+ return MET_STATIC}
 async function getIce(){
- const tu=TURN_STATIC.slice();iceWhy=tu.length?'':'لا توجد بيانات TURN';
+ const tu=TURN_STATIC.concat(await metIce());iceWhy=tu.length?'':'لا توجد بيانات TURN';
  hasTurn=tu.some(x=>JSON.stringify(x.urls||'').indexOf('turn')>-1);
  ICE={iceServers:STUN.concat(tu)};return ICE}
 const MC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
@@ -1507,7 +1518,7 @@ function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
  if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
  if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
   if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';
-   if(rl&&!S.relay){S.relay=(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
+   if(rl&&!S.relay){const ru=String((lc.candidateType=='relay'?lc.url:rc.url)||'');S.relay=(/metered/i.test(ru)?'Metered ':/expressturn/i.test(ru)?'ExpressTURN ':'')+(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
    else if(!rl&&S.relay==='')S.relay='direct';
    /* استهلاك TURN: البيانات اللي عدّت في الاتصال ده وهو ماشي عبر TURN (بنجمع الزيادة بس، عشان الاتصال ممكن يتعمل من جديد) */
    const tot=(pair.bytesSent||0)+(pair.bytesReceived||0);if(pc){const d=Math.max(0,tot-(pc._hb||0));pc._hb=tot;if(rl)S.mb=(S.mb||0)+d/1048576}}}
@@ -1526,7 +1537,7 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
  L.push('===== صحة النظام (الصوت والاتصال) =====');
  L.push(issues?'⚠️ اتسجّل '+issues+' مشكلة واتعالجت تلقائياً — التفاصيل تحت.':'✅ مفيش أي خلل اتسجّل في الصوت أو الاتصال.');
  L.push('');
- L.push('🔁 خادم TURN: '+(hasTurn?'متاح':'❌ مش متاح (مفيش بيانات TURN)'));
+ L.push('🔁 خادم TURN: '+(hasTurn?'متاح ('+['ExpressTURN',(MET_KEY||MET_USER)&&'Metered احتياطي'].filter(Boolean).join(' + ')+')':'❌ مش متاح (مفيش بيانات TURN)'));
  const mbF=v=>v>=1024?(v/1024).toFixed(2)+' جيجا':(v>=10?Math.round(v):v.toFixed(1))+' ميجا',mbT=relay.reduce((a,[n,x])=>a+(x.mb||0),0);
  L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
  if(relay.length)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
