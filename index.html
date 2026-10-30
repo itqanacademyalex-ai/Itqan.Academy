@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.01-a';
+const VER='2026.11.01-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1491,13 +1491,15 @@ const hT=()=>new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-dig
 function hEv(m){if(role!='t')return;const l=H.ev[H.ev.length-1];if(l&&l.m===m&&Date.now()-l.ts<60000)return;H.ev.push({ts:Date.now(),t:hT(),m});if(H.ev.length>120)H.ev.splice(0,H.ev.length-120)}
 function hS(n){n=String(n||'؟');return H.stu[n]||(H.stu[n]={relay:'',loss:0,rtt:0,weak:0,recall:0,remic:0,reset:0,heal:0,jb:0,blk:0,full:0,mic:''})}
 /* من إحصائيات الاتصال: نوع المسار (مباشر ولا عبر TURN) + أقصى فقد صوت وتأخير */
-function hPc(o,stats,dir){try{const S=hS(o.name);let pair=null;
+function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
  stats.forEach(x=>{if(x.type=='transport'&&x.selectedCandidatePairId)pair=stats.get(x.selectedCandidatePairId)});
  if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
  if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
   if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';
    if(rl&&!S.relay){S.relay=(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
-   else if(!rl&&S.relay==='')S.relay='direct'}}
+   else if(!rl&&S.relay==='')S.relay='direct';
+   /* استهلاك TURN: البيانات اللي عدّت في الاتصال ده وهو ماشي عبر TURN (بنجمع الزيادة بس، عشان الاتصال ممكن يتعمل من جديد) */
+   const tot=(pair.bytesSent||0)+(pair.bytesReceived||0);if(pc){const d=Math.max(0,tot-(pc._hb||0));pc._hb=tot;if(rl)S.mb=(S.mb||0)+d/1048576}}}
  stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'){if(x.fractionLost>S.loss)S.loss=x.fractionLost;if(x.roundTripTime>S.rtt)S.rtt=x.roundTripTime}
   if(x.type=='inbound-rtp'&&x.kind=='audio'&&x.packetsReceived>50){const f=(x.packetsLost||0)/((x.packetsLost||0)+x.packetsReceived);if(f>S.loss)S.loss=f}})}catch(e){}}
 function hDg(o,d){const S=hS(o.name),k=String(d.k||'');
@@ -1514,9 +1516,11 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
  L.push(issues?'⚠️ اتسجّل '+issues+' مشكلة واتعالجت تلقائياً — التفاصيل تحت.':'✅ مفيش أي خلل اتسجّل في الصوت أو الاتصال.');
  L.push('');
  L.push('🔁 خادم TURN: '+(hasTurn?'متاح':'❌ مش متاح (مفيش بيانات TURN)'));
- L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
+ const mbF=v=>v>=1024?(v/1024).toFixed(2)+' جيجا':(v>=10?Math.round(v):v.toFixed(1))+' ميجا',mbT=relay.reduce((a,[n,x])=>a+(x.mb||0),0);
+ L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
+ if(relay.length)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
  if(stu.length){L.push('');L.push('👥 الطلاب:');
-  stu.forEach(([n,x])=>{const p=[];p.push(x.relay&&x.relay!=='direct'?'عبر TURN':x.relay==='direct'?'مباشر':'غير معروف');
+  stu.forEach(([n,x])=>{const p=[];p.push(x.relay&&x.relay!=='direct'?'عبر TURN ('+mbF(x.mb||0)+')':x.relay==='direct'?'مباشر':'غير معروف');
    p.push('أقصى فقد صوت '+pct(x.loss));if(x.rtt)p.push('أقصى تأخير '+ms(x.rtt));
    if(x.weak)p.push('نت ضعيف '+x.weak+' مرة');if(x.recall)p.push('صوت المعلم رجع لوحده '+x.recall+' مرة');if(x.remic)p.push('صوت الطالب رجع لوحده '+x.remic+' مرة');
    if(x.full)p.push('إعادة اتصال كاملة '+x.full+' مرة');if(x.reset)p.push('الصوت اتظبط بعد مكالمة '+x.reset+' مرة');if(x.heal)p.push('المايك اتفتح تاني '+x.heal+' مرة');
@@ -2519,7 +2523,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(role!='t'||typeof conns=='undefined')return;
   const L=Object.values(conns).filter(o=>o.adm&&o.call&&o.call.peerConnection);if(!L.length){bad=good=0;return}
   const need=tuneBr();let lim=0,minAv=Infinity,aLoss=0,rr=0;
-  for(const o of L){let wk=0;try{const ST=await o.call.peerConnection.getStats();hPc(o,ST,'');if(o.mc&&o.mc.peerConnection)try{hPc(o,await o.mc.peerConnection.getStats(),'مايك الطالب')}catch(e){}ST.forEach(x=>{
+  for(const o of L){let wk=0;try{const ST=await o.call.peerConnection.getStats();hPc(o,ST,'',o.call.peerConnection);for(const [x,w] of [[o.mc,'مايك الطالب'],[o.cc,'كاميرا المعلم'],[o.sc,'كاميرا الطالب'],[stuS&&stuS.k===o.c.peer?stuS.call:null,'شاشة الطالب']])if(x&&x.peerConnection)try{hPc(o,await x.peerConnection.getStats(),w,x.peerConnection)}catch(e){}ST.forEach(x=>{
    if(x.type=='outbound-rtp'&&x.kind=='video'&&(x.qualityLimitationReason=='bandwidth'||x.qualityLimitationReason=='cpu'))lim++;
    /* الطالب بيبلّغ عن الصوت اللي ضاع منه في الطريق — لو أكتر من 5% أو التأخير كبير يبقى النت عنده ضعيف */
    if(x.type=='remote-inbound-rtp'&&x.kind=='audio'&&(x.fractionLost>.05||x.roundTripTime>.8))wk=1;
