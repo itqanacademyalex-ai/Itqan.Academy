@@ -2,7 +2,7 @@
    - الصفحة دايماً من النت (عشان أي تحديث يوصل فوراً) — مفيش تخزين للموقع نفسه
    - لو مفيش نت: صفحة «مفيش اتصال» بدل الصفحة البيضا
    - مابيلمسش أي طلبات تانية (الاتصال بالحصة، المكتبات، الإيميل...) */
-const C = 'itqan-v1';
+const C = 'itqan-v2';
 const ICON = 'icons/icon-192.png';
 
 self.addEventListener('install', e => {
@@ -21,7 +21,7 @@ const offline = () => caches.match(ICON).then(r => r ? r.blob() : null).then(b =
 .c{background:#14283f;border-radius:20px;padding:28px;max-width:400px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
 img{width:96px;height:96px;border-radius:22px}h2{font-size:20px}p{line-height:1.9;color:#c4d3e0}
 button{padding:12px 24px;border-radius:12px;border:0;background:#1a9486;color:#fff;font:inherit;font-weight:700;font-size:16px}</style></head>
-<body><div class="c">${img ? `<img src="${img}" alt="">` : ''}<h2>📶 مفيش اتصال بالإنترنت</h2>
+<body><div class="c">${img ? `<img src="${img}" alt="">` : ''}<h2>📶 الإنترنت ضعيف أو مقطوع</h2>
 <p>التطبيق محتاج إنترنت عشان يفتح الحصة. اتأكد إن النت شغّال وهنحاول تاني لوحدنا.</p>
 <button onclick="location.reload()">حاول تاني</button></div>
 <script>addEventListener('online',()=>location.reload());setInterval(()=>{if(navigator.onLine)location.reload()},10000)</script></body></html>`,
@@ -29,5 +29,9 @@ button{padding:12px 24px;border-radius:12px;border:0;background:#1a9486;color:#f
 
 self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;
-  e.respondWith(fetch(e.request).catch(offline));
+  /* لو النت معلّق (متوصل بس مابيردش) ماتسيبش الشاشة بيضا: بعد 20 ثانية اعرض صفحة «حاول تاني» */
+  e.respondWith(Promise.race([
+    fetch(e.request),
+    new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 20000))
+  ]).catch(offline));
 });
