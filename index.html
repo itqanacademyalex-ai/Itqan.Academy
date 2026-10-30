@@ -240,7 +240,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <body data-role="">
 <div id="splash"><img src="icons/icon-512.png" alt="Itqan Academy"><b>Itqan Academy</b></div>
 <script>/* شاشة البداية: اللوجو بيظهر بالتدريج (fade in) أول ما التطبيق يتفتح من الأيقونة — مرة واحدة لكل فتحة */
-(function(){var s=document.getElementById('splash'),app=window.itqanApp||/ItqanAndroid\//.test(navigator.userAgent)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,seen=0;
+(function(){var s=document.getElementById('splash'),app=window.itqanApp||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,seen=0;
  try{seen=sessionStorage.getItem('itqan_splash')}catch(e){}
  if(!app||seen){s.remove();return}try{sessionStorage.setItem('itqan_splash','1')}catch(e){}
  s.className='show';setTimeout(function(){s.className='show out';setTimeout(function(){s.remove()},950)},3000)})();</script>
@@ -366,12 +366,10 @@ const SRC='<!doctype html>'+document.documentElement.outerHTML;
 const $=s=>document.querySelector(s);
 /* داخل تطبيق الكمبيوتر: prompt() من التطبيق، ودخول السكرتارية من المتصفح فقط */
 /* ===== تطبيق الموبايل (PWA): أيقونة على الشاشة الرئيسية ===== */
-/* تطبيق الأندرويد بيفتح نفس الموقع وبيعرّف نفسه بـ ItqanAndroid — بيتعامل معاملة التطبيق المثبّت */
-const AAPP=/ItqanAndroid\//.test(navigator.userAgent),APK='https://github.com/itqanacademyalex-ai/Itqan.Academy/releases/download/android-app/ItqanAcademy.apk';
-const PWA=AAPP||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.31-b';
+const VER='2026.10.31-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -481,14 +479,12 @@ var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();in
 function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
  try{if(Date.now()-(+localStorage.getItem('itqan_inst_x')||0)<7*864e5)return}catch(e){}
  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
- const and=!ios&&/Android/i.test(navigator.userAgent);
- if(!ios&&!instEv&&!and)return;
+ if(!ios&&!instEv)return;
  const d=document.createElement('div');d.id='inst';d.style.cssText='background:#1d3652;border:1px solid rgba(227,192,141,.35);border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;text-align:start;margin-top:4px';
  const im=document.createElement('img');im.src='icons/apple-touch-icon.png';im.alt='';im.style.cssText='width:44px;height:44px;border-radius:10px;flex:none';
  const t=document.createElement('small');t.style.cssText='flex:1;line-height:1.7';const x=document.createElement('button');x.textContent='✕';x.style.cssText='background:transparent;font-size:16px;flex:none;padding:4px';
  x.onclick=()=>{d.remove();try{localStorage.setItem('itqan_inst_x',Date.now())}catch(e){}};
- if(and){t.textContent='حمّل تطبيق إتقان للأندرويد — الحصص بتفتح فيه بأيقونة، والصوت والكاميرا شغّالين من غير مشاكل المتصفح.';const b=document.createElement('a');b.href=APK;b.textContent='📥 تحميل';b.style.cssText='background:#1a9486;color:#fff;text-decoration:none;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';d.append(im,t,b,x)}
- else if(instEv){t.textContent='ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.';const b=document.createElement('button');b.textContent='📲 تثبيت';b.style.cssText='background:#1a9486;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';
+ if(instEv){t.textContent='ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.';const b=document.createElement('button');b.textContent='📲 تثبيت';b.style.cssText='background:#1a9486;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';
   b.onclick=async()=>{const e=instEv;instEv=null;d.remove();try{e.prompt();await e.userChoice}catch(x){}};d.append(im,t,b,x)}
  else if(navigator.share){t.textContent='ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».';
   const b=document.createElement('button');b.textContent='⬆️ مشاركة';b.style.cssText='background:#1a9486;border-radius:10px;padding:10px;width:100%;font-weight:700;font-size:15px';
@@ -1418,7 +1414,7 @@ const ENM=[
 ["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
 ["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
 ["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
-["تثبيت","Install"],["حمّل تطبيق إتقان للأندرويد — الحصص بتفتح فيه بأيقونة، والصوت والكاميرا شغّالين من غير مشاكل المتصفح.","Get the Itqan Android app — classes open from an icon, with sound and camera working smoothly."],["📥 تحميل","📥 Download"],["مؤقت وساعة إيقاف","Timer & stopwatch"],["⏱ المؤقت","⏱ Timer"],["⏳ مؤقت تنازلي","⏳ Countdown"],["⏱ ساعة إيقاف","⏱ Stopwatch"],["دقايق","min"],["▶ ابدأ","▶ Start"],["⏸ إيقاف مؤقت","⏸ Pause"],["↺ من الأول","↺ Reset"],["إخفاء من على الشاشة","Hide from screen"],["⏰ انتهى الوقت","⏰ Time is up"],["1 د","1 m"],["3 د","3 m"],["5 د","5 m"],["10 د","10 m"],["15 د","15 m"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
+["تثبيت","Install"],["مؤقت وساعة إيقاف","Timer & stopwatch"],["⏱ المؤقت","⏱ Timer"],["⏳ مؤقت تنازلي","⏳ Countdown"],["⏱ ساعة إيقاف","⏱ Stopwatch"],["دقايق","min"],["▶ ابدأ","▶ Start"],["⏸ إيقاف مؤقت","⏸ Pause"],["↺ من الأول","↺ Reset"],["إخفاء من على الشاشة","Hide from screen"],["⏰ انتهى الوقت","⏰ Time is up"],["1 د","1 m"],["3 د","3 m"],["5 د","5 m"],["10 د","10 m"],["15 د","15 m"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
 ["ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap “Share”, then “Add to Home Screen”."],
 ["لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.","If “Add to Home Screen” isn’t listed, use the Share button ⬆️ in Safari’s toolbar."],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
