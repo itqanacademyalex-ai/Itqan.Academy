@@ -121,7 +121,18 @@ body:not([data-role=t]) #aib{display:none}
 @media(max-width:860px){#app{grid-template-columns:1fr;height:auto}#side{height:480px}}
 
 #calc{position:fixed;inset-block-end:76px;inset-inline-start:14px;z-index:40;width:292px;background:var(--side);border-radius:16px;padding:10px;box-shadow:0 10px 36px #0008;display:flex;flex-direction:column;gap:6px}
-#calc[hidden],#stk[hidden],#toast[hidden]{display:none}
+#calc[hidden],#stk[hidden],#toast[hidden],#tmp[hidden],#tmx[hidden]{display:none}
+/* خانة كود الحصة: الكود نفسه كبير ومتباعد، والكلام الإرشادي (placeholder) صغير وعادي */
+#join input.code-in{text-align:center;font:700 20px Cairo,Tahoma,sans-serif;letter-spacing:5px;padding:12px 10px;width:100%}#join input.code-in::placeholder{font-size:15px;letter-spacing:normal;font-weight:400;color:#8aa0b5}
+#tmx{position:absolute;z-index:5;top:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.86);border:1.5px solid #e3c08d;color:#fff;border-radius:999px;padding:4px 16px;font:700 22px/1.3 Cairo,Tahoma,sans-serif;direction:ltr;font-variant-numeric:tabular-nums;pointer-events:none;white-space:nowrap}
+#tmx.end{background:#b5473f;border-color:#fff;animation:tmF 1s infinite}@keyframes tmF{50%{opacity:.55}}
+#tmp{position:fixed;inset-block-end:76px;inset-inline-start:14px;z-index:41;width:286px;max-width:calc(100vw - 28px);background:var(--side);border-radius:16px;padding:12px;box-shadow:0 10px 36px #0008;display:flex;flex-direction:column;gap:9px;text-align:center}
+#tmp .ch{display:flex;justify-content:space-between;align-items:center}#tmp .ch button{background:#27496b;border-radius:8px;padding:3px 9px}
+#tmp .md{display:flex;gap:6px}#tmp .md button{flex:1;background:#1d3652;border-radius:10px;padding:7px;border:1.5px solid transparent}#tmp .md button.a{border-color:#e3c08d}
+#tmp .big{font:700 34px/1.2 Cairo,Tahoma,sans-serif;direction:ltr;font-variant-numeric:tabular-nums}
+#tmp .ps{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}#tmp .ps[hidden]{display:none}#tmp .ps button{background:#27496b;border-radius:9px;padding:5px 9px;font-size:13px}
+#tmp .ps input{width:62px;background:#1d3652;border:1px solid #27496b;border-radius:9px;color:#fff;text-align:center;font:inherit;padding:4px}
+#tmp .ac{display:flex;gap:6px}#tmp .ac button{flex:1;border-radius:11px;padding:9px;font-weight:700;background:#27496b}#tmp .ac #tmgo{background:#1a9486}
 #calc .ch{display:flex;justify-content:space-between;align-items:center}#calc .ch button{background:#27496b;border-radius:8px;padding:3px 9px;margin-inline-start:4px}
 #cin{background:#1d3652;border:1px solid #27496b;border-radius:10px;padding:8px;color:#fff;font-size:17px;text-align:left;outline:0}
 #cout{min-height:26px;font-size:22px;text-align:right;color:#7fe0d2;direction:ltr;unicode-bidi:plaintext}
@@ -281,6 +292,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
    <button id="cvb" hidden onclick="camMode('T')" title="تصغير الكاميرا">⤡</button>
    <button id="fs" onclick="fsToggle()" title="ملء الشاشة">⛶</button>
    <div id="tag">Itqan Academy 🎤</div>
+   <div id="tmx" hidden></div>
    <button id="unm" hidden onclick="A.play();$('#v').play();this.hidden=true" style="position:absolute;z-index:6;top:60px;left:50%;transform:translateX(-50%);background:#1a9486;border-radius:12px;padding:10px 18px">🔊 اضغط لتفعيل الصوت</button>
    <div id="poll" hidden></div>
   </div>
@@ -304,6 +316,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
    <button class="c tr" id="tl" onclick="tMuteAll()" title="كتم صوت جميع الطلاب">🔇</button>
    <button class="c tr" id="tr" onclick="tRec()" title="تسجيل الحصة">⏺</button>
    <button class="c tp" id="tp" onclick="tPoll()" title="استفتاء سريع">📊</button>
+   <button class="c tz" id="tmb" onclick="tmOpen()" title="مؤقت وساعة إيقاف">⏱</button>
    <button class="c tg" id="tw" onclick="tWb()" title="السبورة">🖍</button>
    <button class="c tp" onclick="stkPick('')" data-i18n-t="stkAll" title="استيكر للجميع">⭐</button>
    <button class="c tz" onclick="sync()" title="تحديث الاتصال">🔄</button>
@@ -356,7 +369,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.30-a';
+const VER='2026.10.30-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -442,7 +455,7 @@ function pwaHome(){if(window.itqanApp)return;
   const i=document.createElement('b');i.style.fontSize='30px';i.textContent=ic;b.append(i,t);b.onclick=()=>pick(r,b);row.append(b);return b};
  mk('t','👨‍🏫','دخول المعلم','#1a9486');mk('s','🎓','دخول الطالب','#27496b');
  const f=document.createElement('div');f.hidden=true;f.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%';
- const h=document.createElement('small');h.style.lineHeight='1.8';const inp=document.createElement('input');inp.dir='ltr';inp.placeholder='كود الحصة — مثال: K7M2';inp.autocomplete='off';inp.setAttribute('autocapitalize','characters');inp.spellcheck=false;inp.style.cssText='text-align:center;font-size:24px;letter-spacing:8px;font-weight:700';
+ const h=document.createElement('small');h.style.lineHeight='1.8';const inp=document.createElement('input');inp.dir='ltr';inp.placeholder='كود الحصة';inp.className='code-in';inp.autocomplete='off';inp.setAttribute('autocapitalize','characters');inp.spellcheck=false;inp.oninput=()=>{const v=inp.value;if(v.length<=6&&/^[a-z0-9]+$/i.test(v))inp.value=v.toUpperCase()};
  const r2=document.createElement('div');r2.style.cssText='display:flex;gap:8px';const pa=document.createElement('button');pa.className='w';pa.style.cssText='background:#27496b;flex:none;padding:10px 14px';pa.textContent='📋 لصق';
  const go=document.createElement('button');go.className='w';go.style.cssText='background:#1a9486;flex:1;font-weight:700';go.textContent='دخول';r2.append(pa,go);
  const er=document.createElement('small');er.style.cssText='color:#fca5a5;min-height:20px;line-height:1.7';f.append(h,inp,r2,er);
@@ -515,7 +528,7 @@ function join(r){
  render();ui();setLang(LANG);sys('الغرفة: '+rn+' • الإصدار '+VER);
 }
 const bc=o=>Object.values(conns).filter(x=>x.adm).forEach(x=>{try{x.c.send(o)}catch(e){}});
-const bst=()=>bc({t:'st',st});
+const bst=()=>{if(st.tm)st.tm.now=Date.now();bc({t:'st',st})};
 /* رسائل التعذّر والتسجيل لا تظهر للمعلم أو الطالب */
 const SYS_HIDE=/⚠️|🔴|تعذر|خطأ في الاتصال|انقطع|مشكلة في الوصول|توقف (الميكروفون|ميكروفون|التفريغ)|بدون صوت|غير متصل|لا يمكن مشاركة|محجوز|تسجيل/;
 function sys(m){if(SYS_HIDE.test(String(m)))return;chat.push({sys:1,m});render()}
@@ -654,7 +667,7 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
@@ -828,10 +841,10 @@ function sData(d){
  if(d.t=='recon'){$('#recb').hidden=!d.on;return}if(d.t=='hb'){window.T_HB=Date.now();return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
  else if(d.t=='denied'||d.t=='kicked'){final=1;stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
- else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
+ else if(d.t=='init'){admitted=1;canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){chat.push(d)}
  else if(d.t=='roster'){roster=d}
- else if(d.t=='st'){st=d.st;ui()}
+ else if(d.t=='st'){st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
  else if(d.t=='pm'&&typeof d.m=='string'){pmGotS(d)}else if(d.t=='pma'){pmAck(pmS,d.ts);pmRender()}else if(d.t=='att'){attn()}else if(d.t=='stk'){showStk(d)}else if(d.t=='poll'){showPoll(d.q)}
  else if(d.t=='pollend'){$('#poll').hidden=true}
@@ -927,7 +940,7 @@ function ui(){
  $('#v').style.visibility=st.scr?'visible':'hidden';
  const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
- layoutCams();
+ layoutCams();tmPaint();
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
@@ -1157,6 +1170,7 @@ function insTog(k){ins[k].on=ins[k].on?0:1;if(ins[k].on)tool='mv';refTb();sendIn
 <div id="calc" hidden><div class="ch"><b data-i18n="calc">الحاسبة العلمية</b><span><button id="cdm" onclick="calcMode()"></button><button onclick="calcT()">✕</button></span></div><input id="cin" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sin(30)+2^3"><div id="cout"></div><div id="cks"></div><div id="chs"></div></div>
 <div id="stk" hidden><div class="ch" style="display:flex;justify-content:space-between"><b id="stkt"></b><button onclick="$('#stk').hidden=true" style="background:#27496b;border-radius:8px;padding:2px 9px">✕</button></div><div class="g" id="stkg"></div><input id="stkm" maxlength="80" data-i18n-p="custom" placeholder="رسالة تشجيع قصيرة (اختياري)"></div>
 <div id="pm" hidden><div class="ch"><b id="pmt"></b><button onclick="$('#pm').hidden=true">✕</button></div><div id="pml"></div><div class="pr"><input id="pmi" maxlength="500" autocomplete="off" data-i18n-p="pmPh" placeholder="اكتب رسالة خاصة..."><button onclick="pmSend()" data-i18n="send">إرسال</button></div></div>
+<div id="tmp" hidden><div class="ch"><b>⏱ المؤقت</b><button onclick="$('#tmp').hidden=true">✕</button></div><div class="md"><button id="tmmt" onclick="tmMode('t')">⏳ مؤقت تنازلي</button><button id="tmmw" onclick="tmMode('w')">⏱ ساعة إيقاف</button></div><div class="big" id="tmbig">00:00</div><div class="ps" id="tmps"><button onclick="tmSet(1)">1 د</button><button onclick="tmSet(3)">3 د</button><button onclick="tmSet(5)">5 د</button><button onclick="tmSet(10)">10 د</button><button onclick="tmSet(15)">15 د</button><input id="tmin" type="number" min="1" max="180" inputmode="numeric" placeholder="دقايق" onchange="tmSet(+this.value)"></div><div class="ac"><button id="tmgo" onclick="tmGo()">▶ ابدأ</button><button onclick="tmReset()">↺ من الأول</button></div><button class="w" style="background:transparent;border:1px solid #27496b;padding:7px" onclick="tmHide()">إخفاء من على الشاشة</button></div>
 <div id="dsm" hidden><div class="ch"><b data-i18n="desmos">Desmos</b><span><button onclick="dsmMin()" aria-label="min">▁</button><button onclick="dsmMax()" aria-label="max">⛶</button><button onclick="dsmClose()" aria-label="close">✕</button></span></div><div id="dsb"></div></div>
 <div id="toast" hidden></div>
 <script>
@@ -1198,6 +1212,34 @@ function calcEval(src,deg){
  function pw(){const b=at();if(pk()=='^'){nx();return Math.pow(b,un())}return b}
  function at(){const x=nx();if(x==null)bad();if(/^[\d.]/.test(x))return parseFloat(x);if(x=='('){const v=ex();if(nx()!=')')bad();return v}if(x=='pi')return Math.PI;if(x=='e')return Math.E;if(Object.prototype.hasOwnProperty.call(F,x)){if(nx()!='(')bad();const v=ex();if(nx()!=')')bad();return F[x](v)}bad()}
  let v=ex();if(p<t.length)bad();if(!isFinite(v))throw new Error('inv');if(Math.abs(v)<1e-12)v=0;return +v.toPrecision(12)}
+/* ===== المؤقت وساعة الإيقاف: المعلم بيتحكم والكل بيشوفه فوق الشاشة =====
+   st.tm={m:'t' تنازلي | 'w' ساعة إيقاف, d:المدة ms, b:اللي عدّى قبل آخر تشغيل ms, t0:وقت التشغيل (null=متوقف), now:وقت الإرسال} */
+var tmEnd=0,tmMd='t',tmD=5*6e4;
+function tmEl(t){return t.b+(t.t0?Date.now()-t.t0:0)}
+function tmFmt(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60,p=n=>String(n).padStart(2,'0');return(h?h+':'+p(m):p(m))+':'+p(x)}
+/* الطالب: نحوّل وقت المعلم لساعة جهازه (عشان فرق الساعات بين الأجهزة) */
+function tmFix(){const t=st.tm;if(role=='t'||!t||!t.t0||!t.now)return;t.t0+=Date.now()-t.now;t.now=0}
+function tmVal(t){const e=tmEl(t);return t.m=='t'?t.d-e:e}
+function tmPaint(){const t=st.tm,b=$('#tmx');if(!b)return;b.hidden=!t;
+ const v=t?tmVal(t):(tmMd=='t'?tmD:0),done=!!(t&&t.m=='t'&&v<=0),shown=t&&t.m=='t'||!t&&tmMd=='t'?Math.ceil(v/1e3)*1e3:v;
+ if(t){b.textContent=(done?'⏰ ':t.m=='t'?'⏳ ':'⏱ ')+tmFmt(shown);b.classList.toggle('end',done);
+  if(done&&t.t0&&tmEnd!==t.t0){tmEnd=t.t0;tmBeep();if(role=='t')sys('⏰ انتهى الوقت')}}
+ if(role=='t'&&!$('#tmp').hidden){const m=t?t.m:tmMd;$('#tmmt').classList.toggle('a',m=='t');$('#tmmw').classList.toggle('a',m=='w');$('#tmps').hidden=m!='t';
+  $('#tmbig').textContent=tmFmt(shown);$('#tmgo').textContent=t&&t.t0&&!done?'⏸ إيقاف مؤقت':'▶ ابدأ'}}
+function tmBeep(){try{_ac=_ac||new _AC();if(_ac.state=='suspended')_ac.resume();const t=_ac.currentTime;
+ [0,.35,.7].forEach(d=>{const o=_ac.createOscillator(),g=_ac.createGain();o.type='square';o.frequency.value=988;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.18,t+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d+.25);o.connect(g).connect(_ac.destination);o.start(t+d);o.stop(t+d+.3)})}catch(e){}
+ try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}}
+setInterval(()=>{if(st.tm)tmPaint()},250);
+function tmOpen(){const p=$('#tmp');p.hidden=!p.hidden;tmPaint()}
+function tmMode(m){if(st.tm&&st.tm.m==m)return;tmMd=m;st.tm=null;bst();tmPaint()}
+function tmSet(min){if(!(min>0&&min<=180))return;tmMd='t';tmD=Math.round(min*6e4);st.tm=null;bst();tmPaint()}
+function tmGo(){const t=st.tm;
+ if(!t)st.tm={m:tmMd,d:tmD,b:0,t0:Date.now()};
+ else if(t.m=='t'&&tmVal(t)<=0){t.b=0;t.t0=Date.now()}
+ else if(t.t0){t.b=tmEl(t);t.t0=null}else t.t0=Date.now();
+ bst();tmPaint()}
+function tmReset(){const t=st.tm;if(t){t.b=0;t.t0=null;bst()}tmPaint()}
+function tmHide(){st.tm=null;bst();tmPaint();$('#tmp').hidden=true}
 function calcT(){const c=$('#calc');c.hidden=!c.hidden;if(!c.hidden)$('#cin').focus()}
 function calcMode(){cdeg=cdeg?0:1;calcUi()}
 function calcUi(){const b=$('#cdm');if(b)b.textContent=cdeg?'DEG':'RAD'}
@@ -1348,7 +1390,7 @@ const ENM=[
 ["دخول المعلم","Teacher login"],["دخول الطالب","Student login"],["الصق رابط الحصة هنا","Paste the class link here"],["لصق","Paste"],
 ["الرجوع لشاشة البداية","Back to the start screen"],["ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.","Install the Itqan app on your phone — it opens from an icon like any app."],
 ["ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap the Share button ⬆️ in Safari, then “Add to Home Screen”."],
-["تثبيت","Install"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
+["تثبيت","Install"],["مؤقت وساعة إيقاف","Timer & stopwatch"],["⏱ المؤقت","⏱ Timer"],["⏳ مؤقت تنازلي","⏳ Countdown"],["⏱ ساعة إيقاف","⏱ Stopwatch"],["دقايق","min"],["▶ ابدأ","▶ Start"],["⏸ إيقاف مؤقت","⏸ Pause"],["↺ من الأول","↺ Reset"],["إخفاء من على الشاشة","Hide from screen"],["⏰ انتهى الوقت","⏰ Time is up"],["1 د","1 m"],["3 د","3 m"],["5 د","5 m"],["10 د","10 m"],["15 د","15 m"],["جارٍ البحث عن الحصة…","Looking for the class…"],["كود الحصة","Class code"],["كود المعلم السري","Teacher secret code"],["الرجوع لشاشة البداية؟ الحصص هتفضل محفوظة وترجع لوحدها لما تفتحي لوحة السكرتارية.","Back to the start screen? The session stays saved and you can resume it."],["مشاركة","Share"],
 ["ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».","Install the Itqan app: tap “Share”, then “Add to Home Screen”."],
 ["لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.","If “Add to Home Screen” isn’t listed, use the Share button ⬆️ in Safari’s toolbar."],["وضع القلم: اكتب بالقلم، وحرّك أو كبّر بصباعك","Pencil mode: write with the pencil, pan or zoom with your finger"],
 ["افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)","Open in the Itqan app (if installed on this computer)"],
