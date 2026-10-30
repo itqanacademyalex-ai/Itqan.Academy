@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.10.31-j';
+const VER='2026.10.31-k';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -565,12 +565,18 @@ function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|I
  x.onclick=()=>{d.remove();try{localStorage.setItem('itqan_inst_x',Date.now())}catch(e){}};
  if(instEv){t.textContent='ثبّت تطبيق إتقان على موبايلك — يفتح بأيقونة زي أي تطبيق.';const b=document.createElement('button');b.textContent='📲 تثبيت';b.style.cssText='background:#1a9486;border-radius:10px;padding:8px 12px;flex:none;font-weight:700';
   b.onclick=async()=>{const e=instEv;instEv=null;d.remove();try{e.prompt();await e.userChoice}catch(x){}};d.append(im,t,b,x)}
- else if(navigator.share){t.textContent='ثبّت تطبيق إتقان: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».';
-  const b=document.createElement('button');b.textContent='⬆️ مشاركة';b.style.cssText='background:#1a9486;border-radius:10px;padding:10px;width:100%;font-weight:700;font-size:15px';
-  b.onclick=()=>{navigator.share({title:'Itqan Academy',url:location.href}).catch(()=>{})};
-  const n=document.createElement('small');n.style.cssText='width:100%;opacity:.7;font-size:11px;line-height:1.6';n.textContent='لو «إضافة إلى الشاشة الرئيسية» مش ظاهرة، استخدم زر المشاركة ⬆️ في شريط Safari.';
+ else{/* آيفون/آيباد: «إضافة إلى الشاشة الرئيسية» بتظهر بس من زر المشاركة بتاع Safari نفسه —
+   قايمة المشاركة اللي بيفتحها الموقع (navigator.share) مافيهاش الاختيار ده، فبنشرح الخطوات ونشاور على الزر */
+  const ua=navigator.userAgent,other=/CriOS|EdgiOS|FxiOS|OPiOS/.test(ua),pad=/iPad/.test(ua)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+  t.textContent='ثبّت تطبيق إتقان على الشاشة الرئيسية — يفتح بأيقونة زي أي تطبيق.';
+  const b=document.createElement('button');b.textContent='📲 إزاي أضيفه للشاشة الرئيسية؟';b.style.cssText='background:#1a9486;border-radius:10px;padding:10px;width:100%;font-weight:700;font-size:15px';
+  const n=document.createElement('div');n.hidden=true;n.style.cssText='width:100%;font-size:13.5px;line-height:2;background:#14283f;border-radius:10px;padding:8px 12px';
+  n.innerHTML=other?'1️⃣ اضغط زر المشاركة <b>⬆️</b> اللي في شريط العنوان فوق<br>2️⃣ اختار <b>«إضافة إلى الشاشة الرئيسية»</b> (Add to Home Screen)<br>3️⃣ اضغط <b>«إضافة»</b><br><small style="opacity:.75">لو مش ظاهرة: افتح الموقع من Safari وكرّر الخطوات.</small>'
+   :'1️⃣ اضغط زر المشاركة <b>⬆️</b> بتاع Safari '+(pad?'(فوق على اليمين)':'(في الشريط اللي تحت)')+' — مش أي زرار جوه الموقع<br>2️⃣ انزل في القايمة واختار <b>«إضافة إلى الشاشة الرئيسية»</b> (Add to Home Screen)<br>3️⃣ اضغط <b>«إضافة»</b><br><small style="opacity:.75">لو مش لاقي ⬆️: اضغط «•••» الأول وبعدين «مشاركة». ولو الاختيار مش في القايمة: انزل لآخرها واضغط «تعديل الإجراءات» وفعّله.</small>';
+  b.onclick=()=>{n.hidden=!n.hidden;if(!n.hidden&&!other&&!pad&&!$('#iosArrow')){const a=document.createElement('div');a.id='iosArrow';a.textContent='⬇️';
+   a.style.cssText='position:fixed;z-index:80;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font-size:42px;animation:iosB 1s ease-in-out infinite;pointer-events:none';
+   const k=document.createElement('style');k.textContent='@keyframes iosB{50%{transform:translate(-50%,-14px)}}';document.head.appendChild(k);document.body.appendChild(a);setTimeout(()=>a.remove(),12000)}};
   d.style.flexWrap='wrap';d.append(im,t,x,b,n)}
- else{t.textContent='ثبّت تطبيق إتقان: اضغط زر المشاركة ⬆️ في Safari، وبعدين «إضافة إلى الشاشة الرئيسية».';d.append(im,t,x)}
  $('#join .card').append(d)}
 /* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
 function appHelp(){if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent))return;
