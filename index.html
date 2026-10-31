@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.01-e';
+const VER='2026.11.01-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -583,10 +583,25 @@ var ANDB=/Android/i.test(navigator.userAgent)&&!/FBAN|FBAV|Instagram|Line\/|What
 function andTab(){if(!ANDB||PWA||window.itqanApp||$('#atab'))return;const c=$('#join .card');if(!c)return;
  const w=document.createElement('div');w.id='atab';w.style.cssText='position:fixed;z-index:55;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px;background:#14283ff2;border:1px solid rgba(227,192,141,.4);border-radius:18px;padding:8px;box-shadow:0 -6px 24px #0008';
  const b=document.createElement('button');b.className='w';b.textContent='📲 تحميل التطبيق على الجهاز';b.style.cssText='background:#e3c08d;color:#0e1a2b;font-weight:700;font-size:16px;padding:12px;border-radius:14px;width:100%';
- const h=document.createElement('small');h.hidden=true;h.style.cssText='line-height:1.9;color:#e3c08d;text-align:center';
- b.onclick=async()=>{if(instEv){const e=instEv;instEv=null;try{e.prompt();const r=await e.userChoice;if(r&&r.outcome=='accepted'){w.remove();$('#join').style.paddingBottom='';return}}catch(x){}}
-  h.textContent=/Chrome\//.test(navigator.userAgent)&&!/SamsungBrowser|EdgA|OPR|Firefox/.test(navigator.userAgent)?'من قايمة Chrome ⋮ (فوق) اختار «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية». لو اتثبّت قبل كده افتحه من أيقونة إتقان على الشاشة.':'افتح الموقع من Chrome، وبعدين اضغط الزرار ده تاني أو من قايمة Chrome ⋮ اختار «تثبيت التطبيق».';h.hidden=false};
- w.append(h,b);$('#join').append(w);$('#join').style.paddingBottom='96px'}
+ /* خطوات التثبيت حسب المتصفح — بتظهر لو Chrome مش جاهز يثبّت بضغطة، أو لما يضغط «خطوات التثبيت» */
+ const ua=navigator.userAgent,br=/SamsungBrowser/.test(ua)?'sam':/EdgA/.test(ua)?'edge':/Firefox/.test(ua)?'ff':/OPR|Opera/.test(ua)?'op':/Chrome\//.test(ua)?'ch':'x';
+ const h=document.createElement('div');h.hidden=true;h.style.cssText='font-size:13.5px;line-height:2;color:#e9eff5;background:#0e1a2b;border-radius:12px;padding:8px 12px;max-height:46vh;overflow:auto';
+ const S={ch:['اضغط <b>⋮</b> (التلات نقط فوق على اليمين في Chrome)','اختار <b>«تثبيت التطبيق»</b> أو <b>«إضافة إلى الشاشة الرئيسية»</b>','اضغط <b>«تثبيت»</b>'],
+  sam:['اضغط <b>≡</b> (القايمة تحت على اليمين)','اختار <b>«إضافة الصفحة إلى»</b>','اختار <b>«الشاشة الرئيسية»</b> واضغط «إضافة»'],
+  edge:['اضغط <b>⋯</b> (تحت في النص)','اختار <b>«إضافة إلى الهاتف»</b>','اضغط «تثبيت»'],
+  ff:['اضغط <b>⋮</b> (القايمة)','اختار <b>«تثبيت»</b> أو «إضافة إلى الشاشة الرئيسية»','اضغط «إضافة»'],
+  op:['اضغط <b>⋮</b> (القايمة)','اختار <b>«الشاشة الرئيسية»</b>','اضغط «إضافة»']}[br];
+ h.innerHTML='<b style="color:#e3c08d">📲 خطوات تثبيت تطبيق إتقان:</b><br>'+(S?S.map((x,i)=>['1️⃣','2️⃣','3️⃣'][i]+' '+x).join('<br>')+'<br>4️⃣ هتلاقي <b>أيقونة إتقان</b> على شاشة الموبايل — افتح الحصص منها على طول.':'افتح الموقع من <b>Chrome</b> عشان تقدر تثبّته.')+
+  '<br><small style="opacity:.75">لو الاختيار مش ظاهر أو التطبيق متثبّت قبل كده: دوّر على أيقونة إتقان على الشاشة. ولو مش لاقيها افتح الموقع من Chrome وكرّر الخطوات.</small>';
+ if(br!='ch'){const o=document.createElement('button');o.className='w';o.textContent='🌐 افتح في Chrome';o.style.cssText='background:#27496b;margin-top:6px;width:100%';
+  o.onclick=()=>{location.href='intent://'+location.host+location.pathname+location.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.href)+';end'};h.append(o)}
+ const tip=document.createElement('button');tip.textContent='ℹ️ خطوات التثبيت';tip.style.cssText='background:transparent;color:#e3c08d;font:inherit;font-size:13px;padding:2px;text-decoration:underline';
+ const showSteps=()=>{h.hidden=false;if(br=='ch'&&!$('#andArrow')){const a=document.createElement('div');a.id='andArrow';a.textContent='⬆️';
+   a.style.cssText='position:fixed;z-index:80;top:calc(4px + env(safe-area-inset-top));right:6px;font-size:40px;animation:andB 1s ease-in-out infinite;pointer-events:none';
+   const k=document.createElement('style');k.textContent='@keyframes andB{50%{transform:translateY(12px)}}';document.head.appendChild(k);document.body.appendChild(a);setTimeout(()=>a.remove(),12000)}};
+ tip.onclick=()=>{h.hidden?showSteps():(h.hidden=true)};
+ b.onclick=async()=>{if(instEv){const e=instEv;instEv=null;try{e.prompt();const r=await e.userChoice;if(r&&r.outcome=='accepted'){w.remove();$('#join').style.paddingBottom='';return}}catch(x){}}showSteps()};
+ w.append(h,b,tip);$('#join').append(w);$('#join').style.paddingBottom='120px'}
 addEventListener('appinstalled',()=>{const w=$('#atab');if(w){w.remove();$('#join').style.paddingBottom=''}const d=$('#inst');if(d)d.remove();try{toast('✅','اتثبّت التطبيق — افتحه من أيقونة إتقان على الشاشة')}catch(e){}});
 function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
  try{if(Date.now()-(+localStorage.getItem('itqan_inst_x')||0)<7*864e5)return}catch(e){}
