@@ -378,7 +378,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.01-f';
+const VER='2026.11.01-g';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -801,7 +801,7 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();if(WPG&&WPG[pi].bg)setTimeout(()=>{try{o.c.send({t:'pbg',img:WPG[pi].bg})}catch(e){}},300);o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
@@ -1045,6 +1045,7 @@ function sData(d){
  else if(d.t=='undo'){strokes.pop();rebuild()}
  else if(d.t=='wbclear'){strokes=[];rebuild()}
  else if(d.t=='restore'&&Array.isArray(d.s)){strokes=d.s;rebuild()}
+ else if(d.t=='pbg'){PBG=typeof d.img=='string'&&/^data:image\/(jpeg|png);base64,/.test(d.img)?pgImg(d.img):null;redraw()}
  else if(d.t=='ssp'){canScr=d.on?1:0;document.body.classList.toggle('cs',!!canScr);if(!canScr)stopSScr();sys(canScr?'🖥 سمح لك المعلم بمشاركة شاشتك — اضغط 🖥':'🚫 أوقف المعلم مشاركة الشاشة لك')}
  else if(d.t=='trapi'){sSrBlock=d.on?1:0;if(d.on&&sSr){sSr.stop();sSr=null}}else if(d.t=='ssd'){stopSScr();sys('🖥 لا يمكن مشاركة شاشتك الآن (هناك مشاركة أخرى)')}
  else if(d.t=='ins'){ins=d.ins;redraw()}
@@ -1129,7 +1130,7 @@ function ui(){
  $('#v').style.visibility=st.scr?'visible':'hidden';
  const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
- layoutCams();tmPaint();
+ layoutCams();tmPaint();{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
@@ -1145,6 +1146,8 @@ let S=1,OX=0,OY=0,tool='pen',col=COLS[0],wd=5,cur=null,pv=null,hov=null,drag=nul
  ins={r:{on:0,x:800,y:450,a:0},p:{on:0,x:800,y:560,a:0},c:{x:0,y:0,r:0,a:0,armed:0}};
 const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 let lastRs=0;
+/* صفحات السبورة (زي دفتر Notability): WPG = [{s:الرسومات, bg:صورة الصفحة (PDF/صورة) أو null}]، pi = الصفحة الحالية، PBG = صورة خلفية الصفحة الظاهرة */
+let WPG=null,pi=0,PBG=null;
 function fit(){const w=wb.clientWidth,h=wb.clientHeight;if(!w)return;
  const d0=Math.min(window.devicePixelRatio||1,3),d=Math.max(d0,Math.min(d0*(window.ZMK||1),Math.sqrt(8e6/(w*h)))),W=Math.round(w*d),H=Math.round(h*d),rs=(st.wb&&w>520&&camVis())?Math.round(108*d):0;
  if(W!==wb.width||H!==wb.height||dirty||rs!==lastRs){lastRs=rs;wb.width=lay.width=lay2.width=W;wb.height=lay.height=lay2.height=H;const W2=W-rs;S=Math.min(W2/LW,H/LH);OX=(W2-LW*S)/2;OY=(H-LH*S)/2;dirty=0;rebuild()}else redraw()}
@@ -1152,7 +1155,7 @@ function rebuild(){[lx,lx2].forEach(q=>{q.setTransform(1,0,0,1,0,0);q.clearRect(
 const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
 function sty(c,s){c.lineCap=c.lineJoin='round';c.lineWidth=s.w;c.strokeStyle=s.c;c.globalCompositeOperation=s.e?'destination-out':'source-over'}
 function penSeg(c,s,i){if(s.h)c=lx2;else if(s.e)penSeg1(lx2,s,i);penSeg1(c,s,i)}
-function penSeg1(c,s,i){const p=s.p;c.save();sty(c,s);c.beginPath();
+function penSeg1(c,s,i){const p=s.p;c.save();sty(c,s);{const q=p[Math.max(0,i)];if(q&&q[2]!=null)c.lineWidth=s.w*(.35+1.3*q[2])}c.beginPath();
  if(i<1){c.moveTo(p[0][0],p[0][1]);c.lineTo(p[0][0]+.01,p[0][1])}
  else{const a=i>=2?mid(p[i-2],p[i-1]):p[0],e=mid(p[i-1],p[i]);c.moveTo(a[0],a[1]);c.quadraticCurveTo(p[i-1][0],p[i-1][1],e[0],e[1])}
  c.stroke();c.restore()}
@@ -1190,7 +1193,7 @@ function drawIns(c){
   c.strokeStyle=k.col||'#d4605a';c.beginPath();c.moveTo(H[0],H[1]);c.lineTo(T[0],T[1]);c.stroke();
   c.setLineDash([]);c.fillStyle='#1a9486';c.beginPath();c.arc(H[0],H[1],9,0,7);c.fill();c.fillStyle='#fff';c.beginPath();c.arc(P[0],P[1],5,0,7);c.fill();c.restore()}
 }
-function redraw(){const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);drawBgT(cx);cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
+function redraw(){const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);drawBgT(cx);if(PBG&&PBG.complete&&PBG.naturalWidth&&st.wb){cx.setTransform(S,0,0,S,OX,OY);cx.drawImage(PBG,0,0,LW,LH);cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
  cx.setTransform(S,0,0,S,OX,OY);if(pv)drawShape(cx,pv);drawIns(cx);
  if(role=='t'&&tool=='era'&&hov){cx.beginPath();cx.arc(hov[0],hov[1],wd*3,0,7);cx.strokeStyle='#888';cx.lineWidth=2;cx.stroke()}}
 /* التقاط المسطرة والمنقلة */
@@ -1240,7 +1243,8 @@ function up(){
  else if(w=='shape'){const s=pv;pv=null;if(dist(s.a,s.b)>3){strokes.push(s);paint(s);bc({t:'sh',s})}}
  else if(w=='cs'){ins.c.armed=ins.c.r>8?1:0;sendIns()}
  drag=null;cur=null;redraw()}
-function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width;return[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S]}
+/* قلم الآيباد/التابلت: الضغط بيتحفظ مع كل نقطة فالخط بيتخن ويرفع زي القلم الحقيقي */
+function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width,P=[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S];if(e.pointerType=='pen'&&e.pressure>0&&tool=='pen'&&e.type!='pointerleave')P.push(Math.round(e.pressure*100)/100);return P}
 wb.onpointerdown=e=>{if(role!='t')return sDown(e);e.preventDefault();try{wb.setPointerCapture(e.pointerId)}catch(x){};down(lp(e))};
 wb.onpointermove=e=>{if(role!='t')return sMove(e);hov=lp(e);move(hov)};
 wb.onpointerup=wb.onpointercancel=e=>{if(role=='t')up();else sUp(e)};
@@ -1258,13 +1262,15 @@ function buildTb(){const t=$('#tb');t.innerHTML='';
  COLS.forEach(c=>{const b=B('','لون',()=>{col=c;refTb()},'sw');b.style.background=c;b.dataset.col=c});SP();
  ['#ffe600','#7CFC00','#ff7ad9','#4cc9ff'].forEach(c=>{const b=B('','هايلايتر',()=>{hcol=c;tool='hl';refTb()},'sw');b.style.background=c;b.style.borderRadius='4px';b.dataset.hc=c});SP();
  [[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>{B('<i style="display:block;border-radius:9px;background:#fff;width:20px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;refTb()}).dataset.w=w});SP();
+ B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));{const l=B('1/1','رقم الصفحة — اضغط لمسح الصفحة دي',pgDel,'pgl');l.style.width='auto';l.style.padding='0 6px';l.style.fontSize='13px';l.style.direction='ltr'}B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));B('➕','صفحة جديدة',()=>pgNew());B('📄','استيراد PDF أو صورة (كل صفحة تبقى صفحة في السبورة)',pgImport);B('📑','حفظ كل الصفحات PDF',pgPdf);SP();
  B('↩','تراجع',undo);B('🗑','مسح الكل',wclr);B('✍️',T('swOn'),tSw).dataset.sw='1';SP();B('◐','خلفية: بيضاء / شفافة',tBg);B('▦',T('bgs'),function(){bgMenu(this)});SP();B('🧮',T('calc'),()=>calcT());if(DESMOS_KEY)B('📈',T('desmos'),()=>dsmT());refTb()}
 function refTb(){document.querySelectorAll('#tb [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool==tool));
  document.querySelectorAll('#tb [data-col]').forEach(b=>b.classList.toggle('on',b.dataset.col==col));
  document.querySelectorAll('#tb [data-hc]').forEach(b=>b.classList.toggle('on',tool=='hl'&&b.dataset.hc==hcol));
  document.querySelectorAll('#tb [data-w]').forEach(b=>b.classList.toggle('on',+b.dataset.w==wd));
  document.querySelectorAll('#tb [data-sw]').forEach(b=>b.classList.toggle('on',!!st.sw));
- document.querySelectorAll('#tb [data-ins]').forEach(b=>b.classList.toggle('on',!!ins[b.dataset.ins].on))}
+ document.querySelectorAll('#tb [data-ins]').forEach(b=>b.classList.toggle('on',!!ins[b.dataset.ins].on));
+ document.querySelectorAll('#tb .pgl').forEach(b=>b.textContent=(pi+1)+'/'+(WPG?WPG.length:1))}
 /* ---------- عناصر عائمة: الكاميرات وشريط الأدوات ---------- */
 const FP={},FE={},boxes={};
 function place(el,id){const p=FP[id];if(!p)return;const w=el.offsetWidth,h=el.offsetHeight;
@@ -1867,8 +1873,49 @@ function wsDiag(cb){let d=0;const f=ok=>{if(!d){d=1;cb(ok)}};try{const r=()=>Mat
 Object.assign(I18.ar,{saveBoard:'حفظ صورة السبورة',swOn:'السماح للطلاب بالكتابة والإشارة على السبورة',swPen:'كتابة',swPt:'إشارة (مؤشر)',swNow:'يمكنك الآن الكتابة والإشارة على السبورة',swOnMsg:'تم السماح للطلاب بالكتابة والإشارة على السبورة',swOffMsg:'تم إيقاف كتابة الطلاب على السبورة'});
 Object.assign(I18.en,{saveBoard:'Save whiteboard image',swOn:'Allow students to write and point on the board',swPen:'Write',swPt:'Point (pointer)',swNow:'You can now write and point on the board',swOnMsg:'Students can now write and point on the board',swOffMsg:'Student writing on the board was turned off'});
 /* ===== حفظ صورة السبورة ===== */
+/* ===== صفحات السبورة + استيراد PDF/صور + حفظ الكل PDF ===== */
+function pgInit(){if(!WPG)WPG=[{s:strokes,bg:null}]}
+function pgSave(){pgInit();WPG[pi].s=strokes}
+function pgImg(u){if(!u)return null;const i=new Image();i.onload=()=>redraw();i.src=u;return i}
+function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});bc({t:'pbg',img:WPG[pi].bg||''});refTb();ui()}
+function pgShow(){strokes=WPG[pi].s;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
+function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
+function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||null});pi++;pgShow()}
+function pgDel(){if(role!='t')return;pgSave();if(WPG.length<2)return alert('دي الصفحة الوحيدة — استخدم 🗑 لمسح الرسم');if(!confirm('تمسح الصفحة '+(pi+1)+' كلها؟'))return;WPG.splice(pi,1);pi=Math.min(pi,WPG.length-1);pgShow()}
+const ldJs=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+/* الصفحة بتتحوّل لصورة 2400×1350 (أوضح من السبورة نفسها عشان التكبير) بخلفية بيضا */
+function pgFit(src){const W=2400,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
+ const sw=src.width||src.naturalWidth,sh=src.height||src.naturalHeight,k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(src,(W-w)/2,(H-h)/2,w,h);return c.toDataURL('image/jpeg',.72)}
+function pgImport(){if(role!='t')return;const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';inp.multiple=true;
+ inp.onchange=async()=>{const F=[...inp.files];if(!F.length)return;pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
+  try{for(const f of F){
+   if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){
+    if(!window.pdfjsLib){await ldJs('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
+    const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,n=Math.min(doc.numPages,40);
+    for(let i=1;i<=n;i++){const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(2400/v0.width,1350/v0.height)*1.2,v=pg.getViewport({scale:sc}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);
+     await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;out.push(pgFit(c))}
+    if(doc.numPages>40)alert('اتضاف أول 40 صفحة بس من الملف')}
+   else if(/^image\//.test(f.type)){const u=URL.createObjectURL(f),im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src=u});out.push(pgFit(im));URL.revokeObjectURL(u)}}}
+  catch(e){return alert('تعذّر فتح الملف — جرّب ملف PDF أو صورة تانية')}
+  if(!out.length)return;
+  /* لو الصفحة الحالية فاضية نستخدمها لأول صفحة */
+  let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=out.shift()}else{WPG.splice(pi+1,0,{s:[],bg:out.shift()});at=pi+1}
+  out.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();sys('📄 اتضافت الصفحات للسبورة — اتنقّل بينهم بالأسهم ▶ ◀ في شريط الأدوات')};
+ inp.click()}
+async function pgPdf(){if(role!='t')return;pgSave();sys('⏳ جارٍ تجهيز ملف PDF…');
+ try{if(!window.jspdf)await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(e){return alert('تعذّر تحميل أداة PDF — تأكد من الإنترنت')}
+ const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'px',format:[LW,LH],hotfixes:['px_scaling']}),keep=[strokes,PBG];
+ for(let i=0;i<WPG.length;i++){strokes=WPG[i].s;PBG=WPG[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=WPG[i].bg}):null;rebuild();
+  const full=wbCanvas(),c=document.createElement('canvas');c.width=LW;c.height=LH;c.getContext('2d').drawImage(full,OX,OY,LW*S,LH*S,0,0,LW,LH);
+  if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,LW,LH)}
+ strokes=keep[0];PBG=keep[1];rebuild();doc.save('itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+function wbCanvas(){const w=Math.max(lay.width,1),h=Math.max(lay.height,1),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);
+ const sv=[st.wb,st.bg];st.wb=1;st.bg=1;try{drawBgT(x)}finally{st.wb=sv[0];st.bg=sv[1]}
+ if(PBG&&PBG.complete&&PBG.naturalWidth){x.setTransform(S,0,0,S,OX,OY);x.drawImage(PBG,0,0,LW,LH);x.setTransform(1,0,0,1,0,0)}
+ x.drawImage(lay,0,0);x.save();x.globalAlpha=.4;x.globalCompositeOperation='multiply';x.drawImage(lay2,0,0);x.restore();return c}
 function wbSave(){const w=Math.max(lay.width,1),h=Math.max(lay.height,1),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);
  const sv=[st.wb,st.bg];st.wb=1;st.bg=1;try{drawBgT(x)}finally{st.wb=sv[0];st.bg=sv[1]}
+ if(PBG&&PBG.complete&&PBG.naturalWidth){x.setTransform(S,0,0,S,OX,OY);x.drawImage(PBG,0,0,LW,LH);x.setTransform(1,0,0,1,0,0)}
  x.drawImage(lay,0,0);x.save();x.globalAlpha=.4;x.globalCompositeOperation='multiply';x.drawImage(lay2,0,0);x.restore();
  c.toBlob(b=>{if(!b)return alert(T('fail'));const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='itqan-board-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)},'image/png')}
 /* ===== كتابة وإشارة الطلاب (بإذن المعلم فقط، والمعلم هو من يتحقق ويعيد البث) ===== */
