@@ -17,6 +17,7 @@ function inviteUrl(raw) {
   if (!isSite(raw)) return null;
   const q = new URL(raw).searchParams;
   if (/^([a-z0-9]{4}|[a-z0-9]{6})$/.test(q.get('c') || '') && /^(t|s)$/.test(q.get('r') || '')) return raw; // كود الحصة — الموقع بيدوّر على الحصة
+  if (q.get('tj') && q.get('r') === 't') return raw; // لينك «جدولي» للمعلم
   return q.get('s') && q.get('k') && /^(t|s)$/.test(q.get('r') || '') ? raw : null;
 }
 const HOME = path.join(__dirname, 'home.html');
@@ -71,7 +72,8 @@ function createWindow(url) {
     if (i.key === 'F5' || ((i.control || i.meta) && i.key.toLowerCase() === 'r')) { win.webContents.reload(); e.preventDefault(); }
   });
 
-  url ? win.loadURL(url) : loadHome(win);
+  /* المعلم عنده «جدولي» على البرنامج ← البرنامج يفتح على شاشة حصصي وجدولي على طول (عشان الفتح التلقائي قبل الميعاد) */
+  url ? win.loadURL(url) : (homeSite() ? win.loadURL(SITE + (SITE.includes('?') ? '&' : '?') + 'app=1') : loadHome(win));
   return win;
 }
 
@@ -132,6 +134,11 @@ ipcMain.handle('last:get', () => {
   try { const o = JSON.parse(require('fs').readFileSync(LAST(), 'utf8')); return o && inviteUrl(o.u) && Date.now() - o.ts < 3 * 36e5 ? o : null; } catch (x) { return null; }
 });
 ipcMain.handle('clip:read', () => clipboard.readText());
+const HOMEF = () => path.join(app.getPath('userData'), 'home-site');
+const homeSite = () => { try { return require('fs').existsSync(HOMEF()); } catch (e) { return false; } };
+ipcMain.on('home:site', (e, on) => { if (!isSite(e.sender.getURL())) return; try { on ? require('fs').writeFileSync(HOMEF(), '1') : require('fs').rmSync(HOMEF(), { force: true }); } catch (x) {} });
+/* شاشة البداية بتاعة الموقع (حصصي + جدولي + الفتح التلقائي قبل الميعاد) */
+ipcMain.handle('site:home', e => { const w = BrowserWindow.fromWebContents(e.sender); const u = SITE + (SITE.includes('?') ? '&' : '?') + 'app=1'; w ? w.loadURL(u) : createWindow(u); return true; });
 ipcMain.handle('invite:open', (e, raw, role) => {
   /* كود الحصة (4 حروف وأرقام) بدل الرابط */
   const c = String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
