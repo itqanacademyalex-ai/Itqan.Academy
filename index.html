@@ -387,7 +387,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.05-d';
+const VER='2026.11.06-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -610,11 +610,14 @@ function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));retu
  if(ok.length){const m=tsGet().filter(x=>!ok.some(y=>y.c===x.c));localStorage.setItem('itqan_tsch',JSON.stringify(ok.concat(m)));try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}}}}catch(e){}}
 /* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
 function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm));return!!(o&&o.c&&o.c.e>Date.now()+6e5&&tkGet(rm))}catch(e){return false}}
+const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tCertOk(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
- if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tCertOk(LK.room)&&!lastGet()?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px'}}
+ if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tCertOk(LK.room)&&!lastGet()?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
+  /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
+  if(AUTO&&LK.r=='t'&&tCertOk(LK.room)){if(!$('#nm').value)try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}if($('#nm').value)setTimeout(()=>{if(!$('#join').hidden)join('t')},1200)}}}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
 const homeUrl=()=>location.origin+location.pathname+'?source=app';
@@ -643,13 +646,15 @@ function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search)
  if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ فتح الحصة…');tCodeOpen(c,pin).then(u=>location.replace(u));return}}}
  if(window.__ln&&window.__ln.fill){window.__ln.fill(c,r);return}
  $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
- resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('⏳','الحصة '+fmtCode(c)+' لسه ماابتدتش — سيب الصفحة مفتوحة، وهتدخل لوحدك أول ما تبدأ.');setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
+ resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
 function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
  if(u.origin!==location.origin||u.pathname!==location.pathname||!q.get('s')||!q.get('k')||!/^(t|s)$/.test(q.get('r')||''))return null;return u}catch(e){return null}}
-function pwaHome(){if(window.itqanApp)return;
+/* في برنامج الكمبيوتر شاشة البداية بتاعة الموقع بتظهر لما البرنامج يفتحها بـ ?app=1 (حصصي + جدولي) */
+const APPHOME=!!window.itqanApp&&new URLSearchParams(location.search).get('app')=='1';
+function pwaHome(){if(window.itqanApp&&!APPHOME)return;
  if(LK){if(!PWA)return;const b=document.createElement('button');b.className='w';b.style.cssText='background:transparent;border:1px solid #27496b;margin-top:8px';b.textContent='🏠 الرجوع لشاشة البداية';b.onclick=()=>{location.href=homeUrl()};$('#jlink').append(b);return}
  const j=$('#jnone');j.textContent='';let role='';
- {const TS=tsGet();if(TS.length){const DN2=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO2=[6,0,1,2,3,4,5],hm2=t=>{const[a,b]=t.split(':').map(Number);return a*60+b},
+ {const TS=tsGet();try{window.itqanApp&&itqanApp.setHomeSite&&itqanApp.setHomeSite(TS.length>0)}catch(e){}if(TS.length){const DN2=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO2=[6,0,1,2,3,4,5],hm2=t=>{const[a,b]=t.split(':').map(Number);return a*60+b},
    t12b=t=>{let[a,b]=t.split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b).padStart(2,'0')+(pm?' م':' ص')};
   const all=[];TS.forEach(x=>x.s.forEach(q=>all.push({c:x.c,t:x.t,d:q[0],h:q[1],m:q[2]})));all.sort((a,b)=>hm2(a.h)-hm2(b.h));
   const w=document.createElement('div');w.id='jts';w.style.cssText='width:100%;background:#14283f;border:1px solid rgba(227,192,141,.3);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;text-align:start';
@@ -665,7 +670,16 @@ function pwaHome(){if(window.itqanApp)return;
      if(n<b){const g=document.createElement('button');g.className='w';g.style.cssText='flex:none;width:auto;padding:8px 14px;font-weight:700;background:'+(now2?'#1a9486':'#27496b');g.textContent='▶ ابدأ';g.onclick=()=>start(x.c);r.append(g)}w.append(r)})}
    else DO2.forEach(d=>{const T=all.filter(x=>x.d===d);if(!T.length)return;const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:6px 10px;line-height:1.8;'+(d===now.getDay()?'outline:2px solid #e3c08d':'');
     r.innerHTML='<b style="color:#e3c08d">'+DN2[d]+'</b><br>'+T.map(x=>'<small>'+t12b(x.h)+' — '+esc(x.t||fmtCode(x.c))+' ('+x.m+' د)</small>').join('<br>');w.append(r)})};
-  draw();setInterval(()=>{if(document.body.contains(w))draw()},60000);j.append(w)}}
+  /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
+  const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
+  const tick=()=>{if(!document.body.contains(w)||!autoOn()||$('#join').hidden)return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
+   for(const x of all){if(x.d!==now.getDay())continue;const a=hm2(x.h);if(n<a-10||n>=a+x.m)continue;const T=tkGet(x.c);if(!T||!tCertOk(x.c))continue;
+    const k='itqan_tauto_'+x.c+'_'+x.h+'_'+key;let done=0;try{done=localStorage.getItem(k)}catch(e){}if(done)continue;try{localStorage.setItem(k,'1')}catch(e){}
+    location.href=linkOf(x.c,T.k,'t')+'&auto=1';return}};
+  const cb=document.createElement('label');cb.style.cssText='display:flex;gap:8px;align-items:center;font-size:12.5px;color:#c4d3e0;line-height:1.6';
+  cb.innerHTML='<input type="checkbox" style="width:auto"'+(autoOn()?' checked':'')+'> افتح حصصي لوحدها قبل ميعادها بـ 10 دقايق (طول ما التطبيق مفتوح على الجهاز ده)';
+  cb.querySelector('input').onchange=e=>{try{localStorage.setItem('itqan_tauto',e.target.checked?'1':'0')}catch(x){}};
+  draw();w.append(cb);setInterval(()=>{if(document.body.contains(w)){draw();w.append(cb);tick()}},30000);setTimeout(tick,1500);j.append(w)}}
  {const M=myList();if(M.length){const w=document.createElement('div');w.id='jmy';w.style.cssText='display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:6px';
   const h=document.createElement('small');h.style.cssText='color:#a9bccd';h.textContent='📚 حصصي — اضغط وادخل على طول:';w.append(h);
   M.forEach(x=>{const r=document.createElement('div');r.style.cssText='display:flex;gap:6px';const b=document.createElement('button');b.className='w';
@@ -697,7 +711,7 @@ function pwaHome(){if(window.itqanApp)return;
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
    /* الحصة لسه ماابتدتش: نستنى ونحاول تاني لوحدنا كل 8 ثواني — الطالب يسيب الصفحة مفتوحة ويدخل أول ما تبدأ */
-   if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){msg('⏳ الحصة '+fmtCode(c)+' لسه ماابتدتش — سيب الصفحة مفتوحة، وهتدخل لوحدك أول ما تبدأ.');clearTimeout(wT);wT=setTimeout(()=>{if(!f.hidden&&parseCode(inp.value)===c)enter()},document.hidden?20000:8000)}
+   if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){msg(role=='t'?'⏳ الحصة '+fmtCode(c)+' مش مفتوحة — اكتب الكود تاني واختار «دخول المعلم».':'🕒 المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');clearTimeout(wT);wT=setTimeout(()=>{if(!f.hidden&&parseCode(inp.value)===c)enter()},document.hidden?20000:8000)}
    else msg(String(e),1)})};
  let wT=0;inp.addEventListener('input',()=>clearTimeout(wT));
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});

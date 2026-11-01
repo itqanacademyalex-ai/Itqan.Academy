@@ -40,6 +40,7 @@ small{color:#a9bccd;line-height:1.8}
  <h1>أكاديمية إتقان</h1>
  <div class="brand">ITQAN ACADEMY</div>
  <button id="back" hidden style="background:#e3c08d;color:#0e1a2b;border:0;border-radius:16px;padding:14px;font:inherit;font-weight:700;font-size:17px;cursor:pointer"></button>
+ <button id="mine" style="background:#27496b;color:#fff;border:1px solid rgba(227,192,141,.4);border-radius:16px;padding:12px;font:inherit;font-weight:700;font-size:16px;cursor:pointer">📚 حصصي وجدولي</button>
  <div class="r">
   <button id="bt"><b>👨‍🏫</b>دخول المعلم</button>
   <button id="bs"><b>🎓</b>دخول الطالب</button>
@@ -68,6 +69,7 @@ document.getElementById('bt').onclick=()=>pick('t');document.getElementById('bs'
 document.getElementById('go').onclick=go;
 document.getElementById('pa').onclick=()=>window.itqanApp.clipRead().then(t=>{u.value=(t||'').trim();e.textContent=''});
 u.addEventListener('keydown',x=>{if(x.key=='Enter')go()});
+document.getElementById('mine').onclick=()=>window.itqanApp.openSiteHome&&window.itqanApp.openSiteHome();
 /* لو خرج من الحصة أو النت فصل: زر يرجّعه لنفس الحصة من غير كود (والمعلم من غير الكود السري) */
 window.itqanApp.lastGet&&window.itqanApp.lastGet().then(o=>{if(!o)return;const b=document.getElementById('back');b.textContent='↩️ ارجع لحصتك '+(o.r=='t'?'كمعلم':'كطالب')+' — '+o.room.toUpperCase();b.hidden=false;b.onclick=()=>window.itqanApp.openInvite(o.u,o.r)});
 </script>

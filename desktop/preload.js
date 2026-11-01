@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('itqanApp', {
   /* شاشة البداية */
   clipRead: () => ipcRenderer.invoke('clip:read'),
   openInvite: (u, role) => ipcRenderer.invoke('invite:open', String(u || ''), String(role || '')),
+  openSiteHome: () => ipcRenderer.invoke('site:home'),
+  setHomeSite: on => ipcRenderer.send('home:site', !!on),
   /* آخر حصة — زر «ارجع لحصتك» في شاشة البداية */
   lastSet: o => ipcRenderer.send('last:set', o && { u: String(o.u || ''), room: String(o.room || ''), r: String(o.r || '') }),
   lastGet: () => ipcRenderer.invoke('last:get'),
