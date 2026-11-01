@@ -387,7 +387,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.04-d';
+const VER='2026.11.05-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -576,11 +576,21 @@ function lastPut(){try{if(!LK||(role!='t'&&role!='s'))return;const o={u:linkOf(L
 function lastDel(){try{localStorage.removeItem('itqan_last');window.itqanApp&&itqanApp.lastSet&&itqanApp.lastSet(null)}catch(e){}}
 function tHasCert(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm));return!!(o&&o.c)}catch(e){return false}}
 setInterval(()=>{if((role=='t'||role=='s')&&!final&&$('#join').hidden)lastPut()},60000);
-const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)})();
+/* ===== «حصصي»: الجهاز بيفتكر الحصص الثابتة اللي اتدخلت قبل كده — تظهر كزراير في شاشة البداية، ضغطة وتدخل =====
+   مفيش أكواد تتكتب تاني، ومفيش اعتماد على لوحة السكرتارية */
+function myList(){try{const a=JSON.parse(localStorage.getItem('itqan_my'));return Array.isArray(a)?a.filter(x=>x&&x.c&&x.k&&(x.r=='t'||x.r=='s')):[]}catch(e){return[]}}
+function myAdd(o){try{const a=myList().filter(x=>!(x.c===o.c&&x.r===o.r));a.unshift({...o,ts:Date.now()});localStorage.setItem('itqan_my',JSON.stringify(a.slice(0,12)))}catch(e){}}
+function myDel(c,r){try{localStorage.setItem('itqan_my',JSON.stringify(myList().filter(x=>!(x.c===c&&x.r===r))))}catch(e){}}
+/* اسم الحصة من اللينك (n) — بيتحفظ لحد ما الطالب/المعلم يدخل */
+{const q=new URLSearchParams(location.search),n=(q.get('n')||'').slice(0,50),c=q.get('s')||q.get('c');if(n&&c)try{sessionStorage.setItem('itqan_pn_'+String(c).toLowerCase(),n)}catch(e){}}
+const pnOf=c=>{try{return sessionStorage.getItem('itqan_pn_'+c)||''}catch(e){return''}};
+/* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
+function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm));return!!(o&&o.c&&o.c.e>Date.now()+6e5&&tkGet(rm))}catch(e){return false}}
+const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tCertOk(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(codeLanding,0);
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
- if(RS){const o=lastGet();if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent='↩️ رجوع للحصة';$('#jgo').style.fontSize='17px'}}
+ if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tCertOk(LK.room)&&!lastGet()?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px'}}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
 const homeUrl=()=>location.origin+location.pathname+'?source=app';
@@ -615,7 +625,13 @@ function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchP
 function pwaHome(){if(window.itqanApp)return;
  if(LK){if(!PWA)return;const b=document.createElement('button');b.className='w';b.style.cssText='background:transparent;border:1px solid #27496b;margin-top:8px';b.textContent='🏠 الرجوع لشاشة البداية';b.onclick=()=>{location.href=homeUrl()};$('#jlink').append(b);return}
  const j=$('#jnone');j.textContent='';let role='';
- {const o=lastGet();if(o){const b=document.createElement('button');b.className='w';b.id='jback';b.style.cssText='background:#e3c08d;color:#0e1a2b;font-weight:700;font-size:17px;padding:14px;width:100%;margin-bottom:10px;line-height:1.6';
+ {const M=myList();if(M.length){const w=document.createElement('div');w.id='jmy';w.style.cssText='display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:6px';
+  const h=document.createElement('small');h.style.cssText='color:#a9bccd';h.textContent='📚 حصصي — اضغط وادخل على طول:';w.append(h);
+  M.forEach(x=>{const r=document.createElement('div');r.style.cssText='display:flex;gap:6px';const b=document.createElement('button');b.className='w';
+   b.style.cssText='flex:1;background:'+(x.r=='t'?'#1a9486':'#27496b')+';font-weight:700;text-align:start;line-height:1.6';b.textContent=(x.r=='t'?'👨‍🏫 ':'🎓 ')+(x.t||'حصة')+' — '+fmtCode(x.c);
+   b.onclick=()=>{location.href=linkOf(x.c,x.k,x.r)};const d=document.createElement('button');d.className='w';d.textContent='✕';d.title='شيلها من حصصي';d.style.cssText='flex:none;width:44px;background:transparent;border:1px solid #27496b';
+   d.onclick=()=>{if(confirm('تشيل «'+(x.t||fmtCode(x.c))+'» من حصصي؟')){myDel(x.c,x.r);r.remove()}};r.append(b,d);w.append(r)});j.append(w)}}
+ {const o=lastGet();if(o&&!myList().some(x=>x.c===o.room&&x.r===o.r)){const b=document.createElement('button');b.className='w';b.id='jback';b.style.cssText='background:#e3c08d;color:#0e1a2b;font-weight:700;font-size:17px;padding:14px;width:100%;margin-bottom:10px;line-height:1.6';
   b.textContent='↩️ ارجع لحصتك '+(o.r=='t'?'كمعلم':'كطالب')+' — '+fmtCode(o.room);b.onclick=()=>{location.href=o.u};j.append(b)}}
  const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;width:100%';
  const mk=(r,ic,t,bg)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:1;background:'+bg+';padding:16px 6px;font-weight:700;font-size:16px;display:flex;flex-direction:column;align-items:center;gap:4px;border:2px solid transparent';
@@ -726,7 +742,7 @@ function join(r){
  if(r=='t'){if(!nw){$('#nm').focus();return alert('اكتب اسمك')}if(!(RS&&tHasCert(rn))&&!/^\d{4,6}$/.test(($('#tpin').value||'').trim())){$('#tpin').hidden=false;$('#tpin').focus();return alert('اكتب كود الغرفة اللي أرسلته لك السكرتارية')}}
  else if(nw<2&&!DIRM){$('#nm').focus();return alert('اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد')}
  name=nm.slice(0,40);try{localStorage.setItem('itqan_nm',name)}catch(e){}
- roomName=rn;room=rn;role=r;lastPut();
+ roomName=rn;room=rn;role=r;lastPut();if(!DIRM){const old=myList().find(x=>x.c===rn&&x.r===r);myAdd({c:rn,k:LK.k,r,t:pnOf(rn)||(old&&old.t)||''})}
  role=r;sessT0=Date.now();if(r=='t')try{mxAC()}catch(e){}{const tb=$('#bt');tb.dataset.i18nT=r=='t'?'board':'tools';if(r=='s')tb.textContent='🧮'}document.body.dataset.role=r;A.src=SIL;A.play().catch(()=>{});$('#join').hidden=true;
  if(r=='s'&&!DIRM)prepMic(1).then(ok=>ok&&sendMic());
  if(r=='t'){$('#v').muted=true;buildTb();tAuth(($('#tpin').value||'').trim(),RS)}else{buildTbS();initS()}
@@ -2189,7 +2205,7 @@ function fxList(){try{const a=JSON.parse(localStorage.getItem('itqan_fix'));retu
 function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}}
 function fxGet(r){return fxList().find(x=>x.room===r)||null}
 const fxSite=()=>location.origin+location.pathname;
-const fxUrl=(r,w)=>{const x=w=='t'&&fxGet(r);return x&&x.tk?fxSite()+'?s='+r+'&k='+x.pub+'&r=t&tk='+x.tk:fxSite()+'?c='+r+'&r='+w};
+const fxUrl=(r,w)=>{const y=fxGet(r),n=y&&y.title?'&n='+encodeURIComponent(y.title):'',x=w=='t'&&y;return(x&&x.tk?fxSite()+'?s='+r+'&k='+x.pub+'&r=t&tk='+x.tk:fxSite()+'?c='+r+'&r='+w)+n};
 /* مفتاح المعلم المتشفّر لكل غرفة ثابتة (للغرف القديمة بيتعمل أول مرة اللوحة تفتح) */
 async function fxEnsureTk(){const a=fxList();let ch=0;for(const x of a)if(!x.tk&&x.jwk&&x.jwk.d){try{x.tk=await tkMake(x.room,x.pin,x.jwk);ch=1}catch(e){}}if(ch){fxPut(a);fxRender()}}
 async function fxMake(title,tn,taken){const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);let rm=genCode();while(taken.has(rm))rm=genCode();taken.add(rm);
@@ -2218,11 +2234,10 @@ function fxImport(){const i=document.createElement('input');i.type='file';i.acce
  const ok=R.filter(x=>x&&/^[a-z0-9]{4,6}$/.test(x.room)&&/^[A-Za-z0-9_-]{86,88}$/.test(x.pub)&&x.jwk&&/^\d{4,6}$/.test(String(x.pin)));if(!ok.length)throw 0;
  const a=fxList(),have=new Set(a.map(x=>x.room));ok.forEach(x=>{if(!have.has(x.room))a.push({room:x.room,pub:x.pub,jwk:x.jwk,pin:String(x.pin),title:String(x.title||'').slice(0,60),tn:String(x.tn||'').slice(0,40),fixed:1,tk:/^[A-Za-z0-9_-]{90,120}$/.test(x.tk||'')?x.tk:undefined,sch:(Array.isArray(x.sch)?x.sch:[]).filter(q=>q&&q.d>=0&&q.d<=6&&/^\d{1,2}:\d{2}$/.test(q.t)).map(q=>({d:+q.d,t:q.t,m:+q.m||60})).slice(0,30)})});fxPut(a);fxRender();alert('✓ اتسترجعت '+ok.length+' غرفة')}catch(e){alert('الملف ده مش نسخة احتياطية صحيحة للغرف الثابتة')}};i.click()}
 /* ===== جدول الحصص: لكل غرفة ثابتة مواعيد أسبوعية (يوم + ساعة + مدة) =====
-   «النهارده» = حصص اليوم بالترتيب وحالتها وزرار فتح، «الأسبوع» = جدول كامل لكل يوم، وفلتر بالمعلم.
-   ولو مفعّل: الحصة بتتفتح لوحدها قبل ميعادها بـ 10 دقايق طول ما لوحة السكرتارية مفتوحة */
+   «النهارده» = حصص اليوم بالترتيب وحالتها، «الأسبوع» = جدول كامل لكل يوم، وفلتر بالمعلم */
 const DN=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO=[6,0,1,2,3,4,5];
 let schV='today',schT='';
-const schAuto=()=>{try{return localStorage.getItem('itqan_sch_auto')!=='0'}catch(e){return true}};
+
 const hm=t=>{const[a,b]=String(t).split(':').map(Number);return a*60+(b||0)},t12=t=>{let[a,b]=String(t).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')};
 function schSlots(){const o=[];fxList().forEach(x=>(x.sch||[]).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
 function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=x.sch||[];let m=$('#schm');
@@ -2239,7 +2254,7 @@ function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=
   m.querySelector('#schs').onclick=()=>{fxPut(a);m.hidden=true;fxRender();schRender()};m.querySelector('#schc').onclick=()=>{m.hidden=true}};
  m.hidden=false;draw()}
 function schSt(sl,now){const d=now.getDay(),n=now.getHours()*60+now.getMinutes(),a=hm(sl.t),b=a+sl.m;if(sl.d!==d)return'';
- if(SXS[sl.x.room])return n<b+30?'🟢 مفتوحة':'🟢 مفتوحة';if(n<a)return a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12(sl.t);if(n<b)return'🔴 وقتها دلوقتي — لسه مااتفتحتش';return'✅ خلصت'}
+ if(n<a)return a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12(sl.t);if(n<b)return'🕒 وقتها دلوقتي';return'✅ خلصت'}
 function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new Date();el.hidden=!!SXV||!fxList().length;if(el.hidden)return;
  const teachers=[...new Set(fxList().map(x=>x.tn).filter(Boolean))],F=sl=>!schT||sl.x.tn===schT;
  let h='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><h3>🗓 جدول الحصص</h3><span style="display:flex;gap:4px;flex-wrap:wrap">'+
@@ -2247,10 +2262,10 @@ function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new
   (teachers.length?'<select onchange="schT=this.value;schRender()" style="background:#1d3652;border:1px solid #27496b;border-radius:10px;color:#fff;padding:6px;font-family:inherit"><option value="">كل المعلمين</option>'+teachers.map(t=>'<option'+(t===schT?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>':'')+'</span></div>';
  if(!S.length)h+='<div class="sxr" style="color:#a9bccd">مفيش مواعيد لسه — من «الغرف الثابتة» اضغطي 🗓 جنب كل غرفة وحطي مواعيدها.</div>';
  else if(schV=='today'){const T=S.filter(sl=>sl.d===now.getDay()&&F(sl));
-  h+=T.length?T.map(sl=>'<div class="sxr"><span><b>'+t12(sl.t)+'</b> · '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?' <small style="color:#a9bccd">— '+esc(sl.x.tn)+'</small>':'')+'<br><small>'+schSt(sl,now)+' · '+sl.m+' دقيقة</small></span><span class="bt"><button class="sxb '+(SXS[sl.x.room]?'d':'g')+'" onclick="fxOpen(\''+sl.x.room+'\')">'+(SXS[sl.x.room]?'عرض':'▶ فتح')+'</button></span></div>').join(''):'<div class="sxr" style="color:#a9bccd">مفيش حصص النهارده'+(schT?' للمعلم ده':'')+'.</div>'}
+  h+=T.length?T.map(sl=>'<div class="sxr"><span><b>'+t12(sl.t)+'</b> · '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?' <small style="color:#a9bccd">— '+esc(sl.x.tn)+'</small>':'')+'<br><small>'+schSt(sl,now)+' · '+sl.m+' دقيقة</small></span><span class="bt"><button class="sxb '+(SXS[sl.x.room]?'d':'g')+'" onclick="fxOpen(\''+sl.x.room+'\')">'+(SXS[sl.x.room]?'عرض':'👁 متابعة')+'</button></span></div>').join(''):'<div class="sxr" style="color:#a9bccd">مفيش حصص النهارده'+(schT?' للمعلم ده':'')+'.</div>'}
  else{h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+DO.map(d=>{const T=S.filter(sl=>sl.d===d&&F(sl));
    return'<div style="background:#1d3652;border-radius:12px;padding:8px;'+(d===now.getDay()?'outline:2px solid #e3c08d':'')+'"><b style="color:#e3c08d">'+DN[d]+'</b>'+(T.length?T.map(sl=>'<div style="font-size:13px;margin-top:6px;line-height:1.6"><b>'+t12(sl.t)+'</b> '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?'<br><small style="color:#a9bccd">'+esc(sl.x.tn)+' · '+sl.m+'د</small>':'')+'</div>').join(''):'<div style="font-size:12px;color:#a9bccd;margin-top:6px">—</div>')+'</div>'}).join('')+'</div>'}
- h+='<label style="display:flex;gap:8px;align-items:center;font-size:13px;color:#c4d3e0"><input type="checkbox" '+(schAuto()?'checked':'')+' onchange="try{localStorage.setItem(\'itqan_sch_auto\',this.checked?\'1\':\'0\')}catch(e){}" style="width:auto"> افتح الحصص لوحدها قبل ميعادها بـ 10 دقايق (طول ما اللوحة دي مفتوحة)</label>'+
+ h+='<small style="color:#a9bccd;line-height:1.8">ℹ️ الحصص الثابتة بيفتحها المعلم بنفسه في ميعادها من «حصصي» أو من لينكه — مش محتاجة اللوحة دي تكون مفتوحة. الطلاب بيستنوا في غرفة الانتظار لحد ما المعلم يدخّلهم.</small>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="schCopy()">📋 نسخ الجدول</button>'+(teachers.length?'<button class="sxb d" onclick="schWaT()">📲 ابعتي لكل معلم جدوله</button>':'')+'</div>';
  el.innerHTML=h}
 function schText(tn){const S=schSlots().filter(sl=>!tn||sl.x.tn===tn);return DO.map(d=>{const T=S.filter(sl=>sl.d===d);return T.length?DN[d]+':\n'+T.map(sl=>'  • '+t12(sl.t)+' — '+(sl.x.title||fmtCode(sl.x.room))+(tn?'':(sl.x.tn?' ('+sl.x.tn+')':''))+' — '+sl.m+' دقيقة').join('\n'):''}).filter(Boolean).join('\n')}
@@ -2258,10 +2273,8 @@ async function schCopy(){const t='🗓 جدول حصص أكاديمية إتقا
 function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو مكتوب في الغرف):',[...new Set(fxList().map(x=>x.tn).filter(Boolean))][0]||'');if(!tn)return;const t=schText(tn);if(!t)return alert('مفيش مواعيد للمعلم ده');
  const rooms=fxList().filter(x=>x.tn===tn);const m='مرحباً '+tn+'، ده جدول حصصك الثابت في أكاديمية إتقان:\n'+t+'\n\n'+rooms.map(x=>'🔢 '+(x.title||'')+': كود الحصة '+fmtCode(x.room)+' — كود المعلم '+x.pin+'\n'+fxUrl(x.room,'t')).join('\n');
  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
-/* فتح تلقائي قبل الميعاد بـ 10 دقايق (مرة واحدة لكل ميعاد في اليوم) */
-setInterval(()=>{if(role!='c'||!schAuto())return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
- schSlots().forEach(sl=>{if(sl.d!==now.getDay())return;const a=hm(sl.t),k='itqan_sch_o_'+sl.x.room+'_'+sl.t+'_'+key;if(n>=a-10&&n<a+sl.m&&!SXS[sl.x.room]){let done=0;try{done=sessionStorage.getItem(k)}catch(e){}if(done)return;try{sessionStorage.setItem(k,'1')}catch(e){}
-  const v=SXV;fxOpen(sl.x.room).then(()=>{SXV=v;sxRender()});try{chime()}catch(e){}}});schRender()},30000);
+/* الحصص الثابتة بيفتحها المعلم بنفسه (من «حصصي» أو لينكه) — مفيش فتح من لوحة السكرتارية ولا اعتماد عليها */
+setInterval(()=>{if(role=='c')schRender()},60000);
 function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();try{schRender()}catch(e){}
  if(!L.length){el.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش غرف ثابتة لسه — اعملي غرفة لكل معلم أو مجموعة، وابعتي الكود مرة واحدة بس.</div>';return}
  el.innerHTML=L.map(x=>{const on=!!SXS[x.room],r=x.room;return'<div class="sxr"><span style="display:flex;flex-direction:column;gap:2px"><b>'+(on?'🟢 ':'')+esc(x.title||'غرفة')+(x.tn?' <small style="color:#a9bccd">— '+esc(x.tn)+'</small>':'')+'</b><small style="direction:ltr;text-align:right;color:#e3c08d">'+fmtCode(r)+' · 🔑 '+esc(x.pin)+'</small></span><span class="bt">'+
