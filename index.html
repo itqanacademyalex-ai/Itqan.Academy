@@ -273,6 +273,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
 <div id="sec" hidden><div class="sx">
  <div class="sxc" style="flex-direction:row;justify-content:space-between;align-items:center"><h2 style="font-size:19px">🗂️ لوحة السكرتارية — أكاديمية إتقان</h2><span id="sxst" class="pop"></span></div>
  <div id="sxA" class="sxc"></div>
+ <div id="sxT" class="sxc" hidden></div>
  <div id="sxR"></div>
  <div id="sxB" style="display:flex;flex-direction:column;gap:12px"></div>
 </div></div>
@@ -384,7 +385,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.03-a';
+const VER='2026.11.03-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2167,11 +2168,56 @@ async function fxCopyAll(){const L=fxList();if(!L.length)return alert('مفيش 
 function fxExport(){const L=fxList();if(!L.length)return alert('مفيش غرف ثابتة لسه');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({v:1,rooms:L})],{type:'application/json'}));a.download='itqan-fixed-rooms-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);alert('⚠️ الملف ده فيه أكواد المعلمين ومفاتيح الغرف — احتفظي بيه في مكان آمن ومتبعتيهوش لحد.')}
 function fxImport(){const i=document.createElement('input');i.type='file';i.accept='application/json,.json';i.onchange=async()=>{try{const o=JSON.parse(await i.files[0].text()),R=(o&&o.rooms)||[];
  const ok=R.filter(x=>x&&/^[a-z0-9]{4,6}$/.test(x.room)&&/^[A-Za-z0-9_-]{86,88}$/.test(x.pub)&&x.jwk&&/^\d{4,6}$/.test(String(x.pin)));if(!ok.length)throw 0;
- const a=fxList(),have=new Set(a.map(x=>x.room));ok.forEach(x=>{if(!have.has(x.room))a.push({room:x.room,pub:x.pub,jwk:x.jwk,pin:String(x.pin),title:String(x.title||'').slice(0,60),tn:String(x.tn||'').slice(0,40),fixed:1})});fxPut(a);fxRender();alert('✓ اتسترجعت '+ok.length+' غرفة')}catch(e){alert('الملف ده مش نسخة احتياطية صحيحة للغرف الثابتة')}};i.click()}
-function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();
+ const a=fxList(),have=new Set(a.map(x=>x.room));ok.forEach(x=>{if(!have.has(x.room))a.push({room:x.room,pub:x.pub,jwk:x.jwk,pin:String(x.pin),title:String(x.title||'').slice(0,60),tn:String(x.tn||'').slice(0,40),fixed:1,sch:(Array.isArray(x.sch)?x.sch:[]).filter(q=>q&&q.d>=0&&q.d<=6&&/^\d{1,2}:\d{2}$/.test(q.t)).map(q=>({d:+q.d,t:q.t,m:+q.m||60})).slice(0,30)})});fxPut(a);fxRender();alert('✓ اتسترجعت '+ok.length+' غرفة')}catch(e){alert('الملف ده مش نسخة احتياطية صحيحة للغرف الثابتة')}};i.click()}
+/* ===== جدول الحصص: لكل غرفة ثابتة مواعيد أسبوعية (يوم + ساعة + مدة) =====
+   «النهارده» = حصص اليوم بالترتيب وحالتها وزرار فتح، «الأسبوع» = جدول كامل لكل يوم، وفلتر بالمعلم.
+   ولو مفعّل: الحصة بتتفتح لوحدها قبل ميعادها بـ 10 دقايق طول ما لوحة السكرتارية مفتوحة */
+const DN=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO=[6,0,1,2,3,4,5];
+let schV='today',schT='';
+const schAuto=()=>{try{return localStorage.getItem('itqan_sch_auto')!=='0'}catch(e){return true}};
+const hm=t=>{const[a,b]=String(t).split(':').map(Number);return a*60+(b||0)},t12=t=>{let[a,b]=String(t).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')};
+function schSlots(){const o=[];fxList().forEach(x=>(x.sch||[]).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
+function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=x.sch||[];let m=$('#schm');
+ if(!m){m=document.createElement('div');m.id='schm';m.style.cssText='position:fixed;inset:0;z-index:70;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px';document.body.append(m)}
+ const draw=()=>{m.innerHTML='<div class="sxc" style="width:min(460px,100%);max-height:90vh;overflow:auto"><h3>🗓 مواعيد «'+esc(x.title||fmtCode(r))+'»'+(x.tn?' — '+esc(x.tn):'')+'</h3><div id="schl" style="display:flex;flex-direction:column;gap:6px"></div>'+
+   '<button class="sxb d" id="scha">➕ إضافة ميعاد</button><div style="display:flex;gap:6px"><button class="sxb g" id="schs" style="flex:1">حفظ</button><button class="sxb d" id="schc">إلغاء</button></div></div>';
+  const L=m.querySelector('#schl');
+  x.sch.forEach((q,i)=>{const row=document.createElement('div');row.className='sxr';
+   row.innerHTML='<select data-k="d">'+DO.map(d=>'<option value="'+d+'"'+(+q.d===d?' selected':'')+'>'+DN[d]+'</option>').join('')+'</select><input data-k="t" type="time" value="'+(q.t||'17:00')+'" style="width:auto"><select data-k="m">'+[30,45,60,75,90,120].map(v=>'<option value="'+v+'"'+((+q.m||60)===v?' selected':'')+'>'+v+' دقيقة</option>').join('')+'</select><button class="sxb r" data-x="1">✕</button>';
+   row.querySelectorAll('[data-k]').forEach(e=>e.onchange=()=>{q[e.dataset.k]=e.dataset.k=='t'?e.value:+e.value});row.querySelector('[data-x]').onclick=()=>{x.sch.splice(i,1);draw()};
+   row.querySelectorAll('select,input').forEach(e=>e.style.cssText+=';background:#1d3652;border:1px solid #27496b;border-radius:8px;color:#fff;padding:6px;font-family:inherit');L.append(row)});
+  if(!x.sch.length)L.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش مواعيد — اضغطي «إضافة ميعاد».</div>';
+  m.querySelector('#scha').onclick=()=>{const l=x.sch[x.sch.length-1];x.sch.push({d:l?DO[(DO.indexOf(+l.d)+1)%7]:DO[0],t:l?l.t:'17:00',m:l?l.m:60});draw()};
+  m.querySelector('#schs').onclick=()=>{fxPut(a);m.hidden=true;fxRender();schRender()};m.querySelector('#schc').onclick=()=>{m.hidden=true}};
+ m.hidden=false;draw()}
+function schSt(sl,now){const d=now.getDay(),n=now.getHours()*60+now.getMinutes(),a=hm(sl.t),b=a+sl.m;if(sl.d!==d)return'';
+ if(SXS[sl.x.room])return n<b+30?'🟢 مفتوحة':'🟢 مفتوحة';if(n<a)return a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12(sl.t);if(n<b)return'🔴 وقتها دلوقتي — لسه مااتفتحتش';return'✅ خلصت'}
+function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new Date();el.hidden=!!SXV||!fxList().length;if(el.hidden)return;
+ const teachers=[...new Set(fxList().map(x=>x.tn).filter(Boolean))],F=sl=>!schT||sl.x.tn===schT;
+ let h='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><h3>🗓 جدول الحصص</h3><span style="display:flex;gap:4px;flex-wrap:wrap">'+
+  '<button class="sxb '+(schV=='today'?'g':'d')+'" onclick="schV=\'today\';schRender()">النهارده</button><button class="sxb '+(schV=='week'?'g':'d')+'" onclick="schV=\'week\';schRender()">الأسبوع</button>'+
+  (teachers.length?'<select onchange="schT=this.value;schRender()" style="background:#1d3652;border:1px solid #27496b;border-radius:10px;color:#fff;padding:6px;font-family:inherit"><option value="">كل المعلمين</option>'+teachers.map(t=>'<option'+(t===schT?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>':'')+'</span></div>';
+ if(!S.length)h+='<div class="sxr" style="color:#a9bccd">مفيش مواعيد لسه — من «الغرف الثابتة» اضغطي 🗓 جنب كل غرفة وحطي مواعيدها.</div>';
+ else if(schV=='today'){const T=S.filter(sl=>sl.d===now.getDay()&&F(sl));
+  h+=T.length?T.map(sl=>'<div class="sxr"><span><b>'+t12(sl.t)+'</b> · '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?' <small style="color:#a9bccd">— '+esc(sl.x.tn)+'</small>':'')+'<br><small>'+schSt(sl,now)+' · '+sl.m+' دقيقة</small></span><span class="bt"><button class="sxb '+(SXS[sl.x.room]?'d':'g')+'" onclick="fxOpen(\''+sl.x.room+'\')">'+(SXS[sl.x.room]?'عرض':'▶ فتح')+'</button></span></div>').join(''):'<div class="sxr" style="color:#a9bccd">مفيش حصص النهارده'+(schT?' للمعلم ده':'')+'.</div>'}
+ else{h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+DO.map(d=>{const T=S.filter(sl=>sl.d===d&&F(sl));
+   return'<div style="background:#1d3652;border-radius:12px;padding:8px;'+(d===now.getDay()?'outline:2px solid #e3c08d':'')+'"><b style="color:#e3c08d">'+DN[d]+'</b>'+(T.length?T.map(sl=>'<div style="font-size:13px;margin-top:6px;line-height:1.6"><b>'+t12(sl.t)+'</b> '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?'<br><small style="color:#a9bccd">'+esc(sl.x.tn)+' · '+sl.m+'د</small>':'')+'</div>').join(''):'<div style="font-size:12px;color:#a9bccd;margin-top:6px">—</div>')+'</div>'}).join('')+'</div>'}
+ h+='<label style="display:flex;gap:8px;align-items:center;font-size:13px;color:#c4d3e0"><input type="checkbox" '+(schAuto()?'checked':'')+' onchange="try{localStorage.setItem(\'itqan_sch_auto\',this.checked?\'1\':\'0\')}catch(e){}" style="width:auto"> افتح الحصص لوحدها قبل ميعادها بـ 10 دقايق (طول ما اللوحة دي مفتوحة)</label>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="schCopy()">📋 نسخ الجدول</button>'+(teachers.length?'<button class="sxb d" onclick="schWaT()">📲 ابعتي لكل معلم جدوله</button>':'')+'</div>';
+ el.innerHTML=h}
+function schText(tn){const S=schSlots().filter(sl=>!tn||sl.x.tn===tn);return DO.map(d=>{const T=S.filter(sl=>sl.d===d);return T.length?DN[d]+':\n'+T.map(sl=>'  • '+t12(sl.t)+' — '+(sl.x.title||fmtCode(sl.x.room))+(tn?'':(sl.x.tn?' ('+sl.x.tn+')':''))+' — '+sl.m+' دقيقة').join('\n'):''}).filter(Boolean).join('\n')}
+async function schCopy(){const t='🗓 جدول حصص أكاديمية إتقان'+(schT?' — '+schT:'')+':\n'+schText(schT);try{await navigator.clipboard.writeText(t);alert('✓ اتنسخ الجدول')}catch(e){prompt('انسخ الجدول:',t)}}
+function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو مكتوب في الغرف):',[...new Set(fxList().map(x=>x.tn).filter(Boolean))][0]||'');if(!tn)return;const t=schText(tn);if(!t)return alert('مفيش مواعيد للمعلم ده');
+ const rooms=fxList().filter(x=>x.tn===tn);const m='مرحباً '+tn+'، ده جدول حصصك الثابت في أكاديمية إتقان:\n'+t+'\n\n'+rooms.map(x=>'🔢 '+(x.title||'')+': كود الحصة '+fmtCode(x.room)+' — كود المعلم '+x.pin+'\n'+fxUrl(x.room,'t')).join('\n');
+ window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
+/* فتح تلقائي قبل الميعاد بـ 10 دقايق (مرة واحدة لكل ميعاد في اليوم) */
+setInterval(()=>{if(role!='c'||!schAuto())return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
+ schSlots().forEach(sl=>{if(sl.d!==now.getDay())return;const a=hm(sl.t),k='itqan_sch_o_'+sl.x.room+'_'+sl.t+'_'+key;if(n>=a-10&&n<a+sl.m&&!SXS[sl.x.room]){let done=0;try{done=sessionStorage.getItem(k)}catch(e){}if(done)return;try{sessionStorage.setItem(k,'1')}catch(e){}
+  const v=SXV;fxOpen(sl.x.room).then(()=>{SXV=v;sxRender()});try{chime()}catch(e){}}});schRender()},30000);
+function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();try{schRender()}catch(e){}
  if(!L.length){el.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش غرف ثابتة لسه — اعملي غرفة لكل معلم أو مجموعة، وابعتي الكود مرة واحدة بس.</div>';return}
  el.innerHTML=L.map(x=>{const on=!!SXS[x.room],r=x.room;return'<div class="sxr"><span style="display:flex;flex-direction:column;gap:2px"><b>'+(on?'🟢 ':'')+esc(x.title||'غرفة')+(x.tn?' <small style="color:#a9bccd">— '+esc(x.tn)+'</small>':'')+'</b><small style="direction:ltr;text-align:right;color:#e3c08d">'+fmtCode(r)+' · 🔑 '+esc(x.pin)+'</small></span><span class="bt">'+
-  '<button class="sxb '+(on?'d':'g')+'" onclick="fxOpen(\''+r+'\')">'+(on?'عرض':'▶ فتح الحصة')+'</button><button class="sxb d" title="واتساب للمعلم" onclick="fxWa(\''+r+'\',\'t\')">📲 المعلم</button><button class="sxb d" title="واتساب للطلاب" onclick="fxWa(\''+r+'\',\'s\')">📲 الطلاب</button><button class="sxb d" title="نسخ لينك الطلاب" onclick="fxCopy(\''+r+'\',\'s\')">🔗</button><button class="sxb d" title="تعديل الاسم" onclick="fxEdit(\''+r+'\')">✏️</button><button class="sxb d" title="حذف" onclick="fxDel(\''+r+'\')">🗑</button></span></div>'}).join('')}
+  '<button class="sxb '+(on?'d':'g')+'" onclick="fxOpen(\''+r+'\')">'+(on?'عرض':'▶ فتح الحصة')+'</button><button class="sxb d" title="واتساب للمعلم" onclick="fxWa(\''+r+'\',\'t\')">📲 المعلم</button><button class="sxb d" title="واتساب للطلاب" onclick="fxWa(\''+r+'\',\'s\')">📲 الطلاب</button><button class="sxb d" title="نسخ لينك الطلاب" onclick="fxCopy(\''+r+'\',\'s\')">🔗</button><button class="sxb d" title="مواعيد الحصص" onclick="schEdit(\''+r+'\')">🗓'+((x.sch||[]).length?' '+x.sch.length:'')+'</button><button class="sxb d" title="تعديل الاسم" onclick="fxEdit(\''+r+'\')">✏️</button><button class="sxb d" title="حذف" onclick="fxDel(\''+r+'\')">🗑</button></span></div>'}).join('')}
 function sxLink(X,r){if(!/^https?:$/.test(location.protocol)||window!==top)return'';return location.origin+location.pathname+'?s='+X.room+'&k='+X.pub+'&r='+r}
 function sxFlash(X,m){X.msg=m;sxRender();setTimeout(()=>{X.msg='';sxRender()},2500)}
 async function sxCopyCode(r){const X=SXS[r];if(!X||!X.code)return;const c=fmtCode(X.code);try{await navigator.clipboard.writeText(c);sxFlash(X,'✓ تم نسخ الكود')}catch(e){prompt('انسخ الكود:',c)}}
@@ -2200,7 +2246,7 @@ function sxSummary(){const L=sxAll();if(!L.length)return'';const on=L.filter(X=>
 function sxTick(){if(role!='c')return;const e=$('#sxst');if(e&&sxAll().length)e.textContent=sxSummary();document.querySelectorAll('#sxB [data-st]').forEach(s=>{const t=sxStat(SXS[s.dataset.st]);if(s.textContent!==t)s.textContent=t})}
 let sxRT=0;function sxRender(){clearTimeout(sxRT);sxRT=setTimeout(sxPaint,60)}
 function sxPaint(){if(role!='c'||!$('#sxB'))return;try{fxRender()}catch(e){}if(SXV&&!SXS[SXV])SXV=null;
- const det=!!SXV;$('#sxA').hidden=det;const R=$('#sxR');if(R)R.hidden=det;
+ const det=!!SXV;$('#sxA').hidden=det;{const T=$('#sxT');if(T)T.hidden=det||!fxList().length}const R=$('#sxR');if(R)R.hidden=det;
  $('#sxB').innerHTML=det?sxDetail(SXS[SXV]):sxDash();sxTick();if(!sxAll().length)$('#sxst').textContent=''}
 const sxD=(r,k)=>' data-r="'+esc(r)+'"'+(k!=null?' data-k="'+esc(k)+'"':'');
 /* اللوحة: كارت لكل حصة — المهم (طلب معلم/طلاب منتظرين) يظهر فوق وعليه أزرار القبول */
