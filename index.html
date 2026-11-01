@@ -384,7 +384,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.02-a';
+const VER='2026.11.02-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1657,7 +1657,11 @@ function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitF
  if(!rq||en===false)return pfsSet(1);
  try{const p=rq.call(el);if(p&&p.catch)p.catch(()=>pfsSet(1))}catch(e){pfsSet(1)}}
 if(!('onfullscreenchange' in document))document.addEventListener('webkitfullscreenchange',()=>document.dispatchEvent(new Event('fullscreenchange')));
-document.addEventListener('fullscreenchange',()=>{const b=$('#fs');if(b)b.textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'✕':'⛶'});
+/* ملء الشاشة الحقيقي: السبورة/الشاشة نفسها تملا الشاشة كلها (نفس شكل وضع ملء الشاشة البديل)، مش بس يختفي شريط المتصفح */
+document.addEventListener('fullscreenchange',()=>{const on=!!(document.fullscreenElement||document.webkitFullscreenElement),b=$('#fs');if(b)b.textContent=on?'✕':'⛶';document.body.classList.toggle('pfs',on);[60,250,600].forEach(t=>setTimeout(()=>{try{fit();relayout()}catch(e){}},t))});
+/* أي تغيير في مقاس السبورة (ملء الشاشة، لف الجهاز، إخفاء القايمة الجانبية، شريط المتصفح في الموبايل) ← نعيد ضبط السبورة فوراً
+   بدل ما نستنى وقت ثابت — عشان ماتطلعش مقصوصة أو مضغوطة لو الشاشة لسه بتتحرك */
+if(window.ResizeObserver){let roF=0;new ResizeObserver(()=>{if(roF)return;roF=requestAnimationFrame(()=>{roF=0;try{fit();relayout()}catch(e){}})}).observe($('#stage'))}
 /* ===== ترجمة كاملة للواجهة (عربي ⇄ English): نصوص التطبيق فقط — أسماء وكتابات المستخدمين محمية بـ translate=no ===== */
 const ENM=[
 ["الفصل الافتراضي","Virtual Classroom"],
