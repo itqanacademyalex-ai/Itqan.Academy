@@ -385,7 +385,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.03-d';
+const VER='2026.11.04-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -543,6 +543,24 @@ async function tkMake(room,pin,jwk){const salt=crypto.getRandomValues(new Uint8A
  return b64u(new Uint8Array([...salt,...iv,...ct]))}
 async function tkOpen(room,pin,tk,pub){const a=ub64(tk),d=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:a.slice(16,28)},await tkKey(pin,room,a.slice(0,16)),a.slice(28))),P=ub64(pub);
  return crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:b64u(P.slice(1,33)),y:b64u(P.slice(33,65)),d:b64u(d),ext:false},ALG,false,['sign'])}
+/* ===== المدير: يدخل أي حصة مفتوحة في أي وقت للإشراف، من غير إذن المعلم =====
+   مفتاح المدير الخاص متشفّر بكلمة سر المدير (DIR_BLOB). المدير يكتب كلمة السر ← المفتاح يتفك على جهازه بس ←
+   يوقّع على دخوله ← المعلم يتحقق بالمفتاح العام (DIR_PUB) ويدخّله على طول. من غير كلمة السر الصح مايقدرش حد يدخل كمدير */
+const DIR_PUB='BFmrjWspYn3ZJYzEpO1HDwr-1QIsxDRS0CKE2LICTi70W4XovTYhqlT2tYEyOQi7f2C8f9vI6B66o9xpJa5X_oo',DIR_BLOB='sFLax31sNhJ4I4l9FPFOZgmnDZ3apg9VldhvS10CKztrPCva7-NIWPzByhIUtYTkzo4OqjMg_XxDhglIAGhPdNzRCF1WAIs1wSvrPg';
+let DIRK=null;
+async function dirUnlock(pw){const rk=await tkOpen('director',pw,DIR_BLOB,DIR_PUB);try{sessionStorage.setItem('itqan_dpw',pw)}catch(e){}DIRK=rk;return rk}
+async function dirKey(){if(DIRK)return DIRK;let pw='';try{pw=sessionStorage.getItem('itqan_dpw')||''}catch(e){}if(!pw)return null;try{return await dirUnlock(pw)}catch(e){return null}}
+const DIRM=new URLSearchParams(location.search).get('dir')=='1';
+function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id='dirm';m.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:14px';document.body.append(m)}
+ m.innerHTML='<div class="card" style="gap:10px"><h2>👔 دخول المدير</h2><input id="dpw" type="password" placeholder="كلمة سر المدير" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button></div>';
+ m.hidden=false;try{const pw=sessionStorage.getItem('itqan_dpw');if(pw)$('#dpw').value=pw}catch(e){}
+ const er=$('#der'),go=async(code)=>{const pw=$('#dpw').value;if(!pw){er.textContent='اكتب كلمة سر المدير';return}const c=parseCode(code||$('#dcd').value);if(!c){er.textContent='اكتب كود الحصة (4 حروف وأرقام)';return}
+  er.style.color='#e3c08d';er.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(e){er.style.color='#fca5a5';er.textContent='كلمة السر غير صحيحة';return}
+  er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'الحصة '+fmtCode(c)+' مش مفتوحة دلوقتي.':String(e)})};
+ $('#dgo').onclick=()=>go();$('#dcd').addEventListener('keydown',e=>{if(e.key=='Enter')go()});
+ /* لو المدير استرجع ملف الغرف الثابتة على جهازه: أزرار دخول سريعة لكل غرفة */
+ const L=fxList();if(L.length)$('#dfx').innerHTML='<small style="color:#a9bccd">الغرف الثابتة:</small>'+L.map(x=>'<button class="w" style="background:#27496b;text-align:start" data-c="'+x.room+'">👁 '+esc(x.title||'غرفة')+(x.tn?' — '+esc(x.tn):'')+' <small style="direction:ltr">('+fmtCode(x.room)+')</small></button>').join('');
+ $('#dfx').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c));setTimeout(()=>$('#dpw').value?$('#dcd').focus():$('#dpw').focus(),50)}
 function tkGet(room){try{const o=JSON.parse(localStorage.getItem('itqan_tk_'+room));return o&&o.tk&&o.k?o:null}catch(e){return null}}
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
@@ -559,6 +577,7 @@ setInterval(()=>{if((role=='t'||role=='s')&&!final&&$('#join').hidden)lastPut()}
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(codeLanding,0);
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t')$('#tpin').hidden=false;else $('#jrecn').hidden=false;
+ if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet();if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent='↩️ رجوع للحصة';$('#jgo').style.fontSize='17px'}}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
@@ -624,7 +643,8 @@ function pwaHome(){if(window.itqanApp)return;
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
  window.__ln={fill:(c,r)=>{pick(r,RB[r]);inp.value=fmtCode(c);enter()},open:()=>!f.hidden,reset:()=>{clearTimeout(wT);role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>secOpen();
- j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec)}
+ const dir=document.createElement('button');dir.className='w';dir.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px';dir.textContent='👔 دخول المدير';dir.onclick=()=>dirOpen();
+ j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec,dir)}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
 var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;pwaInstall()});
 /* أندرويد من المتصفح: زرار ثابت فوق شاشة الدخول «تحميل التطبيق على الجهاز» — بيثبّت تطبيق إتقان من Chrome بضغطة،
@@ -702,11 +722,11 @@ function join(r){
  const nm=$('#nm').value.trim().replace(/\s+/g,' ');
  const nw=nm.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length;
  if(r=='t'){if(!nw){$('#nm').focus();return alert('اكتب اسمك')}if(!(RS&&tHasCert(rn))&&!/^\d{4,6}$/.test(($('#tpin').value||'').trim())){$('#tpin').hidden=false;$('#tpin').focus();return alert('اكتب كود الغرفة اللي أرسلته لك السكرتارية')}}
- else if(nw<2){$('#nm').focus();return alert('اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد')}
+ else if(nw<2&&!DIRM){$('#nm').focus();return alert('اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد')}
  name=nm.slice(0,40);try{localStorage.setItem('itqan_nm',name)}catch(e){}
  roomName=rn;room=rn;role=r;lastPut();
  role=r;sessT0=Date.now();if(r=='t')try{mxAC()}catch(e){}{const tb=$('#bt');tb.dataset.i18nT=r=='t'?'board':'tools';if(r=='s')tb.textContent='🧮'}document.body.dataset.role=r;A.src=SIL;A.play().catch(()=>{});$('#join').hidden=true;
- if(r=='s')prepMic(1).then(ok=>ok&&sendMic());
+ if(r=='s'&&!DIRM)prepMic(1).then(ok=>ok&&sendMic());
  if(r=='t'){$('#v').muted=true;buildTb();tAuth(($('#tpin').value||'').trim(),RS)}else{buildTbS();initS()}
  render();ui();setLang(LANG);sys('الغرفة: '+rn+' • الإصدار '+VER);
 }
@@ -813,7 +833,7 @@ async function startTPeer(){
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
-  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});o&&o.adm&&!o.rep&&sdNote('🚪 '+o.name+' خرج من الحصة');hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
+  c.on('close',()=>{if(cohosts[c.peer]===c){delete cohosts[c.peer];sys('🗂️ انقطع اتصال السكرتارية');if(recOwner=='sec'){recOwner=null;if(!recStopped)recSelf(' (تكملة)')}}const o=conns[c.peer];delete conns[c.peer];ssDrop(c.peer);mxBusDel(c.peer);o&&dropMic(o);o&&o.adm&&!o.dir&&LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});o&&o.adm&&!o.rep&&sdNote('🚪 '+o.name+' خرج من الحصة');hands.delete(c.peer);hideCam('s:'+c.peer);roster2()});
  });
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='scr'){
@@ -834,7 +854,7 @@ async function startTPeer(){
   c.on('close',()=>{const o=conns[c.peer];o&&dropMic(o)});
  });
 }
-function tData(c,d){
+async function tData(c,d){
  if(!d||typeof d!=='object')return;
  if(d.t=='pk?'){try{c.send({t:'pk',k:LK.k})}catch(e){}return}
  if(d.t=='chal'){tProof(c,d);return}
@@ -843,6 +863,8 @@ function tData(c,d){
  if(cohosts[c.peer]===c){if(d.t=='cmd')coCmd(d);return}
  if(d.t=='hello'){
   if(conns[c.peer])return;
+  if(d.dv&&typeof d.dv.g=='string'&&Math.abs(Date.now()-d.dv.ts)<10*60000){const ok=await vfy(DIR_PUB,'D|'+room+'|'+c.peer+'|'+d.dv.ts,d.dv.g);
+   if(ok){const o=conns[c.peer]={c,name:'👔 المدير',can:0,cp:0,adm:0,sid:'',dir:1};admit(c.peer);sys('👔 المدير دخل الحصة للإشراف');try{hEv('👔 المدير دخل الحصة للإشراف')}catch(e){}return}}
   const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
   if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
   if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){x.rep=1;try{x.c.close()}catch(e){}}});
@@ -857,14 +879,14 @@ function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
 }
 function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;o.can=allMuted?0:1;o.cp=camBanAll?0:1;
- if(!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();if(WPG&&WPG[pi].bg)setTimeout(()=>{try{o.c.send({t:'pbg',img:WPG[pi].bg})}catch(e){}},300);if(WPG&&(WPG[pi].n||[]).length)setTimeout(()=>{try{o.c.send({t:'notes',n:WPG[pi].n.map(({id,x,y,t,c})=>({id,x,y,t,c}))})}catch(e){}},400);o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
+ if(!o.dir&&!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();if(WPG&&WPG[pi].bg)setTimeout(()=>{try{o.c.send({t:'pbg',img:WPG[pi].bg})}catch(e){}},300);if(WPG&&(WPG[pi].n||[]).length)setTimeout(()=>{try{o.c.send({t:'notes',n:WPG[pi].n.map(({id,x,y,t,c})=>({id,x,y,t,c}))})}catch(e){}},400);o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});if(!o.dir)LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
-function deny(k,kick){const o=conns[k];if(!o)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
+function deny(k,kick){const o=conns[k];if(!o||o.dir)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
 function camAllow(k){const o=conns[k];if(!o||!o.adm)return;o.cp=o.cp?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+k)}render()}
 function tCamBan(){camBanAll=camBanAll?0:1;Object.values(conns).filter(o=>o.adm).forEach(o=>{o.cp=camBanAll?0:1;o.c.send({t:'cam',on:o.cp});if(!o.cp){try{o.sc&&o.sc.close()}catch(e){}hideCam('s:'+o.c.peer)}});render();sys(camBanAll?'تم منع كاميرات الطلاب':'تم السماح بكاميرات الطلاب')}
 function cycleGm(){gm=(gm+1)%3;if(gm==1)admitAll();sys('وضع الدخول: '+['بموافقة المعلم','تلقائي','مقفلة (لا يدخل أحد)'][gm]);render()}
 function roster2(){
- const o=Object.entries(conns).filter(([k,x])=>x.adm);
+ const o=Object.entries(conns).filter(([k,x])=>x.adm&&!x.dir);
  roster={s:o.map(([k,x])=>x.name),h:o.filter(([k])=>hands.has(k)).map(([k,x])=>x.name)};
  bc({t:'roster',...roster});render();
 }
@@ -1079,7 +1101,7 @@ function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)|
 async function vProof(d){const c=conn;
  try{
   if(!(d&&d.c&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'T|'+room+'|'+vNonce,d.g)))throw 0;
-  if(conn!==c)return;vOk=1;c.send({t:'hello',n:name,id:sid()})
+  if(conn!==c)return;vOk=1;let dv=null;if(DIRM){const k=await dirKey();if(k&&peer&&peer.id){const ts=Date.now();dv={ts,g:await sgn(k,'D|'+room+'|'+peer.id+'|'+ts)}}}if(conn!==c)return;c.send({t:'hello',n:dv?'👔 المدير':name,id:sid(),dv})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
   showGate('⛔','تعذر التحقق من هوية المعلم — تأكد أنك فتحت الرابط الأصلي من السكرتارية. جارٍ إعادة المحاولة...');
@@ -1161,7 +1183,7 @@ function render(){
   (W.length?'<div class="m s">⏳ في غرفة الانتظار ('+W.length+')</div><button class="m" '+B('#1a9486')+' onclick="admitAll()">قبول الجميع</button>'+W.map(([k,x])=>row('⏳ ',x.name,'<button '+B('#1a9486')+' onclick="admit(\''+k+'\')">قبول</button><button '+B('#d4605a')+' onclick="deny(\''+k+'\')">رفض</button>')).join(''):'')+
   '<button class="m" style="background:#1a9486;color:#fff;text-align:center" onclick="tMuteAll()">'+(allMuted?'🎤 إلغاء كتم الجميع':'🔇 كتم صوت جميع الطلاب')+'</button>'+
   '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="tCamBan()">'+(camBanAll?'📷 السماح بكاميرات الطلاب':'🚫 منع كاميرات الطلاب')+'</button>'+
-  (A.map(([k,x])=>row(stIc(x)+(x.wk?'<span title="النت عند الطالب ده ضعيف — الصوت ممكن يتقطّع عنده">📶⚠️ </span>':''),x.name,
+  (A.map(([k,x])=>x.dir?row('',x.name,'<small style="color:#e3c08d">للإشراف — مش ظاهر للطلاب</small>'):row(stIc(x)+(x.wk?'<span title="النت عند الطالب ده ضعيف — الصوت ممكن يتقطّع عنده">📶⚠️ </span>':''),x.name,
   ib(x.can?'#e3c08d':'#d4605a',x.can?'🔇':'🎙️',x.can?'كتم':'إلغاء الكتم','allow(\''+k+'\')')+
   ib(x.cp?'#35607f':'#d4605a',x.cp?'📷':'📵','كاميرا الطالب','camAllow(\''+k+'\')')+
   ib(x.sp?'#1a9486':'#35607f','🖥️','مشاركة الشاشة','ssp(\''+k+'\')')+
@@ -1691,7 +1713,7 @@ function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;
 /* حفظ حالة الحصة عند إعادة تحميل صفحة المعلم (Refresh) واستعادتها خلال 20 دقيقة */
 const tsKey=()=>'itqan_ts_'+room;
 function tSave(){if(role!='t'||!LOG.start||mailDone||endDone)return;
- const now=Date.now(),att=LOG.att.concat(Object.values(conns).filter(o=>o.adm).map(o=>({ts:now,n:o.name,ev:'خرج'})));
+ const now=Date.now(),att=LOG.att.concat(Object.values(conns).filter(o=>o.adm&&!o.dir).map(o=>({ts:now,n:o.name,ev:'خرج'})));
  const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300),att,seen:[...SEEN],strokes,h:H};
  try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(e){o.strokes=[];try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(x){}}}
 function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()));sessionStorage.removeItem(tsKey())}catch(e){}
