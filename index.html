@@ -385,7 +385,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.03-c';
+const VER='2026.11.03-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -738,7 +738,7 @@ async function tAuth(pin,resume){
   if(!rk)return showGate('⛔','كود المعلم غير صحيح — اكتب الكود اللي بعتته لك السكرتارية وحاول تاني.',1);
   const c={r:room,p:TK.pub,e:Date.now()+30*864e5},sg=await sgn(rk,certMsg(c));TC={c,s:sg};
   try{localStorage.setItem('itqan_tc_'+room,JSON.stringify({c,s:sg,j:TK.j,rc:RC,ml:MAILLIVE,ph:await pinH(pin)}))}catch(e){}
-  return tStart()}
+  window._selfOpen=1;return tStart()}
  tReq(pin);
 }
 async function tReq(pin){
@@ -769,7 +769,7 @@ async function tReq(pin){
  /* لما المعلم يرجع للصفحة (بعد ما كان في تطبيق أو تبويب تاني) نعيد المحاولة فوراً */
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!got){if(c&&!c.open)c=null;later(300)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();if(MAILLIVE)back?mailSend('↩️ عاد المعلم للغرفة '+roomName,'عاد المعلم ('+name+') إلى الغرفة: '+roomName+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow()):mailTeacherIn()}sys('✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();/* إيميل «المعلم فتح الحصة» بيتبعت دايماً أول ما المعلم يفتح (حتى لو الإيميلات الفورية مقفولة) */if(back){if(MAILLIVE)mailSend('↩️ عاد المعلم للغرفة '+fmtCode(roomName),'عاد المعلم ('+name+') إلى الغرفة: '+fmtCode(roomName)+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow())}else mailTeacherIn()}sys(window._selfOpen?'✓ فتحت الحصة بكودك — أنت الآن مسؤول عن الحصة، والطلاب هيستنوا في غرفة الانتظار لحد ما تدخّلهم':'✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
@@ -1628,7 +1628,8 @@ function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
  if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,keep)}).catch(()=>mailEJ(sub,msg,keep))}catch(e){}}
  return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
-function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;mailSend('👨‍🏫 دخل المعلم الغرفة '+roomName,'دخل المعلم ('+name+') إلى الغرفة: '+roomName+'\nالوقت: '+mailNow())}
+function mailTeacherIn(){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;const c=fmtCode(roomName);
+ mailSend('🟢 المعلم فتح الحصة — '+name+' — '+c,'المعلم '+name+' فتح الحصة دلوقتي.\n\nكود الحصة: '+c+'\nالوقت: '+mailNow()+'\nطريقة الفتح: '+(window._selfOpen?'بكود المعلم (غرفة ثابتة — من غير السكرتارية)':'بموافقة السكرتارية')+'\n\nالطلاب بيدخلوا غرفة الانتظار والمعلم بيدخّلهم.\nهيوصلك تقرير الحصة كامل لما المعلم ينهيها.')}
 function mailStu(n){mailNames.add(n);if(!MAILLIVE)return;mailQ.push(n);clearTimeout(mailTm);mailTm=setTimeout(mailFlush,60000)}
 function mailFlush(keep){clearTimeout(mailTm);if(!mailQ.length)return;const q=mailQ.splice(0);mailSend('🎓 دخل '+q.length+' طالب الغرفة '+roomName,'دخل الطلاب التالية أسماؤهم:\n- '+q.join('\n- ')+'\nالوقت: '+mailNow(),keep)}
 /* ===== تقرير صحة النظام في إيميل نهاية الحصة: أي خلل في الصوت/الاتصال، وهل اتستخدم TURN ومع مين ===== */
