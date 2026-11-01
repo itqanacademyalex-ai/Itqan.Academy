@@ -77,7 +77,9 @@ body[data-role=s] #wclr{display:none}
 #gate{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;align-items:center;justify-content:center}
 #gate[hidden]{display:none}
 #mg{position:fixed;inset:0;z-index:60;background:rgba(10,20,34,.96);display:flex;align-items:center;justify-content:center}
-#mg[hidden]{display:none}#mg .card{max-height:92vh;overflow:auto}
+#mg[hidden]{display:none}
+/* النوافذ اللي بتتعمل من الكود عندها display في الـ style، فـ hidden لوحده مابيخفيهاش */
+#schm[hidden],#dirm[hidden]{display:none!important}#mg .card{max-height:92vh;overflow:auto}
 .card{background:var(--side);padding:26px;border-radius:22px;width:min(380px,92vw);display:flex;flex-direction:column;gap:12px;text-align:center}
 .card h2{font-size:22px}.card input{background:#1d3652;border:1px solid #27496b;border-radius:12px;padding:11px;color:#fff;font-family:inherit;text-align:center;outline:0}
 .card .row{display:flex;gap:8px}.card .row button{flex:1;padding:11px;border-radius:12px;background:var(--p);font-weight:700}
@@ -385,7 +387,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.04-c';
+const VER='2026.11.04-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
