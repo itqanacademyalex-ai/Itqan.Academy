@@ -79,7 +79,7 @@ body[data-role=s] #wclr{display:none}
 #mg{position:fixed;inset:0;z-index:60;background:rgba(10,20,34,.96);display:flex;align-items:center;justify-content:center}
 #mg[hidden]{display:none}
 /* النوافذ اللي بتتعمل من الكود عندها display في الـ style، فـ hidden لوحده مابيخفيهاش */
-#schm[hidden],#dirm[hidden]{display:none!important}#mg .card{max-height:92vh;overflow:auto}
+#schm[hidden],#dirm[hidden],#qm[hidden]{display:none!important}#mg .card{max-height:92vh;overflow:auto}
 .card{background:var(--side);padding:26px;border-radius:22px;width:min(380px,92vw);display:flex;flex-direction:column;gap:12px;text-align:center}
 .card h2{font-size:22px}.card input{background:#1d3652;border:1px solid #27496b;border-radius:12px;padding:11px;color:#fff;font-family:inherit;text-align:center;outline:0}
 .card .row{display:flex;gap:8px}.card .row button{flex:1;padding:11px;border-radius:12px;background:var(--p);font-weight:700}
@@ -387,7 +387,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.07-a';
+const VER='2026.11.07-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1492,7 +1492,7 @@ function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=
   r=R('الهايلايتر');HCOLS.forEach(c=>{const b=I(r,'','هايلايتر',()=>{hcol=c;tool='hl';tbPopX();refTb()},tool=='hl'&&c==hcol,'sw sq');b.style.background=c});
   r=R('السُمك');[[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:#fff;width:22px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;tbPopX();refTb()},wd==w))}
  else if(k=='pg'){const r=R('الصفحات ('+(pi+1)+' من '+(WPG?WPG.length:1)+')');W(r,'➕ صفحة جديدة',()=>pgNew());W(r,'📄 استيراد PDF أو صور',pgImport);W(r,'📑 حفظ كل الصفحات PDF',pgPdf);W(r,'🗑 مسح الصفحة دي',pgDel,1)}
- else if(k=='more'){const r=R();W(r,(st.sw?'✅ ':'')+'✍️ السماح للطلاب بالكتابة',tSw);W(r,(st.bg?'✅ ':'')+'◐ خلفية بيضاء',tBg);W(r,'📑 حفظ السبورة كلها PDF',pgPdf);W(r,'🖼 حفظ الصفحة دي صورة',wbSave);
+ else if(k=='more'){const r=R();W(r,(st.sw?'✅ ':'')+'✍️ السماح للطلاب بالكتابة',tSw);W(r,(st.bg?'✅ ':'')+'◐ خلفية بيضاء',tBg);W(r,'📖 المصحف — ضيف آيات للسبورة',qOpen);W(r,'📑 حفظ السبورة كلها PDF',pgPdf);W(r,'🖼 حفظ الصفحة دي صورة',wbSave);
   {const r2=R('شكل الورقة');[['blank','⬜','فاضية'],['lines','☰','سطور'],['sq','▦','مربعات صغيرة'],['grid','▩','شبكة'],['xy','✚','إحداثيات X-Y']].forEach(([k2,ic,ti])=>I(r2,ic,ti,()=>{setBgT(k2);tbPopX();refTb()},(st.bt||'blank')==k2&&!!st.bg))}
   W(r,'🧮 الحاسبة',()=>calcT());if(DESMOS_KEY)W(r,'📈 Desmos',()=>dsmT());W(r,'🗑 مسح السبورة كلها',()=>{if(confirm('تمسح كل الرسم في الصفحة دي؟'))wclr()},1)}
  const b=btn.getBoundingClientRect();m.hidden=false;const w=m.offsetWidth,h=m.offsetHeight;
@@ -2169,6 +2169,38 @@ async function pgPdf(){if(role!='t')return;pgSave();sys('⏳ جارٍ تجهيز
   const full=wbCanvas(),c=document.createElement('canvas');c.width=LW;c.height=LH;c.getContext('2d').drawImage(full,OX,OY,LW*S,LH*S,0,0,LW,LH);
   if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,LW,LH)}
  window._xN=null;strokes=keep[0];PBG=keep[1];rebuild();doc.save('itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+/* ===== 📖 المصحف على السبورة =====
+   المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
+   يشرح ويكتب ويلوّن عليها بالقلم، والطلاب بيشوفوها. النص من موسوعة القرآن الكريم (quranenc.com) — رخصة CC BY-SA 4.0 */
+let QD=null;
+async function qData(){if(QD)return QD;const r=await fetch('quran.json',{cache:'force-cache'});QD=await r.json();return QD}
+const arN=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+/* خط المصحف (Amiri Quran — رخصة OFL) محفوظ مع الموقع، فبيشتغل من غير ما يعتمد على مواقع تانية */
+let QF=null;async function qFont(){if(!QF){QF=new FontFace('Amiri Quran',"url(fonts/amiri-quran.woff2) format('woff2')");try{await QF.load();document.fonts.add(QF)}catch(e){QF=null}}}
+async function qRender(si,a1,a2,big){const D=await qData(),S0=D.s[si-1],V=S0[2];a1=Math.max(1,Math.min(V.length,a1|0));a2=Math.max(a1,Math.min(V.length,a2|0));await qFont();
+ const W=2400,H=1350,FS=big?78:62,LH=FS*1.95,M=110,TOP=150,BOT=H-80,pages=[];let c,x,y;
+ const fresh=()=>{c=document.createElement('canvas');c.width=W;c.height=H;x=c.getContext('2d');x.fillStyle='#fffdf6';x.fillRect(0,0,W,H);
+  x.strokeStyle='#c9a45c';x.lineWidth=6;x.strokeRect(40,40,W-80,H-80);x.lineWidth=2;x.strokeRect(54,54,W-108,H-108);
+  x.fillStyle='#8a6d1d';x.font='600 34px Cairo,Tahoma,sans-serif';x.textAlign='center';x.textBaseline='middle';x.direction='rtl';x.fillText('سورة '+S0[0]+' — '+(S0[1]=='m'?'مكية':'مدنية'),W/2,96);
+  x.font=FS+'px "Amiri Quran","Scheherazade New",serif';x.fillStyle='#1b1b1b';x.textAlign='right';x.textBaseline='alphabetic';y=TOP+FS;pages.push(c)};
+ fresh();
+ if(a1===1&&si!==1&&si!==9){x.textAlign='center';x.fillText('بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ',W/2,y);x.textAlign='right';y+=LH}
+ /* الكلمات بتتكتب سطر سطر من اليمين، وعلامة نهاية الآية ﴿رقمها﴾ */
+ let line='';const flush=last=>{if(!line)return;if(y>BOT){fresh()}x.fillText(line,W-M,y);y+=LH;line=''};
+ /* تنوين الضم المتتابع (U+065E) مش موجود في الخط ← بنستخدم مقابله في الخط (U+08F1) */
+ for(let a=a1;a<=a2;a++){const words=(V[a-1].replace(/\u065E/g,'\u08F1').replace(/\u2009/g,' ')+' ﴿'+arN(a)+'﴾').split(' ');for(const w of words){const t=line?line+' '+w:w;if(x.measureText(t).width>W-2*M&&line){flush();line=w}else line=t}}
+ flush(1);if(pages.length>30)pages.length=30;return pages.map(p=>p.toDataURL('image/jpeg',.82))}
+function qOpen(){if(role!='t')return;let m=$('#qm');if(!m){m=document.createElement('div');m.id='qm';m.style.cssText='position:fixed;inset:0;z-index:72;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px';document.body.append(m)}
+ m.innerHTML='<div class="card" style="gap:10px;width:min(420px,96vw)"><h2>📖 المصحف</h2><select id="qs" style="background:#1d3652;border:1px solid #27496b;border-radius:12px;padding:10px;color:#fff;font-family:inherit"><option>⏳ جارٍ التحميل…</option></select>'+
+  '<div class="row" style="display:flex;gap:8px;align-items:center"><small>من آية</small><input id="qa" type="number" min="1" value="1" style="width:80px"><small>لحد آية</small><input id="qb" type="number" min="1" value="10" style="width:80px"></div>'+
+  '<label style="display:flex;gap:8px;align-items:center;justify-content:center;font-size:14px"><input id="qbig" type="checkbox" style="width:auto"> خط أكبر</label><small id="qe" style="color:#e3c08d;min-height:18px"></small>'+
+  '<div class="row"><button id="qgo">➕ ضيفها للسبورة</button><button onclick="$(\'#qm\').hidden=true">إلغاء</button></div><small style="opacity:.6;font-size:11px">الرسم العثماني من موسوعة القرآن الكريم (quranenc.com) — CC BY-SA 4.0</small></div>';
+ m.hidden=false;const sel=$('#qs'),qa=$('#qa'),qb=$('#qb'),er=$('#qe');
+ qData().then(D=>{sel.innerHTML=D.s.map((x,i)=>'<option value="'+(i+1)+'">'+arN(i+1)+' — سورة '+x[0]+' ('+arN(x[2].length)+' آية)</option>').join('');
+  const fix=()=>{const n=D.s[sel.value-1][2].length;qa.max=qb.max=n;qa.value=1;qb.value=Math.min(n,15)};sel.onchange=fix;fix()}).catch(()=>{er.textContent='تعذّر تحميل المصحف — تأكد من الإنترنت'});
+ $('#qgo').onclick=async()=>{er.textContent='⏳ جارٍ تجهيز الصفحات…';try{const P=await qRender(+sel.value,+qa.value,+qb.value,$('#qbig').checked);
+  pgSave();let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=P.shift()}else{WPG.splice(pi+1,0,{s:[],bg:P.shift()});at=pi+1}P.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();
+  m.hidden=true;sys('📖 الآيات اتضافت للسبورة — اكتب ولوّن عليها بالقلم، واتنقّل بين الصفحات بالأسهم')}catch(e){er.textContent='تعذّر تجهيز الآيات — حاول تاني'}}}
 function wbCanvas(){const w=Math.max(lay.width,1),h=Math.max(lay.height,1),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);
  const sv=[st.wb,st.bg];st.wb=1;st.bg=1;try{drawBgT(x)}finally{st.wb=sv[0];st.bg=sv[1]}
  if(PBG&&PBG.complete&&PBG.naturalWidth){x.setTransform(S,0,0,S,OX,OY);x.drawImage(PBG,0,0,LW,LH);x.setTransform(1,0,0,1,0,0)}
