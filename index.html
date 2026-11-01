@@ -385,7 +385,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.04-b';
+const VER='2026.11.04-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -546,7 +546,7 @@ async function tkOpen(room,pin,tk,pub){const a=ub64(tk),d=new Uint8Array(await c
 /* ===== المدير: يدخل أي حصة مفتوحة في أي وقت للإشراف، من غير إذن المعلم =====
    مفتاح المدير الخاص متشفّر بكلمة سر المدير (DIR_BLOB). المدير يكتب كلمة السر ← المفتاح يتفك على جهازه بس ←
    يوقّع على دخوله ← المعلم يتحقق بالمفتاح العام (DIR_PUB) ويدخّله على طول. من غير كلمة السر الصح مايقدرش حد يدخل كمدير */
-const DIR_PUB='BFmrjWspYn3ZJYzEpO1HDwr-1QIsxDRS0CKE2LICTi70W4XovTYhqlT2tYEyOQi7f2C8f9vI6B66o9xpJa5X_oo',DIR_BLOB='FdJShvNlllhUW9jPuJjL89CzWl5uZ45v4YAjiMoRDvnU5Sm3kaA9O2E5opPCy6jNhh8AYkP1aeOGiu-1F1FuVD1A0VTXOJmhwIU8TA';
+const DIR_PUB='BFmrjWspYn3ZJYzEpO1HDwr-1QIsxDRS0CKE2LICTi70W4XovTYhqlT2tYEyOQi7f2C8f9vI6B66o9xpJa5X_oo',DIR_BLOB='PQ_MKFu2uo1YIeu6wWpJfnp3bAoTSp2cHffncA5uP0U7F0AlewVthc9AOJTaZB0g5bkh0xJTGKiI-radm0W5PDR5feoCIKnEH6bXrA';
 let DIRK=null;
 async function dirUnlock(pw){const rk=await tkOpen('director',pw,DIR_BLOB,DIR_PUB);try{sessionStorage.setItem('itqan_dpw',pw)}catch(e){}DIRK=rk;return rk}
 async function dirKey(){if(DIRK)return DIRK;let pw='';try{pw=sessionStorage.getItem('itqan_dpw')||''}catch(e){}if(!pw)return null;try{return await dirUnlock(pw)}catch(e){return null}}
