@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.10-a';
+const VER='2026.11.10-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -590,11 +590,16 @@ async function roomKey(code,pin){const base=await crypto.subtle.importKey('raw',
 /* المعلم كتب كود الحصة: يكتب كود المعلم ← نطلّع مفتاح الغرفة ونحفظه متشفّر على الجهاز ← صفحة الحصة */
 /* بصمة مفتاح الغرفة الصحيح (v): بتيجي في لينكات السكرتارية وبتتحفظ على الجهاز — من غيرها مانقدرش نتأكد إن كود المعلم صح */
 const fpOf=k=>String(k||'').slice(1,15);
+/* ===== كود المعلم الجديد (6 أرقام) بيتأكد من نفسه: السكرتارية بتختار كود يحقق شرط حسابي خاص بكود الحصة،
+   فالموقع يعرف لوحده إن الكود صح من غير لينك ولا سكرتارية. أي كود متخمّن عشوائي فرصته واحد من 8192 ===== */
+async function pinOk(code,pin){pin=String(pin||'');if(!/^\d{6}$/.test(pin))return false;const h=new Uint8Array(await crypto.subtle.digest('SHA-256',enc('itqan-tpin|'+String(code).toLowerCase()+'|'+pin)));return h[0]===0&&(h[1]&0xF8)===0}
+async function pinGen(code){for(let i=0;i<300000;i++){const p=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000);if(await pinOk(code,p))return p}throw new Error('gen')}
 function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){return''}}
 {const q=new URLSearchParams(location.search),c=(q.get('c')||q.get('s')||'').toLowerCase(),v=q.get('v');if(c&&v&&/^[A-Za-z0-9_-]{14}$/.test(v))try{localStorage.setItem('itqan_v_'+c,v)}catch(e){}}
 async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
- let v=vGet(code);if(!v){/* مفيش بصمة على الجهاز: نسأل السكرتارية لو فاتحة */try{const x=await Promise.race([resolveCode(code),new Promise((_,no)=>setTimeout(()=>no(0),9000))]);if(x&&x.k){v=fpOf(x.k);try{localStorage.setItem('itqan_v_'+code,v)}catch(e){}}}catch(e){}}
- if(!v)throw new Error('nov');if(fpOf(k.pub)!==v)throw new Error('pin');
+ if(await pinOk(code,pin)){try{localStorage.setItem('itqan_v_'+code,fpOf(k.pub))}catch(e){}}else if(/^\d{6}$/.test(String(pin)))throw new Error('pin');else{
+ let v=vGet(code);if(!v){/* كود قديم (4 أرقام): نتأكد من البصمة أو من السكرتارية لو فاتحة */try{const x=await Promise.race([resolveCode(code),new Promise((_,no)=>setTimeout(()=>no(0),9000))]);if(x&&x.k){v=fpOf(x.k);try{localStorage.setItem('itqan_v_'+code,v)}catch(e){}}}catch(e){}}
+ if(!v)throw new Error(/^\d{6}$/.test(String(pin))?'pin':'old');if(fpOf(k.pub)!==v)throw new Error('pin')}
  const tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
  return linkOf(code,k.pub,'t')}
 function tkGet(room){try{const o=JSON.parse(localStorage.getItem('itqan_tk_'+room));return o&&o.tk&&o.k?o:null}catch(e){return null}}
@@ -659,12 +664,12 @@ function resolveCode(code){return new Promise(async(ok,no)=>{
  p=new Peer(undefined,{config:ice});
  p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{const c=p.connect(id,{reliable:true});
   c.on('open',()=>{try{c.send({t:'pk?'})}catch(x){}});
-  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k)){const v=vGet(room);if(v&&fpOf(d.k)!==v)return;end(d.k)}})}));
+  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k))end(d.k)})}));
  p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss>=2)end(null,'مفيش حصة مفتوحة بالكود ده — اتأكد من الكود، أو اسأل السكرتارية.')})})}
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
- if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.message=='pin'?'كود المعلم غلط — ارجع وجرّب تاني.':'أول مرة على الجهاز ده: افتح «لينك المعلم» اللي بعتته لك السكرتارية.',1));return}}}
+ if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.message=='pin'?'كود المعلم غلط — ارجع وجرّب تاني.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).',1));return}}}
  if(window.__ln&&window.__ln.fill){window.__ln.fill(c,r);return}
  $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
@@ -728,7 +733,7 @@ function pwaHome(){if(window.itqanApp&&!APPHOME)return;
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
   if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 4 أرقام.',1);
-   busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.message=='pin'?'⛔ كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':e&&e.message=='nov'?'⛔ أول مرة على الجهاز ده: افتح «لينك المعلم» اللي بعتته لك السكرتارية على واتساب (عشان نتأكد من كودك).':'تعذّر فتح الحصة — حاول تاني.',1)})}
+   busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.message=='pin'?'⛔ كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':e&&e.message=='old'?'⛔ كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).':'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
    /* الحصة لسه ماابتدتش: نستنى ونحاول تاني لوحدنا كل 8 ثواني — الطالب يسيب الصفحة مفتوحة ويدخل أول ما تبدأ */
@@ -853,8 +858,6 @@ async function initT(){
 let TC=null,TK=null;
 const pinH=async pin=>b64u(await crypto.subtle.digest('SHA-256',enc('P|'+room+'|'+pin)));
 async function tAuth(pin,resume){
- /* غرفة ثابتة: لازم مفتاح الحصة يطابق البصمة اللي من السكرتارية — غير كده كود المعلم يبقى غلط */
- if(tkGet(room)){const v=vGet(room);if(!v)return showGate('⛔','عشان نتأكد من كود المعلم: افتح «لينك المعلم» اللي بعتته لك السكرتارية على واتساب مرة واحدة على الجهاز ده.',1);if(fpOf(LK.k)!==v){try{localStorage.removeItem('itqan_tk_'+room);localStorage.removeItem('itqan_tc_'+room)}catch(e){}return showGate('⛔','كود المعلم اللي اتكتب قبل كده على الجهاز ده غلط — ارجع وادخل بكود المعلم الصحيح.',1)}}
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&(resume||sv.ph&&sv.ph===await pinH(pin))&&await certOk(sv.c,sv.s,room,LK.k)){
   try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
@@ -862,7 +865,7 @@ async function tAuth(pin,resume){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  TK={priv:kp.privateKey,pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),j:await crypto.subtle.exportKey('jwk',kp.privateKey)};
  /* غرفة ثابتة: المعلم بيفتح بنفسه بكوده السري — من غير السكرتارية */
- {const v=vGet(room);if(v&&fpOf(LK.k)!==v)return showGate('⛔','اللينك ده مش مطابق للحصة — افتح لينك المعلم الأصلي من السكرتارية.',1)}
+/* المفتاح بيتحفظ على الجهاز بس بعد ما كود المعلم يتأكد، وفكّه محتاج نفس الكود */
  const T0=tkGet(room);if(T0&&T0.k===LK.k){showGate('⏳','جارٍ فتح الحصة…');let rk=null;try{rk=await tkOpen(room,pin,T0.tk,LK.k)}catch(e){}
   if(!rk)return showGate('⛔','كود المعلم غير صحيح — اكتب الكود اللي بعتته لك السكرتارية وحاول تاني.',1);
   const c={r:room,p:TK.pub,e:Date.now()+30*864e5},sg=await sgn(rk,certMsg(c));TC={c,s:sg};
@@ -1242,7 +1245,6 @@ function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)|
 async function vProof(d){const c=conn;
  try{
   if(!(d&&d.c&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'T|'+room+'|'+vNonce,d.g)))throw 0;
-  {const v=vGet(room);if(v&&fpOf(LK.k)!==v)throw 0}
   if(conn!==c)return;vOk=1;let dv=null;if(DIRM){const k=await dirKey();if(k&&peer&&peer.id){const ts=Date.now();dv={ts,g:await sgn(k,'D|'+room+'|'+peer.id+'|'+ts)}}}if(conn!==c)return;c.send({t:'hello',n:dv?'👔 المدير':name,id:sid(),dv})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
@@ -2353,7 +2355,7 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
 function sxHome(){$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
  '<h3 style="margin-top:8px">📌 الغرف الثابتة <small style="color:#a9bccd;font-weight:400">— كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small></h3><div id="sxfx"></div>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk()}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
@@ -2424,7 +2426,7 @@ const fxUrl=(r,w)=>{const y=fxGet(r),n=y&&y.title?'&n='+encodeURIComponent(y.tit
 /* الغرف الثابتة القديمة: مفتاحها يتحسب من «كود الحصة + كود المعلم» زي الجديدة، عشان المعلم يقدر يفتح بالكودين بس */
 async function fxEnsureTk(){await new Promise(r=>setTimeout(r,1200));const a=fxList();let ch=0;for(const x of a)if(!x.dk){await new Promise(r=>setTimeout(r,0));try{if(SXS[x.room])continue;const K=await roomKey(x.room,x.pin);x.pub=K.pub;x.jwk=K.jwk;x.tk=await tkMake(x.room,x.pin,K.jwk);x.dk=1;ch=1}catch(e){}}if(ch){fxPut(a);fxRender()}}
 async function fxMake(title,tn,taken){const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);let rm=genCode();while(taken.has(rm))rm=genCode();taken.add(rm);
- const pin=String(1000+crypto.getRandomValues(new Uint32Array(1))[0]%9000),K=await roomKey(rm,pin);
+ const pin=await pinGen(rm),K=await roomKey(rm,pin);
  return{room:rm,pub:K.pub,jwk:K.jwk,pin,title,tn,fixed:1,dk:1,tk:await tkMake(rm,pin,K.jwk)}}
 const fxTaken=()=>new Set(fxList().map(x=>x.room).concat(sxList().map(x=>x.room)));
 async function fxAdd(){const t=prompt('اسم الغرفة (مثلاً: رياضيات 3 ثانوي):');if(t===null)return;const tn=prompt('اسم المعلم (اختياري):')||'';
@@ -2432,6 +2434,14 @@ async function fxAdd(){const t=prompt('اسم الغرفة (مثلاً: رياض
 async function fxBulk(){const n=parseInt(prompt('عدد الغرف الثابتة اللي عايزة تعمليها:','20'),10);if(!(n>0))return;if(n>60)return alert('أقصى عدد 60 غرفة');
  const a=fxList(),tk=fxTaken(),st0=a.length;for(let i=1;i<=n;i++)a.push(await fxMake('غرفة '+(st0+i),'',tk));fxPut(a);fxRender();alert('✓ اتعملت '+n+' غرفة ثابتة. عدّلي اسم كل غرفة واسم المعلم من ✏️، وخدي «نسخة احتياطية» عشان الأكواد ماتضيعش لو الجهاز اتغيّر.')}
 function fxEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;const t=prompt('اسم الغرفة:',x.title||'');if(t===null)return;const tn=prompt('اسم المعلم:',x.tn||'');if(tn===null)return;x.title=t.trim();x.tn=tn.trim();fxPut(a);fxRender()}
+/* كود معلم جديد (6 أرقام بيتأكد من نفسه) — المفتاح بيتغيّر معاه، فلازم يتبعت للمعلم من جديد */
+async function fxRenew(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;if(SXS[r])return alert('اقفلي الحصة دي الأول من «إنهاء» وبعدين جدّدي الكود.');
+ if(!confirm('كود معلم جديد للغرفة «'+(x.title||fmtCode(r))+'»؟ الكود القديم هيبطل، وهتبعتي الجديد للمعلم.'))return;
+ x.pin=await pinGen(r);const K=await roomKey(r,x.pin);x.pub=K.pub;x.jwk=K.jwk;x.tk=await tkMake(r,x.pin,K.jwk);x.dk=1;fxPut(a);fxRender();
+ if(confirm('✓ كود المعلم الجديد: '+x.pin+'\nتبعتيه للمعلم على واتساب دلوقتي؟'))fxWa(r,'t')}
+async function fxRenewAll(){const a=fxList().filter(x=>!/^\d{6}$/.test(String(x.pin))&&!SXS[x.room]);if(!a.length)return alert('كل الأكواد جديدة ✓');
+ if(!confirm('تجديد كود المعلم لـ '+a.length+' غرفة (اللي أكوادها قديمة)؟ هتبعتي الأكواد الجديدة للمعلمين بعدها.'))return;
+ const L=fxList();for(const x of L){if(/^\d{6}$/.test(String(x.pin))||SXS[x.room])continue;x.pin=await pinGen(x.room);const K=await roomKey(x.room,x.pin);x.pub=K.pub;x.jwk=K.jwk;x.tk=await tkMake(x.room,x.pin,K.jwk);x.dk=1}fxPut(L);fxRender();alert('✓ اتجدّدت الأكواد — ابعتي لكل معلم كوده الجديد من «📲 المعلم» أو «📲 ابعتي لكل معلم جدوله».')}
 function fxDel(r){const x=fxGet(r);if(!x)return;if(!confirm('حذف الغرفة الثابتة «'+(x.title||fmtCode(r))+'»؟ الكود بتاعها مش هيشتغل تاني.'))return;fxPut(fxList().filter(y=>y.room!==r));fxRender()}
 async function fxOpen(r){const x=fxGet(r);if(!x)return;if(SXS[r]){sxOpen(r);return}
  const s={room:x.room,pub:x.pub,jwk:x.jwk,pin:x.pin,title:x.title,tn:x.tn,ts:Date.now(),fixed:1};sxPut(sxList().filter(y=>y.room!==r).concat([s]));
@@ -2496,7 +2506,7 @@ setInterval(()=>{if(role=='c')schRender()},60000);
 function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();try{schRender()}catch(e){}
  if(!L.length){el.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش غرف ثابتة لسه — اعملي غرفة لكل معلم أو مجموعة، وابعتي الكود مرة واحدة بس.</div>';return}
  el.innerHTML=L.map(x=>{const on=!!SXS[x.room],r=x.room;return'<div class="sxr"><span style="display:flex;flex-direction:column;gap:2px"><b>'+(on?'🟢 ':'')+esc(x.title||'غرفة')+(x.tn?' <small style="color:#a9bccd">— '+esc(x.tn)+'</small>':'')+'</b><small style="direction:ltr;text-align:right;color:#e3c08d">'+fmtCode(r)+' · 🔑 '+esc(x.pin)+'</small></span><span class="bt">'+
-  '<button class="sxb '+(on?'d':'g')+'" onclick="fxOpen(\''+r+'\')">'+(on?'عرض':'▶ فتح الحصة')+'</button><button class="sxb d" title="واتساب للمعلم" onclick="fxWa(\''+r+'\',\'t\')">📲 المعلم</button><button class="sxb d" title="واتساب للطلاب" onclick="fxWa(\''+r+'\',\'s\')">📲 الطلاب</button><button class="sxb d" title="نسخ لينك الطلاب" onclick="fxCopy(\''+r+'\',\'s\')">🔗</button><button class="sxb d" title="مواعيد الحصص" onclick="schEdit(\''+r+'\')">🗓'+((x.sch||[]).length?' '+x.sch.length:'')+'</button><button class="sxb d" title="تعديل الاسم" onclick="fxEdit(\''+r+'\')">✏️</button><button class="sxb d" title="حذف" onclick="fxDel(\''+r+'\')">🗑</button></span></div>'}).join('')}
+  '<button class="sxb '+(on?'d':'g')+'" onclick="fxOpen(\''+r+'\')">'+(on?'عرض':'▶ فتح الحصة')+'</button><button class="sxb d" title="واتساب للمعلم" onclick="fxWa(\''+r+'\',\'t\')">📲 المعلم</button><button class="sxb d" title="واتساب للطلاب" onclick="fxWa(\''+r+'\',\'s\')">📲 الطلاب</button><button class="sxb d" title="نسخ لينك الطلاب" onclick="fxCopy(\''+r+'\',\'s\')">🔗</button><button class="sxb d" title="مواعيد الحصص" onclick="schEdit(\''+r+'\')">🗓'+((x.sch||[]).length?' '+x.sch.length:'')+'</button><button class="sxb '+(/^\d{6}$/.test(String(x.pin))?'d':'r')+'" title="كود معلم جديد" onclick="fxRenew(\''+r+'\')">🔄'+(/^\d{6}$/.test(String(x.pin))?'':' كود قديم')+'</button><button class="sxb d" title="تعديل الاسم" onclick="fxEdit(\''+r+'\')">✏️</button><button class="sxb d" title="حذف" onclick="fxDel(\''+r+'\')">🗑</button></span></div>'}).join('')}
 function sxLink(X,r){if(!/^https?:$/.test(location.protocol)||window!==top)return'';return location.origin+location.pathname+'?s='+X.room+'&k='+X.pub+'&r='+r}
 function sxFlash(X,m){X.msg=m;sxRender();setTimeout(()=>{X.msg='';sxRender()},2500)}
 async function sxCopyCode(r){const X=SXS[r];if(!X||!X.code)return;const c=fmtCode(X.code);try{await navigator.clipboard.writeText(c);sxFlash(X,'✓ تم نسخ الكود')}catch(e){prompt('انسخ الكود:',c)}}
