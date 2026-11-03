@@ -93,6 +93,8 @@ body[data-role=s] #wclr{display:none}
 #tb .grip{width:26px;cursor:grab;background:#35607f;touch-action:none;font-size:18px}
 .cb{position:absolute;width:180px;height:101px;border-radius:12px;overflow:hidden;border:2px solid #ffffff66;background:#000;box-shadow:0 6px 20px #000a;cursor:grab;touch-action:none;user-select:none}
 .cb[hidden]{display:none}
+/* كاميرا الطالب طولية عشان وشه يبان كامل */
+.cb.pt{width:120px;height:160px}
 .cb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .cb span{position:absolute;bottom:3px;right:6px;font-size:11px;background:#000a;padding:1px 7px;border-radius:8px;pointer-events:none}
 .cb button{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:7px;background:#000a;font-size:12px;padding:0}
@@ -312,7 +314,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
    <button class="c st" id="bc" onclick="cam()" data-i18n-t="cam" title="الكاميرا">📷</button>
    <button class="c tonly st" id="bs" onclick="scrBtn()" title="مشاركة الشاشة">🖥</button>
    <button class="c tonly" id="bsw" onclick="tSwap()" title="تبديل بين السبورة والشاشة">🔀</button>
-   <button class="c tonly" id="bdl" onclick="pgPdf()" title="تحميل السبورة كلها PDF (كل الصفحات)">📥</button>
+   <button class="c tonly" id="bdl" onclick="pgPdf()" title="تحميل السبورة PDF">📥</button>
    <button class="c st" id="bt" onclick="toolsMenu(this)" data-i18n-t="tools" title="الأدوات">🖍</button>
    <button class="c" id="bh" onclick="hand()" data-i18n-t="hand" title="رفع اليد">✋</button>
    <button class="c" id="bp" onclick="pmOpen()" data-i18n-t="pm" title="رسالة خاصة">💬</button>
@@ -387,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.08-a';
+const VER='2026.11.09-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1057,7 +1059,7 @@ function cam(){role=='t'?tCam():sCam()}
 async function sCam(){
  if(camS)return stopCam();
  if(!canCam)return alert('أوقف المعلم كاميرات الطلاب حالياً');
- let t;try{t=(await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:360},frameRate:{ideal:15}}})).getVideoTracks()[0]}catch(e){return micErr(e,'الكاميرا')}
+ let t;try{t=(await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:480},height:{ideal:640},aspectRatio:{ideal:.75},frameRate:{ideal:15}}})).getVideoTracks()[0]}catch(e){try{t=(await navigator.mediaDevices.getUserMedia({video:true})).getVideoTracks()[0]}catch(e2){return micErr(e2,'الكاميرا')}}
  if(!canCam||camS){t.stop();return}
  camS=t;camCall=peer.call('itqan-'+room,new MediaStream([t]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(camCall,3e5,'balanced'),1200);
  watchCall(camCall,'الكاميرا');showCam('me',new MediaStream([t]),'أنت',1);sys('📷 تم تشغيل الكاميرا وإرسالها للمعلم');ui()}
@@ -1154,9 +1156,20 @@ function smartShape(P,c,w){P=P.map(q=>[q[0],q[1]]);if(P.length<6)return null;let
   if(ee>.3)return{k:'pg',c,w,pts:V,a:V[0],b:V[1]}}
  if(ee<.3){if(Math.abs(rx-ry)/Math.max(rx,ry)<.18){const r=(rx+ry)/2;return{k:'c',c,w,a:[cx0,cy0],b:[cx0+r,cy0]}}return{k:'e',c,w,a:[x0,y0],b:[x1,y1]}}
  if(V.length>=5&&V.length<=8)return{k:'pg',c,w,pts:V,a:V[0],b:V[1]};return null}
+/* ممحاة الخط كله: أي خط أو شكل تلمسه بيتمسح كامل (ويرجع بالتراجع ↩) */
+let seDirty=0;
+function segD(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy;let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
+function strokeHit(s2,p,r){if(s2.e)return false;const R=r+(s2.w||4)/2;
+ if(s2.k=='p'){const P=s2.p;if(P.length==1)return dist(P[0],p)<R;for(let i=1;i<P.length;i++)if(segD(p,P[i-1],P[i])<R)return true;return false}
+ if(s2.k=='pg'){const P=s2.pts;for(let i=0;i<P.length;i++)if(segD(p,P[i],P[(i+1)%P.length])<R)return true;return false}
+ const a=s2.a,b=s2.b;if(s2.k=='c'){return Math.abs(dist(p,a)-dist(a,b))<R}
+ if(s2.k=='l'||s2.k=='a')return segD(p,a,b)<R;
+ const x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]);return p[0]>x0-R&&p[0]<x1+R&&p[1]>y0-R&&p[1]<y1+R&&(Math.min(Math.abs(p[0]-x0),Math.abs(p[0]-x1))<R||Math.min(Math.abs(p[1]-y0),Math.abs(p[1]-y1))<R||s2.k=='e')}
+const ERU=[];let seLast=0;
+function seHit(p){let hit=0;for(let i=strokes.length-1;i>=0;i--){if(strokeHit(strokes[i],p,12/Math.max(.2,S)*.5+6)){const g=ERU[ERU.length-1];if(g&&g.open)g.L.push(strokes[i]);strokes.splice(i,1);hit=1}}if(hit){seDirty=1;seLast=1;rebuild()}}
 function wclr(){if(!strokes.length)return;CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];rebuild();bc({t:'wbclear'})}
 const REDO=[];
-function undo(){if(strokes.length){REDO.push(strokes.pop());if(REDO.length>60)REDO.shift();rebuild();bc({t:'undo'})}else if(CLR.length){strokes=CLR.pop();rebuild();bc({t:'restore',s:strokes})}}
+function undo(){if(seLast&&ERU.length){const g=ERU.pop();strokes.push(...g.L.reverse());seLast=ERU.length>0;rebuild();bc({t:'restore',s:strokes});return}if(strokes.length){REDO.push(strokes.pop());if(REDO.length>60)REDO.shift();rebuild();bc({t:'undo'})}else if(CLR.length){strokes=CLR.pop();rebuild();bc({t:'restore',s:strokes})}}
 /* إعادة (Redo): بيرجّع آخر حاجة اتشالت بالتراجع */
 function redo(){const s2=REDO.pop();if(!s2)return;strokes.push(s2);paint(s2);redraw();bc({t:'sh',s:s2})}
 function tBg(){st.bg=st.bg?0:1;bst();ui()}
@@ -1232,7 +1245,7 @@ function sData(d){
  else if(d.t=='init'){admitted=1;if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){chat.push(d)}
  else if(d.t=='roster'){roster=d}
- else if(d.t=='st'){st=d.st;tmFix();ui()}
+ else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
  else if(d.t=='pm'&&typeof d.m=='string'){pmGotS(d)}else if(d.t=='pma'){pmAck(pmS,d.ts);pmRender()}else if(d.t=='remic'){micResend()}else if(d.t=='att'){attn()}else if(d.t=='stk'){showStk(d)}else if(d.t=='poll'){showPoll(d.q)}
  else if(d.t=='pollend'){$('#poll').hidden=true}
@@ -1330,7 +1343,7 @@ function ui(){
  $('#v').style.visibility=st.scr?'visible':'hidden';
  const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
- layoutCams();tmPaint();{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
+ layoutCams();tmPaint();try{qChip()}catch(e){}{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
@@ -1340,7 +1353,7 @@ function ui(){
 
 /* ---------- السبورة ---------- */
 const wb=$('#wb'),cx=wb.getContext('2d',{desynchronized:true})||wb.getContext('2d'),lay=document.createElement('canvas'),lx=lay.getContext('2d');
-const lay2=document.createElement('canvas'),lx2=lay2.getContext('2d');let hcol='#ffe600';
+const lay2=document.createElement('canvas'),lx2=lay2.getContext('2d');let hcol='#ffe600',hwd=5,ewd=5;
 const LW=1600,LH=900,RL=800,RH=84,PR=300,COLS=['#1a1a2e','#d4605a','#2563eb','#16a34a','#f59e0b','#7c3aed','#facc15','#ffffff'];
 let S=1,OX=0,OY=0,tool='pen',col=COLS[0],wd=5,cur=null,pv=null,hov=null,drag=null,snap=null,pend=[],lastSend=0,dirty=0,
  ins={r:{on:0,x:800,y:450,a:0},p:{on:0,x:800,y:560,a:0},c:{x:0,y:0,r:0,a:0,armed:0}};
@@ -1401,7 +1414,7 @@ function bgCache(W,H){const k=[W,H,S,OX,OY,st.bg,st.bt,st.wb,PBG?PBG.src.length:
  bgc.width=W;bgc.height=H;bgx.setTransform(1,0,0,1,0,0);bgx.clearRect(0,0,W,H);drawBgT(bgx);if(PBG&&PBG.complete&&PBG.naturalWidth&&st.wb){bgx.setTransform(S,0,0,S,OX,OY);bgx.drawImage(PBG,0,0,LW,LH);bgx.setTransform(1,0,0,1,0,0)}}
 function redraw(){if(rqF){cancelAnimationFrame(rqF);rqF=0}const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);bgCache(W,H);cx.drawImage(bgc,0,0);if(st.wb){cx.setTransform(S,0,0,S,OX,OY);drawNotes(cx,null,role=='t'&&tool=='note');cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
  cx.setTransform(S,0,0,S,OX,OY);if(pv)drawShape(cx,pv);drawIns(cx);
- if(role=='t'&&tool=='era'&&hov){cx.beginPath();cx.arc(hov[0],hov[1],wd*3,0,7);cx.strokeStyle='#888';cx.lineWidth=2;cx.stroke()}}
+ if(role=='t'&&(tool=='era'||tool=='se')&&hov){cx.beginPath();cx.arc(hov[0],hov[1],tool=='se'?12:ewd*3,0,7);cx.strokeStyle='#888';cx.lineWidth=2;cx.stroke()}}
 /* التقاط المسطرة والمنقلة */
 function cands(){const o=[];
  if(ins.r.on){const r=ins.r,d=[Math.cos(r.a),Math.sin(r.a)],n=[-d[1],d[0]],L=RL/2,h=RH/2,P=(u,v)=>[r.x+d[0]*u+n[0]*v,r.y+d[1]*u+n[1]*v];o.push({s:P(-L,-h),e:P(L,-h)},{s:P(-L,h),e:P(L,h)})}
@@ -1424,7 +1437,8 @@ function wbCancel(){if(role!='t'){sdr=null;sPrev=null;redraw();return}if(!drag)r
  drag=null;cur=null;pv=null;rebuild()}
 function flush(f){if(pend.length&&(f||Date.now()-lastSend>40)){bc({t:'sp',p:pend});pend=[];lastSend=Date.now()}}
 function down(p){
- if(tool!='mv'&&tool!='note')REDO.length=0;
+ if(tool=='se'){drag={w:'se'};ERU.push({L:[],open:1});if(ERU.length>30)ERU.shift();seHit(p);return}
+ if(tool!='mv'&&tool!='note'){REDO.length=0;seLast=0}
  if(tool=='note'){const n=noteAt(p);if(!n){noteNew(p);return}const[x,y,w,h]=nRect(n);
   if(Math.hypot(p[0]-(x+14),p[1]-(y+13))<16){if(confirm('تمسح الورقة دي باللي مكتوب عليها؟'))noteDel(n);redraw();return}
   if(p[0]>x+w-26&&p[1]>y+h-26){drag={w:'nrs',n,ox:p[0]-w,oy:p[1]-h};return}
@@ -1435,11 +1449,12 @@ function down(p){
   k.col=col;cur={k:'p',c:col,w:wd,e:0,p:[[k.x+k.r*Math.cos(k.a),k.y+k.r*Math.sin(k.a)]]};strokes.push(cur);penSeg(lx,cur,0);bc({t:'sb',s:cur});drag={w:'ca',last:k.a};redraw();return}
  if(tool=='pen'||tool=='era'||tool=='hl'||tool=='sm'){
   snap=tool=='pen'?pickSnap(p):null;const q=snap?snapTo(snap,p):p;
-  cur={k:'p',c:tool=='hl'?hcol:col,w:tool=='era'?wd*6:tool=='hl'?wd*3+8:wd,e:tool=='era'?1:0,p:[q]};if(tool=='hl')cur.h=1;{const nn=noteAt(q);if(nn)cur.nid=nn.id}if(tool=='sm')cur.sm=1;strokes.push(cur);penSeg(lx,cur,0);bc({t:'sb',s:cur});drag={w:'pen'};redraw();return}
+  cur={k:'p',c:tool=='hl'?hcol:col,w:tool=='era'?ewd*6:tool=='hl'?hwd*3+8:wd,e:tool=='era'?1:0,p:[q]};if(tool=='hl')cur.h=1;{const nn=noteAt(q);if(nn)cur.nid=nn.id}if(tool=='sm')cur.sm=1;strokes.push(cur);penSeg(lx,cur,0);bc({t:'sb',s:cur});drag={w:'pen'};redraw();return}
  snap=(tool=='l'||tool=='a')?pickSnap(p):null;const q=snap?snapTo(snap,p):p;drag={w:'shape'};pv={k:tool,c:col,w:wd,a:q,b:q};redraw()}
 function move(p){
- if(!drag){if(tool=='era')redrawSoon();return}
+ if(!drag){if(tool=='era'||tool=='se')redrawSoon();return}
  const w=drag.w;
+ if(w=='se'){seHit(p);redrawSoon();return}
  if(w=='pen'){const q=snap?snapTo(snap,p):p,l=cur.p[cur.p.length-1];if(dist(q,l)<1)return;cur.p.push(q);penSeg(lx,cur,cur.p.length-1);pend.push(q);flush(false);redrawSoon()}
  else if(w=='shape'){pv.b=snap?snapTo(snap,p):p;redrawSoon()}
  else if(w=='cs'){const k=ins.c;k.r=dist(p,[k.x,k.y]);k.a=Math.atan2(p[1]-k.y,p[0]-k.x);sendIns();redraw()}
@@ -1456,6 +1471,7 @@ function up(){
  else if(w=='shape'){const s=pv;pv=null;if(dist(s.a,s.b)>3){strokes.push(s);paint(s);bc({t:'sh',s})}}
  else if(w=='cs'){ins.c.armed=ins.c.r>8?1:0;sendIns()}
  else if(w=='nmv'||w=='nrs'){drag=null;cur=null;bc({t:'restore',s:strokes});noteSync(1);redraw();return}
+ else if(w=='se'){drag=null;const g=ERU[ERU.length-1];if(g){g.open=0;if(!g.L.length)ERU.pop()}if(seDirty){seDirty=0;bc({t:'restore',s:strokes})}redraw();return}
  drag=null;cur=null;redraw()}
 /* قلم الآيباد/التابلت: الضغط بيتحفظ مع كل نقطة فالخط بيتخن ويرفع زي القلم الحقيقي */
 function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width,P=[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S];if(e.pointerType=='pen'&&e.pressure>0&&tool=='pen'&&e.type!='pointerleave')P.push(Math.round(e.pressure*100)/100);return P}
@@ -1469,15 +1485,19 @@ document.addEventListener('fullscreenchange',()=>setTimeout(fit,100));
 /* ===== شريط أدوات السبورة: صف واحد مرتّب، وكل مجموعة في قايمة صغيرة بتفتح بضغطة ===== */
 const SHP=[['l','╱','خط مستقيم'],['a','➜','سهم'],['r','▭','مستطيل'],['c','◯','دائرة'],['e','⬭','شكل بيضاوي'],['t','△','مثلث'],['rt','◺','مثلث قائم'],['h','⬡','سداسي']];
 const HCOLS=['#ffe600','#7CFC00','#ff7ad9','#4cc9ff'];
+/* ===== 7+8) ضغطة = اختيار الأداة، ضغطتين (أو ضغطة وهي مختارة) = قايمة اللون والسُمك (أو نوع الممحاة) ===== */
+let ttLast={k:'',t:0};
+function toolTap(btn,k){const n=Date.now(),grp=k=='se'?'era':k,cur=tool=='se'?'era':tool,dbl=(ttLast.k===grp&&n-ttLast.t<450)||cur===grp;ttLast={k:grp,t:n};
+ if(dbl&&(grp=='pen'||grp=='hl'||grp=='era')){if(tool!==k&&!(grp=='era'&&(tool=='era'||tool=='se')))setTool(k);tbPop(btn,grp=='pen'?'colp':grp=='hl'?'colh':'era');return}setTool(k)}
 function setTool(k){if(k=='comp'&&tool=='comp'){ins.c={x:0,y:0,r:0,a:0,armed:0};sendIns();redraw()}tool=k;tbPopX();refTb()}
 function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
  const B=(h,ti,f,c)=>{const b=document.createElement('button');b.innerHTML=h;b.title=ti;if(c)b.className=c;b.onclick=f;t.appendChild(b);return b},
   SP=()=>{const i=document.createElement('i');i.className='sp';t.appendChild(i)};
  const gr=B('⠿','اسحب لتحريك الشريط (يمكن وضعه خارج السبورة)',()=>{},'grip');mkDrag(t,'tb',gr);
- B('✏️','قلم',()=>setTool('pen')).dataset.tool='pen';
+ B('✏️','قلم — اضغط مرتين للون والسُمك',function(){toolTap(this,'pen')}).dataset.tool='pen';
  B('✨','القلم الذكي — ارسم شكل بإيدك (خط، دائرة، مربع، مثلث…) ويتحوّل لشكل منتظم',()=>setTool('sm')).dataset.tool='sm';
- B('🖊','هايلايتر',()=>setTool('hl')).dataset.tool='hl';
- B('🧽','ممحاة',()=>setTool('era')).dataset.tool='era';
+ B('🖊','هايلايتر — اضغط مرتين للون والسُمك',function(){toolTap(this,'hl')}).dataset.tool='hl';
+ B('🧽','ممحاة — اضغط مرتين لاختيار: ممحاة جزء / ممحاة الخط كله',function(){toolTap(this,tool=='se'?'se':'era')}).dataset.tool='era';
  B('▭','أشكال',function(){tbPop(this,'shp')},'dd').dataset.grp='shp';
  B('📐','المسطرة والمنقلة والبرجل',function(){tbPop(this,'ins')},'dd').dataset.grp='ins';
  B('🗒️','ورقة ملاحظات مسطّرة — اضغط على أي مكان في السبورة أو الشاشة المشاركة، واكتب عليها بالقلم',()=>setTool('note')).dataset.tool='note';
@@ -1494,6 +1514,13 @@ function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=
   W=(r,h,f,danger)=>{const b=document.createElement('button');b.className='wide'+(danger?' dg':'');b.innerHTML=h;b.onclick=()=>{m.hidden=true;f()};r.append(b);return b};
  if(k=='shp'){const r=R('الأشكال');SHP.forEach(([q,i,ti])=>I(r,i,ti,()=>setTool(q),tool==q))}
  else if(k=='ins'){const r=R('أدوات القياس');I(r,'📏','مسطرة',()=>{insTog('r');tbPop(btn,k);tbPop(btn,k)},ins.r.on);I(r,'📐','منقلة',()=>{insTog('p');tbPop(btn,k);tbPop(btn,k)},ins.p.on);I(r,'🧭','برجل (اسحب لتحديد نصف القطر ثم ارسم القوس)',()=>setTool('comp'),tool=='comp');I(r,'✥','تحريك المسطرة والمنقلة',()=>setTool('mv'),tool=='mv')}
+ else if(k=='colp'){let r=R('لون القلم');COLS.forEach(c=>{const b=I(r,'','لون',()=>{col=c;tool='pen';tbPopX();refTb()},c==col,'sw');b.style.background=c});
+  r=R('السُمك');[[2,'رفيع'],[5,'متوسط'],[10,'سميك'],[16,'عريض']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:'+col+';width:24px;height:'+Math.max(2,w*.8)+'px;border:1px solid #fff5"></i>',ti,()=>{wd=w;tool='pen';tbPopX();refTb()},wd==w))}
+ else if(k=='colh'){let r=R('لون الهايلايتر');HCOLS.forEach(c=>{const b=I(r,'','هايلايتر',()=>{hcol=c;tool='hl';tbPopX();refTb()},c==hcol,'sw sq');b.style.background=c});
+  r=R('سُمك الهايلايتر');[[3,'رفيع'],[6,'متوسط'],[10,'عريض']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:3px;background:'+hcol+';opacity:.7;width:24px;height:'+Math.max(4,w*1.6)+'px"></i>',ti,()=>{hwd=w;tool='hl';tbPopX();refTb()},hwd==w))}
+ else if(k=='era'){const r=R('الممحاة');const W2=(h,ti,f,on)=>{const b=document.createElement('button');b.className='wide';b.innerHTML=h;b.title=ti;if(on)b.classList.add('on');b.onclick=()=>{tbPopX();f()};r.append(b)};
+  W2('🧽 ممحاة جزء — تمسح المكان اللي بتعدّي عليه','',()=>setTool('era'),tool=='era');W2('🧹 ممحاة الخط كله — المس الخط يتمسح كامل','',()=>setTool('se'),tool=='se');
+  const r2=R('سُمك الممحاة');[[3,'صغيرة'],[6,'متوسطة'],[12,'كبيرة']].forEach(([w,ti])=>I(r2,'<i style="display:block;border-radius:50%;background:#fff;width:'+(6+w*1.6)+'px;height:'+(6+w*1.6)+'px"></i>',ti,()=>{ewd=w;if(tool!='se')tool='era';tbPopX();refTb()},ewd==w))}
  else if(k=='col'){let r=R('لون القلم');COLS.forEach(c=>{const b=I(r,'','لون',()=>{col=c;if(tool=='hl'||tool=='era'||tool=='note')tool='pen';tbPopX();refTb()},c==col&&tool!='hl','sw');b.style.background=c});
   r=R('الهايلايتر');HCOLS.forEach(c=>{const b=I(r,'','هايلايتر',()=>{hcol=c;tool='hl';tbPopX();refTb()},tool=='hl'&&c==hcol,'sw sq');b.style.background=c});
   r=R('السُمك');[[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:#fff;width:22px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;tbPopX();refTb()},wd==w))}
@@ -1504,7 +1531,7 @@ function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=
  const b=btn.getBoundingClientRect();m.hidden=false;const w=m.offsetWidth,h=m.offsetHeight;
  m.style.left=Math.max(6,Math.min(b.left+b.width/2-w/2,innerWidth-w-6))+'px';m.style.top=(b.bottom+8+h<innerHeight?b.bottom+8:Math.max(6,b.top-h-8))+'px'}
 function refTb(){const T0=$('#tb');if(!T0)return;
- T0.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool==tool));
+ T0.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool==tool||(b.dataset.tool=='era'&&tool=='se')));{const eb=T0.querySelector('[data-tool=era]');if(eb)eb.innerHTML=tool=='se'?'🧹':'🧽'}
  const sh=SHP.find(x=>x[0]==tool),gs=T0.querySelector('[data-grp=shp]');if(gs){gs.classList.toggle('on',!!sh);gs.innerHTML=sh?sh[1]:'▭'}
  const gi=T0.querySelector('[data-grp=ins]');if(gi)gi.classList.toggle('on',tool=='comp'||tool=='mv'||!!ins.r.on||!!ins.p.on);
  const d=T0.querySelector('.cdot');if(d){d.style.background=tool=='hl'?hcol:col;d.style.width=d.style.height=(8+wd*1.3)+'px'}
@@ -1531,7 +1558,7 @@ function showCam(id,stream,label,mirror){
  if(!b){const el=document.createElement('div');el.className='cb';el.innerHTML='<video autoplay playsinline muted></video><span></span><button title="تكبير / تصغير">⤢</button>';
   el.querySelector('span').textContent=label;if(mirror)el.querySelector('video').style.transform='scaleX(-1)';
   if(!FP[id])FP[id]=defPos(id);
-  $('#fl').appendChild(el);b=boxes[id]={el,v:el.querySelector('video'),mode:id=='T'?'auto':'small',mirror};
+  if(id.startsWith('s:')||(id=='me'&&role=='s'))el.classList.add('pt');$('#fl').appendChild(el);b=boxes[id]={el,v:el.querySelector('video'),mode:id=='T'?'auto':'small',mirror};
   el.querySelector('button').onclick=()=>camMode(id);
   el.addEventListener('pointerdown',e=>{b.x=e.clientX;b.y=e.clientY});
   el.addEventListener('pointerup',e=>{if(e.target.tagName=='BUTTON'||Math.hypot(e.clientX-b.x,e.clientY-b.y)>5)return;const n=Date.now();if(n-(b.t||0)<350){b.t=0;camMode(id)}else b.t=n});
@@ -1543,7 +1570,7 @@ function hideCam(id){const b=boxes[id];if(!b)return;b.el.remove();delete boxes[i
 function camMode(id){const b=boxes[id];if(!b)return;b.mode=id=='T'?(isBigT()?'small':'big'):(b.mode=='big'?'small':'big');layoutCams()}
 function layoutCams(){const big=isBigT();document.body.classList.toggle('wbm',!!(st.wb||st.scr));$('#cv').style.display=big?'block':'none';$('#cvb').hidden=!big;
  const vis=[];
- Object.entries(boxes).forEach(([id,b])=>{const hide=id=='T'&&(!st.cam||big),lg=id!='T'&&b.mode=='big';b.hide=hide;b.lg=lg;b.el.hidden=hide;b.el.classList.toggle('big',lg);b.el.style.width=lg?'360px':'';b.el.style.height=lg?'203px':'';if(!hide&&!lg)vis.push(id)});
+ Object.entries(boxes).forEach(([id,b])=>{const hide=id=='T'&&(!st.cam||big),lg=id!='T'&&b.mode=='big';b.hide=hide;b.lg=lg;b.el.hidden=hide;b.el.classList.toggle('big',lg);{const pt=b.el.classList.contains('pt');b.el.style.width=lg?(pt?'270px':'360px'):'';b.el.style.height=lg?(pt?'360px':'203px'):''}if(!hide&&!lg)vis.push(id)});
  Object.entries(boxes).forEach(([id,b])=>{if(b.hide)return;if(!FP[id]||!FP[id].u)FP[id]=defPos(id,vis.indexOf(id));place(b.el,id)});
  if(st.wb&&$('#wb').clientWidth)fit()}
 function relayout(){layoutCams();if(FE.tb&&!$('#tb').hidden)place($('#tb'),'tb')}
@@ -1601,7 +1628,7 @@ function aiShare(){const v=$('#ai_out').value.trim();if(!v)return;const parts=('
  parts.forEach(m=>{const o={n:name+' (المعلم)',m,ts:Date.now()};chat.push(o);bc({t:'chat',...o})});render();aiSt('أُرسل للطلاب ✓')}
 function insTog(k){ins[k].on=ins[k].on?0:1;if(ins[k].on)tool='mv';refTb();sendIns();redraw()}
 </script>
-<div id="calc" hidden><div class="ch"><b data-i18n="calc">الحاسبة العلمية</b><span><button id="cdm" onclick="calcMode()"></button><button onclick="calcT()">✕</button></span></div><input id="cin" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sin(30)+2^3"><div id="cout"></div><div id="cks"></div><div id="chs"></div></div>
+<div id="calc" hidden><div class="ch"><b data-i18n="calc">الحاسبة العلمية</b><span><button id="cdm" onclick="calcMode()"></button><button onclick="calcT()">✕</button></span></div><input id="cin" dir="ltr" autocomplete="off" spellcheck="false" inputmode="none" placeholder="sin(30)+2^3"><div id="cout"></div><div id="cks"></div><div id="chs"></div></div>
 <div id="stk" hidden><div class="ch" style="display:flex;justify-content:space-between"><b id="stkt"></b><button onclick="$('#stk').hidden=true" style="background:#27496b;border-radius:8px;padding:2px 9px">✕</button></div><div class="g" id="stkg"></div><input id="stkm" maxlength="80" data-i18n-p="custom" placeholder="رسالة تشجيع قصيرة (اختياري)"></div>
 <div id="pm" hidden><div class="ch"><b id="pmt"></b><button onclick="$('#pm').hidden=true">✕</button></div><div id="pml"></div><div class="pr"><input id="pmi" maxlength="500" autocomplete="off" data-i18n-p="pmPh" placeholder="اكتب رسالة خاصة..."><button onclick="pmSend()" data-i18n="send">إرسال</button></div></div>
 <div id="tmp" hidden><div class="ch"><b>⏱ المؤقت</b><button onclick="$('#tmp').hidden=true">✕</button></div><div class="md"><button id="tmmt" onclick="tmMode('t')">⏳ مؤقت تنازلي</button><button id="tmmw" onclick="tmMode('w')">⏱ ساعة إيقاف</button></div><div class="big" id="tmbig">00:00</div><div class="ps" id="tmps"><button onclick="tmSet(1)">1 د</button><button onclick="tmSet(3)">3 د</button><button onclick="tmSet(5)">5 د</button><button onclick="tmSet(10)">10 د</button><button onclick="tmSet(15)">15 د</button><input id="tmin" type="number" min="1" max="180" inputmode="numeric" placeholder="دقايق" onchange="tmSet(+this.value)"></div><div class="ac"><button id="tmgo" onclick="tmGo()">▶ ابدأ</button><button onclick="tmReset()">↺ من الأول</button></div><button class="w" style="background:transparent;border:1px solid #27496b;padding:7px" onclick="tmHide()">إخفاء من على الشاشة</button></div>
@@ -1674,7 +1701,7 @@ function tmGo(){const t=st.tm;
  bst();tmPaint()}
 function tmReset(){const t=st.tm;if(t){t.b=0;t.t0=null;bst()}tmPaint()}
 function tmHide(){st.tm=null;bst();tmPaint();$('#tmp').hidden=true}
-function calcT(){const c=$('#calc');c.hidden=!c.hidden;if(!c.hidden)$('#cin').focus()}
+function calcT(){const c=$('#calc');c.hidden=!c.hidden;if(!c.hidden&&!MOB)$('#cin').focus()}
 function calcMode(){cdeg=cdeg?0:1;calcUi()}
 function calcUi(){const b=$('#cdm');if(b)b.textContent=cdeg?'DEG':'RAD'}
 function calcGo(){const i=$('#cin'),o=$('#cout');try{const v=calcEval(i.value,cdeg);o.style.color='#7fe0d2';o.textContent='= '+v;chist.unshift(i.value+' = '+v);chist=chist.slice(0,6);$('#chs').textContent=T('hist')+': '+chist.join('  |  ')}catch(e){o.style.color='#ff8a8a';o.textContent=e.message=='div0'?T('div0'):T('inv')}}
@@ -1689,16 +1716,18 @@ function bgMenu(btn){let m=$('#bgm');if(m&&!m.hidden){m.hidden=true;return}
  m.textContent='';['sq','blank','lines','grid','xy'].forEach(k=>{const b=document.createElement('button');b.textContent=((st.bt||'blank')==k?'✓ ':'')+T('bg_'+k);b.onclick=()=>{setBgT(k);m.hidden=true};m.append(b)});
  const r=btn.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=Math.max(6,Math.min(r.left,innerWidth-190))+'px';m.hidden=false}
 /* الخلفية تُرسم في طبقة العرض خلف الرسم، فلا تتأثر بالممحاة ولا تمسح الرسومات */
+/* الورقة (سطور / مربعات / شبكة / إحداثيات) بتملا السبورة كلها مهما كان مقاسها أو اتكبّرت، مش المستطيل الأساسي بس */
 function drawBgT(c){if(!st.bg||!st.wb)return;const k=st.bt||'blank';if(k=='blank'||!S)return;
- c.save();c.setTransform(S,0,0,S,OX,OY);c.beginPath();c.rect(0,0,LW,LH);c.clip();c.lineWidth=1/S;
- const G=(n,col,x0,y0,v,h)=>{c.strokeStyle=col;c.beginPath();if(v!==0)for(let x=x0%n;x<=LW;x+=n){c.moveTo(x,0);c.lineTo(x,LH)}if(h!==0)for(let y=y0%n;y<=LH;y+=n){c.moveTo(0,y);c.lineTo(LW,y)}c.stroke()};
+ const cw=c.canvas.width,ch=c.canvas.height,X0=(0-OX)/S,X1=(cw-OX)/S,Y0=(0-OY)/S,Y1=(ch-OY)/S;
+ c.save();c.setTransform(S,0,0,S,OX,OY);c.lineWidth=1/S;
+ const G=(n,col,ox,oy,v,h)=>{c.strokeStyle=col;c.beginPath();if(v!==0)for(let x=ox+Math.floor((X0-ox)/n)*n;x<=X1;x+=n){c.moveTo(x,Y0);c.lineTo(x,Y1)}if(h!==0)for(let y=oy+Math.floor((Y0-oy)/n)*n;y<=Y1;y+=n){c.moveTo(X0,y);c.lineTo(X1,y)}c.stroke()};
  if(k=='sq')G(20,'#d3e3f3',0,0);else if(k=='grid')G(50,'#c4cfdd',0,0);else if(k=='lines')G(44,'#b9c8e2',60,60,0,1);
- else if(k=='xy'){G(50,'#dfe6ef',0,0);const X=LW/2,Y=LH/2;c.strokeStyle='#111';c.lineWidth=2.4/S;c.beginPath();c.moveTo(0,Y);c.lineTo(LW,Y);c.moveTo(X,0);c.lineTo(X,LH);c.stroke();
-  c.fillStyle='#111';c.beginPath();c.moveTo(LW-2,Y);c.lineTo(LW-16,Y-6);c.lineTo(LW-16,Y+6);c.closePath();c.moveTo(X,2);c.lineTo(X-6,16);c.lineTo(X+6,16);c.closePath();c.fill();
+ else if(k=='xy'){G(50,'#dfe6ef',0,0);const X=LW/2,Y=LH/2;c.strokeStyle='#111';c.lineWidth=2.4/S;c.beginPath();c.moveTo(X0,Y);c.lineTo(X1,Y);c.moveTo(X,Y0);c.lineTo(X,Y1);c.stroke();
+  c.fillStyle='#111';c.beginPath();c.moveTo(X1-2,Y);c.lineTo(X1-16,Y-6);c.lineTo(X1-16,Y+6);c.closePath();c.moveTo(X,Y0+2);c.lineTo(X-6,Y0+16);c.lineTo(X+6,Y0+16);c.closePath();c.fill();
   c.font='13px sans-serif';c.fillStyle='#444';c.direction='ltr';c.textAlign='center';
-  for(let i=-15;i<=15;i++)if(i)c.fillText(String(i),X+i*50,Y+16);
-  c.textAlign='right';for(let j=-8;j<=8;j++)if(j)c.fillText(String(j),X-6,Y-j*50+4);c.fillText('0',X-6,Y+16);
-  c.font='italic 16px serif';c.textAlign='left';c.fillText('x',LW-14,Y-10);c.fillText('y',X+10,18)}
+  for(let i=Math.ceil((X0-X)/50);i<=Math.floor((X1-X)/50);i++)if(i)c.fillText(String(i),X+i*50,Y+16);
+  c.textAlign='right';for(let j=Math.ceil((Y-Y1)/50);j<=Math.floor((Y-Y0)/50);j++)if(j)c.fillText(String(j),X-6,Y-j*50+4);c.fillText('0',X-6,Y+16);
+  c.font='italic 16px serif';c.textAlign='left';c.fillText('x',X1-14,Y-10);c.fillText('y',X+10,Y0+18)}
  c.restore()}
 /* نغمة قصيرة تنبّه المعلم بوجود طالب في غرفة الانتظار */
 let _ac,_lc=0;const _AC=window.AudioContext||window.webkitAudioContext;
@@ -1823,6 +1852,9 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
  if(t.sus)tp.push('محرّك الصوت اتوقف '+t.sus+' مرة (لحد ما المعلم لمس الشاشة)');if(t.reset)tp.push('الصوت اتظبط بعد مكالمة '+t.reset+' مرة');if(t.heal)tp.push('المايك اتفتح تاني '+t.heal+' مرة');
  if(t.peer)tp.push('خادم الغرف فصل '+t.peer+' مرة');if(t.mic)tp.push('❌ مشكلة مايك: '+t.mic);
  L.push('');L.push('👨‍🏫 المعلم: '+(tp.length?tp.join(' — '):'✅ مفيش مشاكل'));
+ {const up=(typeof RUPS!='undefined'?RUPS:[]),done=(typeof RDONE!='undefined'?RDONE:[]),on=!!(recSelfEng||recOwner);
+  L.push('');L.push('🎥 التسجيل على Drive: '+(recOwner=='sec'?'بيتسجّل عند السكرتارية':on?'شغّال على جهاز المعلم':done.length?'اتسجّل':'❌ مااتسجّلش في الحصة دي'));
+  done.forEach(d=>L.push('   ✅ اترفع: '+d.n));up.forEach(u=>L.push('   ⏳ '+u.meta.name+' — اترفع منه '+recMB(u.meta.off||0)+' ميجا'+(u.err?' (آخر مشكلة: '+u.err+')':'')+' — الباقي بيكمّل رفع لوحده'))}
  if(H.ev.length){L.push('');L.push('🕒 سجل الأحداث:');H.ev.slice(-50).forEach(e=>L.push(' '+e.t+'  '+e.m))}
  return L.join('\n')+'\n\n'}
 function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
@@ -2143,7 +2175,7 @@ function noteInk(id,dx,dy){strokes.forEach(s=>{if(s.nid!==id)return;if(s.p)s.p.f
 function noteDel(n){const L=NOTES();L.splice(L.indexOf(n),1);strokes=strokes.filter(s=>s.nid!==n.id);rebuild();bc({t:'restore',s:strokes});noteSync(1)}
 function pgSave(){pgInit();WPG[pi].s=strokes}
 function pgImg(u){if(!u)return null;const i=new Image();i.onload=()=>redraw();i.src=u;return i}
-function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});bc({t:'pbg',img:WPG[pi].bg||''});noteSync(1);refTb();ui()}
+function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});bc({t:'pbg',img:WPG[pi].bg||''});noteSync(1);refTb();ui();try{qChip()}catch(e){}}
 function pgShow(){strokes=WPG[pi].s;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
 function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
 function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||null});pi++;pgShow()}
@@ -2168,13 +2200,21 @@ function pgImport(){if(role!='t')return;const inp=document.createElement('input'
   let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=out.shift()}else{WPG.splice(pi+1,0,{s:[],bg:out.shift()});at=pi+1}
   out.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();sys('📄 اتضافت الصفحات للسبورة — اتنقّل بينهم بالأسهم ▶ ◀ في شريط الأدوات')};
  inp.click()}
-async function pgPdf(){if(role!='t')return;pgSave();sys('⏳ جارٍ تجهيز ملف PDF…');
- try{if(!window.jspdf)await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(e){return alert('تعذّر تحميل أداة PDF — تأكد من الإنترنت')}
+/* الطالب: بنحفظ كل صفحة شافها (رسمها وخلفيتها وملاحظاتها) عشان يقدر يحمّل السبورة كلها PDF */
+const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PBG&&PBG.src||null,n:SNOTES}}
+/* حفظ الملف بطريقة مضمونة: على الآيفون/الآيباد بنفتح «مشاركة» (حفظ في الملفات)، وغير كده تحميل عادي */
+async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
+ if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
+async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[]}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
+ if(!L.length)return;sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}
+ try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
  const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'px',format:[LW,LH],hotfixes:['px_scaling']}),keep=[strokes,PBG];
- for(let i=0;i<WPG.length;i++){window._xN=WPG[i].n||[];strokes=WPG[i].s;PBG=WPG[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=WPG[i].bg}):null;rebuild();
+ const wasWb=st.wb;st.wb=1;
+ for(let i=0;i<L.length;i++){window._xN=L[i].n||[];strokes=L[i].s;PBG=L[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=L[i].bg}):null;rebuild();
   const full=wbCanvas(),c=document.createElement('canvas');c.width=LW;c.height=LH;c.getContext('2d').drawImage(full,OX,OY,LW*S,LH*S,0,0,LW,LH);
   if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,LW,LH)}
- window._xN=null;strokes=keep[0];PBG=keep[1];rebuild();doc.save('itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+ window._xN=null;strokes=keep[0];PBG=keep[1];st.wb=wasWb;rebuild();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
 /* ===== 📖 المصحف على السبورة =====
    المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
    يشرح ويكتب ويلوّن عليها بالقلم، والطلاب بيشوفوها. النص من موسوعة القرآن الكريم (quranenc.com) — رخصة CC BY-SA 4.0 */
@@ -2205,8 +2245,16 @@ function qOpen(){if(role!='t')return;let m=$('#qm');if(!m){m=document.createElem
  qData().then(D=>{sel.innerHTML=D.s.map((x,i)=>'<option value="'+(i+1)+'">'+arN(i+1)+' — سورة '+x[0]+' ('+arN(x[2].length)+' آية)</option>').join('');
   const fix=()=>{const n=D.s[sel.value-1][2].length;qa.max=qb.max=n;qa.value=1;qb.value=Math.min(n,15)};sel.onchange=fix;fix()}).catch(()=>{er.textContent='تعذّر تحميل المصحف — تأكد من الإنترنت'});
  $('#qgo').onclick=async()=>{er.textContent='⏳ جارٍ تجهيز الصفحات…';try{const P=await qRender(+sel.value,+qa.value,+qb.value,$('#qbig').checked);
-  pgSave();let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=P.shift()}else{WPG.splice(pi+1,0,{s:[],bg:P.shift()});at=pi+1}P.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();
+  pgSave();let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=P.shift();WPG[pi].q=1}else{WPG.splice(pi+1,0,{s:[],bg:P.shift(),q:1});at=pi+1}P.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b,q:1}));pi=at;pgShow();
   m.hidden=true;sys('📖 الآيات اتضافت للسبورة — اكتب ولوّن عليها بالقلم، واتنقّل بين الصفحات بالأسهم')}catch(e){er.textContent='تعذّر تجهيز الآيات — حاول تاني'}}}
+/* شريحة صغيرة فوق السبورة لما فيه صفحات مصحف: «⇄» تبدّل بين المصحف والسبورة، و«✕» تقفل المصحف (تشيل صفحاته) */
+let qLastQ=-1,qLastB=-1;
+function qChip(){let c=$('#qchip');const has=role=='t'&&st.wb&&WPG&&WPG.some(p=>p.q);if(!has){if(c)c.hidden=true;return}
+ if(!c){c=document.createElement('div');c.id='qchip';c.style.cssText='position:absolute;z-index:6;top:12px;left:60px;display:flex;gap:4px;background:rgba(10,20,34,.85);border:1px solid #c9a45c;border-radius:999px;padding:3px';
+  c.innerHTML='<button id="qsw" style="background:#1a9486;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700"></button><button id="qcl" title="اقفل المصحف" style="background:#5a2b2b;border-radius:999px;width:30px;font-size:13px">✕</button>';$('#stage').appendChild(c);
+  $('#qsw').onclick=()=>{pgSave();if(WPG[pi].q){qLastQ=pi;let j=qLastB>=0&&qLastB<WPG.length&&!WPG[qLastB].q?qLastB:WPG.findIndex(p=>!p.q);if(j<0){WPG.push({s:[],bg:null});j=WPG.length-1}pi=j}else{qLastB=pi;pi=qLastQ>=0&&qLastQ<WPG.length&&WPG[qLastQ].q?qLastQ:WPG.findIndex(p=>p.q)}pgShow()};
+  $('#qcl').onclick=()=>{if(!confirm('تقفل المصحف وتشيل صفحاته من السبورة؟'))return;pgSave();const cur=WPG[pi];WPG=WPG.filter(p=>!p.q);if(!WPG.length)WPG=[{s:[],bg:null}];pi=Math.max(0,WPG.indexOf(cur));qLastQ=qLastB=-1;pgShow()}}
+ c.hidden=false;$('#qsw').textContent=WPG[pi].q?'📝 للسبورة':'📖 للمصحف'}
 function wbCanvas(){const w=Math.max(lay.width,1),h=Math.max(lay.height,1),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);
  const sv=[st.wb,st.bg];st.wb=1;st.bg=1;try{drawBgT(x)}finally{st.wb=sv[0];st.bg=sv[1]}
  if(PBG&&PBG.complete&&PBG.naturalWidth){x.setTransform(S,0,0,S,OX,OY);x.drawImage(PBG,0,0,LW,LH);x.setTransform(1,0,0,1,0,0)}
@@ -2538,8 +2586,8 @@ function recUp(meta,onSt){
     meta.off=st+sz;U.q.shift();U.fails=0;U.err='';rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
-   if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
-  }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
+   if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
+  }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
 /* ---- المحرك: يرسم الفيديو على canvas ويدمج الأصوات ويسجل ---- */
@@ -2586,9 +2634,9 @@ function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(
 function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
  const c=Object.values(cohosts)[0];
  if(c){try{c.send({t:'rec',on:1})}catch(e){}coMedia();recWait=setTimeout(()=>{if(!recOwner)recSelf()},9000)}else recSelf()}
-function recSelf(suf){if(recSelfEng||!RC||recStopped)return;
+function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audioTrack:()=>mxRecTrack()},RC.u,RC.k,recRefresh);recSet(1)}
- catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك')}}
+ catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
 function coMedia(){
  Object.values(cohosts).forEach(c=>{
   const want=!!RC&&!recStopped&&recOwner!='t'&&peer&&!peer.destroyed;
@@ -2711,7 +2759,9 @@ function mxRebuild(){const old=MX.ac;if(!old)return;
  if(!mxAC())return;const map=new Map();bus.forEach(k=>{const n=mxBus(k);if(oT[k]&&n)map.set(oT[k],n)});const nR=mxRecTrack();if(oR&&nR)map.set(oR,nR);
  src.forEach(([k,t])=>{if(k!=='T'&&t&&t.readyState=='live')mxSrc(k,t)});
  const pcs=[];Object.values(conns).forEach(o=>{o.call&&pcs.push(o.call.peerConnection)});Object.values(cohosts).forEach(c=>{c._mc&&pcs.push(c._mc.peerConnection)});
- pcs.forEach(pc=>{try{pc&&pc.getSenders().forEach(se=>{const n=se.track&&map.get(se.track);if(n)se.replaceTrack(n).catch(()=>{})})}catch(e){}})}
+ pcs.forEach(pc=>{try{pc&&pc.getSenders().forEach(se=>{const n=se.track&&map.get(se.track);if(n)se.replaceTrack(n).catch(()=>{})})}catch(e){}});
+ /* التسجيل كان ماسك صوت المحرّك القديم ← نكمّله في ملف جديد بالصوت الجديد عشان مايتسجلش سكوت */
+ if(recSelfEng){const e=recSelfEng;recSelfEng=null;recOwner=null;Promise.resolve(e.stop()).finally(()=>{recSet(0);recSelf(' (تكملة)')})}}
 function mxRecTrack(){try{mxAC();return MX.rec&&MX.rec.stream.getAudioTracks()[0]||null}catch(e){return null}}
 function mxSrc(key,t){const ac=mxAC();if(!ac||!t)return;mxSrcDel(key);let n;try{n=ac.createMediaStreamSource(new MediaStream([t]))}catch(e){return}
  n.connect(MX.rec);Object.keys(MX.bus).forEach(k=>{if(k!==mxOwn(key))try{n.connect(MX.bus[k])}catch(e){}});MX.src[key]={n,t};try{trTap(key,n)}catch(e){}}
