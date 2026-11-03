@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.09-a';
+const VER='2026.11.10-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -588,7 +588,14 @@ async function roomKey(code,pin){const base=await crypto.subtle.importKey('raw',
  const d=b2n(bits)%(EC.N-1n)+1n,[x,y]=await ecPub(d),D=n2b(d),X=n2b(x),Y=n2b(y);
  return{jwk:{kty:'EC',crv:'P-256',x:b64u(X),y:b64u(Y),d:b64u(D),ext:true},pub:b64u(new Uint8Array([4,...X,...Y]))}}
 /* المعلم كتب كود الحصة: يكتب كود المعلم ← نطلّع مفتاح الغرفة ونحفظه متشفّر على الجهاز ← صفحة الحصة */
-async function tCodeOpen(code,pin){const k=await roomKey(code,pin),tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
+/* بصمة مفتاح الغرفة الصحيح (v): بتيجي في لينكات السكرتارية وبتتحفظ على الجهاز — من غيرها مانقدرش نتأكد إن كود المعلم صح */
+const fpOf=k=>String(k||'').slice(1,15);
+function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){return''}}
+{const q=new URLSearchParams(location.search),c=(q.get('c')||q.get('s')||'').toLowerCase(),v=q.get('v');if(c&&v&&/^[A-Za-z0-9_-]{14}$/.test(v))try{localStorage.setItem('itqan_v_'+c,v)}catch(e){}}
+async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
+ let v=vGet(code);if(!v){/* مفيش بصمة على الجهاز: نسأل السكرتارية لو فاتحة */try{const x=await Promise.race([resolveCode(code),new Promise((_,no)=>setTimeout(()=>no(0),9000))]);if(x&&x.k){v=fpOf(x.k);try{localStorage.setItem('itqan_v_'+code,v)}catch(e){}}}catch(e){}}
+ if(!v)throw new Error('nov');if(fpOf(k.pub)!==v)throw new Error('pin');
+ const tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
  return linkOf(code,k.pub,'t')}
 function tkGet(room){try{const o=JSON.parse(localStorage.getItem('itqan_tk_'+room));return o&&o.tk&&o.k?o:null}catch(e){return null}}
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
@@ -614,6 +621,7 @@ const pnOf=c=>{try{return sessionStorage.getItem('itqan_pn_'+c)||''}catch(e){ret
 /* ===== «جدولي» للمعلم: السكرتارية بتبعت جدول المعلم جوه اللينك (tj) ← بيتحفظ على جهازه ويظهر في شاشة البداية ===== */
 function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));return Array.isArray(a)?a:[]}catch(e){return[]}}
 {const tj=new URLSearchParams(location.search).get('tj');if(tj)try{const a=JSON.parse(new TextDecoder().decode(ub64(tj)));if(Array.isArray(a)){
+ a.forEach(x=>{if(x&&/^[a-z0-9]{4,6}$/.test(x.c)&&/^[A-Za-z0-9_-]{14}$/.test(x.v||''))try{localStorage.setItem('itqan_v_'+x.c,x.v)}catch(e){}});
  const ok=a.filter(x=>x&&/^[a-z0-9]{4,6}$/.test(x.c)&&Array.isArray(x.s)).map(x=>({c:x.c,t:String(x.t||'').slice(0,50),s:x.s.filter(q=>Array.isArray(q)&&q[0]>=0&&q[0]<=6&&/^\d{1,2}:\d{2}$/.test(q[1])).map(q=>[+q[0],q[1],+q[2]||60]).slice(0,20)})).slice(0,20);
  if(ok.length){const m=tsGet().filter(x=>!ok.some(y=>y.c===x.c));localStorage.setItem('itqan_tsch',JSON.stringify(ok.concat(m)));try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}}}}catch(e){}}
 /* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
@@ -651,12 +659,12 @@ function resolveCode(code){return new Promise(async(ok,no)=>{
  p=new Peer(undefined,{config:ice});
  p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{const c=p.connect(id,{reliable:true});
   c.on('open',()=>{try{c.send({t:'pk?'})}catch(x){}});
-  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k))end(d.k)})}));
+  c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k)){const v=vGet(room);if(v&&fpOf(d.k)!==v)return;end(d.k)}})}));
  p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss>=2)end(null,'مفيش حصة مفتوحة بالكود ده — اتأكد من الكود، أو اسأل السكرتارية.')})})}
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
- if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ فتح الحصة…');tCodeOpen(c,pin).then(u=>location.replace(u));return}}}
+ if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.message=='pin'?'كود المعلم غلط — ارجع وجرّب تاني.':'أول مرة على الجهاز ده: افتح «لينك المعلم» اللي بعتته لك السكرتارية.',1));return}}}
  if(window.__ln&&window.__ln.fill){window.__ln.fill(c,r);return}
  $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
@@ -666,7 +674,7 @@ function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchP
 const APPHOME=!!window.itqanApp&&new URLSearchParams(location.search).get('app')=='1';
 function pwaHome(){if(window.itqanApp&&!APPHOME)return;
  if(LK){if(!PWA)return;const b=document.createElement('button');b.className='w';b.style.cssText='background:transparent;border:1px solid #27496b;margin-top:8px';b.textContent='🏠 الرجوع لشاشة البداية';b.onclick=()=>{location.href=homeUrl()};$('#jlink').append(b);return}
- const j=$('#jnone');j.textContent='';let role='';
+ const j=$('#jnone');j.textContent='';let role='';{const nm=$('#nm');if(nm)nm.style.display='none'}
  {const TS=tsGet();try{window.itqanApp&&itqanApp.setHomeSite&&itqanApp.setHomeSite(TS.length>0)}catch(e){}if(TS.length){const DN2=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO2=[6,0,1,2,3,4,5],hm2=t=>{const[a,b]=t.split(':').map(Number);return a*60+b},
    t12b=t=>{let[a,b]=t.split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b).padStart(2,'0')+(pm?' م':' ص')};
   const all=[];TS.forEach(x=>x.s.forEach(q=>all.push({c:x.c,t:x.t,d:q[0],h:q[1],m:q[2]})));all.sort((a,b)=>hm2(a.h)-hm2(b.h));
@@ -714,13 +722,13 @@ function pwaHome(){if(window.itqanApp&&!APPHOME)return;
   h.textContent=r=='t'?'اكتب «كود الحصة» اللي بعتته السكرتارية. كود المعلم السري هتكتبه في الخطوة الجاية.':'اكتب «كود الحصة» اللي بعتته السكرتارية.';inp.focus()}
  pa.onclick=async()=>{try{inp.value=(await navigator.clipboard.readText()||'').trim();er.textContent=''}catch(e){er.textContent='اضغط مطوّلاً على الخانة واختار «لصق».';inp.focus()}};
  let busy=0;const msg=(t,bad)=>{er.style.color=bad?'#fca5a5':'#e3c08d';er.textContent=t};
- const enter=()=>{if(busy)return;const v=inp.value.trim();if(!v)return msg('اكتب كود الحصة الأول.',1);
+ const enter=()=>{if(busy)return;if(!role){f.hidden=false;f.style.display='flex';return msg('⬆️ اختار الأول: «دخول المعلم» ولا «دخول الطالب».',1)}const v=inp.value.trim();if(!v)return msg('اكتب كود الحصة الأول.',1);
   if(/^https?:\/\/\S+$/i.test(v)){const u=inviteOf(v);if(!u)return msg('الرابط ده مش رابط حصة من أكاديمية إتقان — انسخه كامل من رسالة السكرتارية.',1);
    const r=u.searchParams.get('r');if(role&&r!==role)return msg(r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.',1);
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
   if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 4 أرقام.',1);
-   busy=1;go.disabled=true;msg('⏳ جارٍ فتح الحصة…');return tCodeOpen(c,pin).then(u=>{location.href=u},()=>{busy=0;go.disabled=false;msg('تعذّر فتح الحصة — حاول تاني.',1)})}
+   busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.message=='pin'?'⛔ كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':e&&e.message=='nov'?'⛔ أول مرة على الجهاز ده: افتح «لينك المعلم» اللي بعتته لك السكرتارية على واتساب (عشان نتأكد من كودك).':'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
    /* الحصة لسه ماابتدتش: نستنى ونحاول تاني لوحدنا كل 8 ثواني — الطالب يسيب الصفحة مفتوحة ويدخل أول ما تبدأ */
@@ -845,6 +853,8 @@ async function initT(){
 let TC=null,TK=null;
 const pinH=async pin=>b64u(await crypto.subtle.digest('SHA-256',enc('P|'+room+'|'+pin)));
 async function tAuth(pin,resume){
+ /* غرفة ثابتة: لازم مفتاح الحصة يطابق البصمة اللي من السكرتارية — غير كده كود المعلم يبقى غلط */
+ if(tkGet(room)){const v=vGet(room);if(!v)return showGate('⛔','عشان نتأكد من كود المعلم: افتح «لينك المعلم» اللي بعتته لك السكرتارية على واتساب مرة واحدة على الجهاز ده.',1);if(fpOf(LK.k)!==v){try{localStorage.removeItem('itqan_tk_'+room);localStorage.removeItem('itqan_tc_'+room)}catch(e){}return showGate('⛔','كود المعلم اللي اتكتب قبل كده على الجهاز ده غلط — ارجع وادخل بكود المعلم الصحيح.',1)}}
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&(resume||sv.ph&&sv.ph===await pinH(pin))&&await certOk(sv.c,sv.s,room,LK.k)){
   try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
@@ -852,6 +862,7 @@ async function tAuth(pin,resume){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  TK={priv:kp.privateKey,pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),j:await crypto.subtle.exportKey('jwk',kp.privateKey)};
  /* غرفة ثابتة: المعلم بيفتح بنفسه بكوده السري — من غير السكرتارية */
+ {const v=vGet(room);if(v&&fpOf(LK.k)!==v)return showGate('⛔','اللينك ده مش مطابق للحصة — افتح لينك المعلم الأصلي من السكرتارية.',1)}
  const T0=tkGet(room);if(T0&&T0.k===LK.k){showGate('⏳','جارٍ فتح الحصة…');let rk=null;try{rk=await tkOpen(room,pin,T0.tk,LK.k)}catch(e){}
   if(!rk)return showGate('⛔','كود المعلم غير صحيح — اكتب الكود اللي بعتته لك السكرتارية وحاول تاني.',1);
   const c={r:room,p:TK.pub,e:Date.now()+30*864e5},sg=await sgn(rk,certMsg(c));TC={c,s:sg};
@@ -915,7 +926,7 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'lock':st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'قفلت السكرتارية الشات':'فتحت السكرتارية الشات');break;
   case 'ml':MAILLIVE=d.v?1:0;try{const k='itqan_tc_'+room,o=JSON.parse(localStorage.getItem(k));if(o){o.ml=MAILLIVE;localStorage.setItem(k,JSON.stringify(o))}}catch(e){}break;
   case 'rc':{const r=recCfgOk(d.v);if(r&&(!RC||RC.k!==r.k||RC.u!==r.u)){const first=!RC;RC=r;if(first&&hubT0&&Date.now()-hubT0>12000)recPlan()}break}
-  case 'recst':if(d.v===1){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
+  case 'recst':if(d.v===1&&!recSelfEng){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
 function forceEnd(){lastDel();Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});sys('أنهت السكرتارية الجلسة');endFlowT(1)}
 async function startTPeer(){
@@ -1167,7 +1178,7 @@ function strokeHit(s2,p,r){if(s2.e)return false;const R=r+(s2.w||4)/2;
  const x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]);return p[0]>x0-R&&p[0]<x1+R&&p[1]>y0-R&&p[1]<y1+R&&(Math.min(Math.abs(p[0]-x0),Math.abs(p[0]-x1))<R||Math.min(Math.abs(p[1]-y0),Math.abs(p[1]-y1))<R||s2.k=='e')}
 const ERU=[];let seLast=0;
 function seHit(p){let hit=0;for(let i=strokes.length-1;i>=0;i--){if(strokeHit(strokes[i],p,12/Math.max(.2,S)*.5+6)){const g=ERU[ERU.length-1];if(g&&g.open)g.L.push(strokes[i]);strokes.splice(i,1);hit=1}}if(hit){seDirty=1;seLast=1;rebuild()}}
-function wclr(){if(!strokes.length)return;CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];rebuild();bc({t:'wbclear'})}
+function wclr(){const L=NOTES();if(!strokes.length&&!L.length)return;CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];if(L.length){L.length=0;noteSync(1)}rebuild();bc({t:'wbclear'})}
 const REDO=[];
 function undo(){if(seLast&&ERU.length){const g=ERU.pop();strokes.push(...g.L.reverse());seLast=ERU.length>0;rebuild();bc({t:'restore',s:strokes});return}if(strokes.length){REDO.push(strokes.pop());if(REDO.length>60)REDO.shift();rebuild();bc({t:'undo'})}else if(CLR.length){strokes=CLR.pop();rebuild();bc({t:'restore',s:strokes})}}
 /* إعادة (Redo): بيرجّع آخر حاجة اتشالت بالتراجع */
@@ -1231,6 +1242,7 @@ function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)|
 async function vProof(d){const c=conn;
  try{
   if(!(d&&d.c&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'T|'+room+'|'+vNonce,d.g)))throw 0;
+  {const v=vGet(room);if(v&&fpOf(LK.k)!==v)throw 0}
   if(conn!==c)return;vOk=1;let dv=null;if(DIRM){const k=await dirKey();if(k&&peer&&peer.id){const ts=Date.now();dv={ts,g:await sgn(k,'D|'+room+'|'+peer.id+'|'+ts)}}}if(conn!==c)return;c.send({t:'hello',n:dv?'👔 المدير':name,id:sid(),dv})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
@@ -1343,7 +1355,7 @@ function ui(){
  $('#v').style.visibility=st.scr?'visible':'hidden';
  const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
- layoutCams();tmPaint();try{qChip()}catch(e){}{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
+ layoutCams();tmPaint();try{qChip()}catch(e){}if(!st.wb){try{tbPopX();const bm=$('#bgm');if(bm)bm.hidden=true}catch(e){}}{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(10,20,34,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
@@ -1386,7 +1398,7 @@ function drawShape(c,s){if(s.k=='pg'){c.save();c.lineCap=c.lineJoin='round';c.li
  case 'rt':c.moveTo(a[0],a[1]);c.lineTo(a[0],b[1]);c.lineTo(b[0],b[1]);c.closePath();break;
  case 'h':{const r=Math.hypot(dx,dy),t0=Math.atan2(dy,dx);for(let i=0;i<6;i++){const q=t0+i*Math.PI/3,X=a[0]+r*Math.cos(q),Y=a[1]+r*Math.sin(q);i?c.lineTo(X,Y):c.moveTo(X,Y)}c.closePath();break}
  }
- c.stroke();c.restore()}
+ if(s.f){c.fillStyle=s.c;c.fill()}c.stroke();c.restore()}
 function drawIns(c){
  if(ins.r.on){const o=ins.r,L=RL/2,h=RH/2;c.save();c.translate(o.x,o.y);c.rotate(o.a);
   c.fillStyle='rgba(255,224,130,.82)';c.strokeStyle='#8a6d1d';c.lineWidth=2;c.fillRect(-L,-h,RL,RH);c.strokeRect(-L,-h,RL,RH);
@@ -1412,7 +1424,7 @@ let rqF=0;function redrawSoon(){if(rqF)return;rqF=requestAnimationFrame(()=>{rqF
 const bgc=document.createElement('canvas'),bgx=bgc.getContext('2d');let bgK='';
 function bgCache(W,H){const k=[W,H,S,OX,OY,st.bg,st.bt,st.wb,PBG?PBG.src.length:0,PBG&&PBG.complete?1:0].join('|');if(k===bgK)return;bgK=k;
  bgc.width=W;bgc.height=H;bgx.setTransform(1,0,0,1,0,0);bgx.clearRect(0,0,W,H);drawBgT(bgx);if(PBG&&PBG.complete&&PBG.naturalWidth&&st.wb){bgx.setTransform(S,0,0,S,OX,OY);bgx.drawImage(PBG,0,0,LW,LH);bgx.setTransform(1,0,0,1,0,0)}}
-function redraw(){if(rqF){cancelAnimationFrame(rqF);rqF=0}const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);bgCache(W,H);cx.drawImage(bgc,0,0);if(st.wb){cx.setTransform(S,0,0,S,OX,OY);drawNotes(cx,null,role=='t'&&tool=='note');cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
+function redraw(){if(rqF){cancelAnimationFrame(rqF);rqF=0}const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);bgCache(W,H);cx.drawImage(bgc,0,0);if(st.wb){cx.setTransform(S,0,0,S,OX,OY);drawNotes(cx,null,role=='t');cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
  cx.setTransform(S,0,0,S,OX,OY);if(pv)drawShape(cx,pv);drawIns(cx);
  if(role=='t'&&(tool=='era'||tool=='se')&&hov){cx.beginPath();cx.arc(hov[0],hov[1],tool=='se'?12:ewd*3,0,7);cx.strokeStyle='#888';cx.lineWidth=2;cx.stroke()}}
 /* التقاط المسطرة والمنقلة */
@@ -1439,10 +1451,8 @@ function flush(f){if(pend.length&&(f||Date.now()-lastSend>40)){bc({t:'sp',p:pend
 function down(p){
  if(tool=='se'){drag={w:'se'};ERU.push({L:[],open:1});if(ERU.length>30)ERU.shift();seHit(p);return}
  if(tool!='mv'&&tool!='note'){REDO.length=0;seLast=0}
- if(tool=='note'){const n=noteAt(p);if(!n){noteNew(p);return}const[x,y,w,h]=nRect(n);
-  if(Math.hypot(p[0]-(x+14),p[1]-(y+13))<16){if(confirm('تمسح الورقة دي باللي مكتوب عليها؟'))noteDel(n);redraw();return}
-  if(p[0]>x+w-26&&p[1]>y+h-26){drag={w:'nrs',n,ox:p[0]-w,oy:p[1]-h};return}
-  drag={w:'nmv',n,lx:p[0],ly:p[1],mv:0};return}
+ if(tool!='se'&&noteGrab(p))return;
+ if(tool=='note'){const n=noteAt(p);if(!n){noteNew(p);return}drag={w:'nmv',n,lx:p[0],ly:p[1],mv:0};return}
  if(tool=='mv'){drag=hit(p);return}
  if(tool=='comp'){const k=ins.c;
   if(!k.armed||dist(p,[k.x,k.y])<25){ins.c={x:p[0],y:p[1],r:0,a:0,armed:0,col};drag={w:'cs'};sendIns();redraw();return}
@@ -1450,7 +1460,7 @@ function down(p){
  if(tool=='pen'||tool=='era'||tool=='hl'||tool=='sm'){
   snap=tool=='pen'?pickSnap(p):null;const q=snap?snapTo(snap,p):p;
   cur={k:'p',c:tool=='hl'?hcol:col,w:tool=='era'?ewd*6:tool=='hl'?hwd*3+8:wd,e:tool=='era'?1:0,p:[q]};if(tool=='hl')cur.h=1;{const nn=noteAt(q);if(nn)cur.nid=nn.id}if(tool=='sm')cur.sm=1;strokes.push(cur);penSeg(lx,cur,0);bc({t:'sb',s:cur});drag={w:'pen'};redraw();return}
- snap=(tool=='l'||tool=='a')?pickSnap(p):null;const q=snap?snapTo(snap,p):p;drag={w:'shape'};pv={k:tool,c:col,w:wd,a:q,b:q};redraw()}
+ snap=(tool=='l'||tool=='a')?pickSnap(p):null;const q=snap?snapTo(snap,p):p;drag={w:'shape'};pv={k:tool,c:col,w:wd,a:q,b:q};if(shFill&&tool!='l'&&tool!='a')pv.f=1;{const nn=noteAt(q);if(nn)pv.nid=nn.id}redraw()}
 function move(p){
  if(!drag){if(tool=='era'||tool=='se')redrawSoon();return}
  const w=drag.w;
@@ -1483,6 +1493,7 @@ addEventListener('resize',fit);
 document.addEventListener('fullscreenchange',()=>setTimeout(fit,100));
 /* شريط الأدوات */
 /* ===== شريط أدوات السبورة: صف واحد مرتّب، وكل مجموعة في قايمة صغيرة بتفتح بضغطة ===== */
+let shFill=0;
 const SHP=[['l','╱','خط مستقيم'],['a','➜','سهم'],['r','▭','مستطيل'],['c','◯','دائرة'],['e','⬭','شكل بيضاوي'],['t','△','مثلث'],['rt','◺','مثلث قائم'],['h','⬡','سداسي']];
 const HCOLS=['#ffe600','#7CFC00','#ff7ad9','#4cc9ff'];
 /* ===== 7+8) ضغطة = اختيار الأداة، ضغطتين (أو ضغطة وهي مختارة) = قايمة اللون والسُمك (أو نوع الممحاة) ===== */
@@ -1501,7 +1512,6 @@ function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
  B('▭','أشكال',function(){tbPop(this,'shp')},'dd').dataset.grp='shp';
  B('📐','المسطرة والمنقلة والبرجل',function(){tbPop(this,'ins')},'dd').dataset.grp='ins';
  B('🗒️','ورقة ملاحظات مسطّرة — اضغط على أي مكان في السبورة أو الشاشة المشاركة، واكتب عليها بالقلم',()=>setTool('note')).dataset.tool='note';
- B('<i class="cdot"></i>','اللون والسُمك',function(){tbPop(this,'col')},'dd cbtn');
  SP();B('↩','تراجع',undo);B('↪','إعادة',redo);SP();
  B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));B('1/1','الصفحات: جديدة / استيراد PDF / حفظ PDF',function(){tbPop(this,'pg')},'pgl dd');B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));
  SP();B('⋯','المزيد',function(){tbPop(this,'more')},'dd');refTb()}
@@ -1512,8 +1522,11 @@ function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=
  const R=(lab)=>{const r=document.createElement('div');r.className='r';if(lab){const l=document.createElement('b');l.textContent=lab;m.append(l)}m.append(r);return r},
   I=(r,h,ti,f,on,cl)=>{const b=document.createElement('button');b.innerHTML=h;b.title=ti;if(cl)b.className=cl;if(on)b.classList.add('on');b.onclick=f;r.append(b);return b},
   W=(r,h,f,danger)=>{const b=document.createElement('button');b.className='wide'+(danger?' dg':'');b.innerHTML=h;b.onclick=()=>{m.hidden=true;f()};r.append(b);return b};
- if(k=='shp'){const r=R('الأشكال');SHP.forEach(([q,i,ti])=>I(r,i,ti,()=>setTool(q),tool==q))}
+ if(k=='shp'){const r=R('الأشكال');SHP.forEach(([q,i,ti])=>I(r,i,ti,()=>{shFill=0;setTool(q)},tool==q&&!shFill));
+  const r2=R('أشكال ملوّنة (مليانة)');SHP.filter(x=>x[0]!='l'&&x[0]!='a').forEach(([q,i,ti])=>{const b=I(r2,'<span style="color:'+col+';font-size:22px">'+({r:'■',c:'●',e:'⬬',t:'▲',rt:'◣',h:'⬢'}[q]||i)+'</span>',ti+' مليان',()=>{shFill=1;setTool(q)},tool==q&&!!shFill)})}
  else if(k=='ins'){const r=R('أدوات القياس');I(r,'📏','مسطرة',()=>{insTog('r');tbPop(btn,k);tbPop(btn,k)},ins.r.on);I(r,'📐','منقلة',()=>{insTog('p');tbPop(btn,k);tbPop(btn,k)},ins.p.on);I(r,'🧭','برجل (اسحب لتحديد نصف القطر ثم ارسم القوس)',()=>setTool('comp'),tool=='comp');I(r,'✥','تحريك المسطرة والمنقلة',()=>setTool('mv'),tool=='mv')}
+ else if(k=='spen'){let r=R('لون القلم');COLS.forEach(c=>{const b=I(r,'','لون',()=>{swCol=c;tbPopX();sbRef()},c==swCol,'sw');b.style.background=c});
+  r=R('السُمك');[[2,'رفيع'],[4,'متوسط'],[8,'سميك'],[12,'عريض']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:'+swCol+';width:24px;height:'+Math.max(2,w)+'px;border:1px solid #fff5"></i>',ti,()=>{swW=w;tbPopX();sbRef()},swW==w))}
  else if(k=='colp'){let r=R('لون القلم');COLS.forEach(c=>{const b=I(r,'','لون',()=>{col=c;tool='pen';tbPopX();refTb()},c==col,'sw');b.style.background=c});
   r=R('السُمك');[[2,'رفيع'],[5,'متوسط'],[10,'سميك'],[16,'عريض']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:'+col+';width:24px;height:'+Math.max(2,w*.8)+'px;border:1px solid #fff5"></i>',ti,()=>{wd=w;tool='pen';tbPopX();refTb()},wd==w))}
  else if(k=='colh'){let r=R('لون الهايلايتر');HCOLS.forEach(c=>{const b=I(r,'','هايلايتر',()=>{hcol=c;tool='hl';tbPopX();refTb()},c==hcol,'sw sq');b.style.background=c});
@@ -2165,11 +2178,18 @@ function drawNotes(c,list,handles){(list||NOTES()).forEach(n=>{const[x,y,w,h]=nR
  c.strokeStyle='#e89a9a';c.lineWidth=1.5;c.beginPath();c.moveTo(x+w-34,y+26);c.lineTo(x+w-34,y+h);c.stroke();
  if(n.t){c.fillStyle='#3b3214';c.font='600 20px Cairo,Tahoma,sans-serif';c.textBaseline='bottom';c.direction='rtl';c.textAlign='right';String(n.t).split('\n').slice(0,8).forEach((l,k)=>c.fillText(l.slice(0,40),x+w-42,y+26+NL*(k+1)-4))}
  c.restore();
- if(handles){c.save();c.fillStyle='#d4605a';c.beginPath();c.arc(x+14,y+13,10,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=2.2;c.beginPath();c.moveTo(x+10,y+9);c.lineTo(x+18,y+17);c.moveTo(x+18,y+9);c.lineTo(x+10,y+17);c.stroke();
-  c.fillStyle='rgba(53,96,127,.75)';c.beginPath();c.moveTo(x+w,y+h-22);c.lineTo(x+w,y+h);c.lineTo(x+w-22,y+h);c.closePath();c.fill();c.restore()}})}
+ if(handles){c.save();/* 🗑 سلة صغيرة للحذف */c.fillStyle='#d4605a';c.beginPath();c.arc(x+18,y+16,15,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();
+  c.moveTo(x+11,y+11);c.lineTo(x+25,y+11);c.moveTo(x+15,y+11);c.lineTo(x+16,y+8);c.lineTo(x+20,y+8);c.lineTo(x+21,y+11);c.moveTo(x+12.5,y+13);c.lineTo(x+14,y+24);c.lineTo(x+22,y+24);c.lineTo(x+23.5,y+13);c.moveTo(x+18,y+14);c.lineTo(x+18,y+22);c.stroke();
+  /* ✥ مقبض التحريك في نص الشريط اللي فوق */c.fillStyle='rgba(53,96,127,.55)';c.fillRect(x+w/2-22,y+6,44,14);c.strokeStyle='#fff';c.lineWidth=1.5;c.beginPath();c.moveTo(x+w/2-12,y+11);c.lineTo(x+w/2+12,y+11);c.moveTo(x+w/2-12,y+15);c.lineTo(x+w/2+12,y+15);c.stroke();
+  /* ◢ مقبض الحجم أكبر */c.fillStyle='rgba(53,96,127,.85)';c.beginPath();c.moveTo(x+w,y+h-34);c.lineTo(x+w,y+h);c.lineTo(x+w-34,y+h);c.closePath();c.fill();c.strokeStyle='#fff';c.lineWidth=1.6;c.beginPath();c.moveTo(x+w-8,y+h-20);c.lineTo(x+w-20,y+h-8);c.moveTo(x+w-8,y+h-12);c.lineTo(x+w-12,y+h-8);c.stroke();c.restore()}})}
 function noteAt(p){const L=NOTES();for(let i=L.length-1;i>=0;i--){const[x,y,w,h]=nRect(L[i]);if(p[0]>=x&&p[0]<=x+w&&p[1]>=y&&p[1]<=y+h)return L[i]}return null}
 let noteSyncT=0;function noteSync(now){clearTimeout(noteSyncT);const f=()=>bc({t:'notes',n:NOTES().map(({id,x,y,w,h,t,c})=>({id,x,y,w,h,t,c}))});if(now)f();else noteSyncT=setTimeout(f,120)}
-function noteNew(p){const n={id:Date.now().toString(36),x:Math.max(0,Math.min(LW-NW,p[0]-NW/2)),y:Math.max(0,Math.min(LH-NH,p[1]-20)),w:NW,h:NH,c:'#fffbe6'};NOTES().push(n);tool='pen';refTb();redraw();noteSync(1);sys('🗒️ اتحطت ورقة — اكتب عليها بالقلم. عشان تحرّكها أو تكبّرها أو تمسحها اختار 🗒️ تاني.')}
+/* أي أداة: الشريط اللي فوق في الورقة = تحريك، السلة = حذف، الركن = تكبير/تصغير — من غير ما تختار 🗒️ */
+function noteGrab(p){const n=noteAt(p);if(!n)return false;const[x,y,w,h]=nRect(n);
+ if(Math.hypot(p[0]-(x+18),p[1]-(y+16))<20){if(confirm('تمسح الورقة دي باللي مكتوب عليها؟'))noteDel(n);redraw();return true}
+ if(p[0]>x+w-38&&p[1]>y+h-38){drag={w:'nrs',n,ox:p[0]-w,oy:p[1]-h};return true}
+ if(p[1]<y+26){drag={w:'nmv',n,lx:p[0],ly:p[1],mv:0};return true}return false}
+function noteNew(p){const n={id:Date.now().toString(36),x:Math.max(0,Math.min(LW-NW,p[0]-NW/2)),y:Math.max(0,Math.min(LH-NH,p[1]-20)),w:NW,h:NH,c:'#fffbe6'};NOTES().push(n);tool='pen';refTb();redraw();noteSync(1);sys('🗒️ اتحطت ورقة — اكتب عليها بالقلم. اسحبها من الشريط اللي فوق، وكبّرها من الركن ◢، وامسحها من 🗑')}
 /* تحريك حبر الورقة معاها */
 function noteInk(id,dx,dy){strokes.forEach(s=>{if(s.nid!==id)return;if(s.p)s.p.forEach(q=>{q[0]+=dx;q[1]+=dy});if(s.a){s.a=[s.a[0]+dx,s.a[1]+dy];s.b=[s.b[0]+dx,s.b[1]+dy]}if(s.pts)s.pts=s.pts.map(q=>[q[0]+dx,q[1]+dy])})}
 function noteDel(n){const L=NOTES();L.splice(L.indexOf(n),1);strokes=strokes.filter(s=>s.nid!==n.id);rebuild();bc({t:'restore',s:strokes});noteSync(1)}
@@ -2270,8 +2290,7 @@ function tSw(){if(role!='t')return;st.sw=st.sw?0:1;bst();ui();refTb();sys(T(st.s
 function buildTbS(){const t=$('#tb');t.innerHTML='';
  const B=(h,ti,f,c)=>{const b=document.createElement('button');b.innerHTML=h;b.title=ti;if(c)b.className=c;b.onclick=f;t.appendChild(b);return b},SP=()=>{const i=document.createElement('i');i.className='sp';t.appendChild(i)};
  const gr=B('⠿','اسحب لتحريك الشريط (يمكن وضعه خارج السبورة)',()=>{},'grip');mkDrag(t,'tb',gr);
- B('✏️',T('swPen'),()=>{swTool='pen';sbRef()}).dataset.st='pen';B('👆',T('swPt'),()=>{swTool='pt';sbRef()}).dataset.st='pt';SP();
- ['#111827','#d4605a','#2563eb','#16a34a'].forEach(c=>{const b=B('','لون',()=>{swCol=c;sbRef()},'sw');b.style.background=c;b.dataset.sc=c});SP();
+ B('✏️',T('swPen')+' — اضغط مرتين للون والسُمك',function(){const n=Date.now(),dbl=swTool=='pen'||n-(this._t||0)<450;this._t=n;swTool='pen';sbRef();if(dbl)tbPop(this,'spen')}).dataset.st='pen';B('👆',T('swPt'),()=>{swTool='pt';sbRef()}).dataset.st='pt';SP();
  B('🧮',T('calc'),()=>calcT());if(DESMOS_KEY)B('📈',T('desmos'),()=>dsmT());sbRef()}
 function sbRef(){if(role!='s')return;const ok=!!(st.sw&&admitted);document.body.classList.toggle('sw',ok&&!!st.wb);
  if(ok!==lastSw){lastSw=ok;if(ok)toast('✍️',T('swNow'));else{sdr=null;sPrev=null}}
@@ -2400,7 +2419,7 @@ function fxList(){try{const a=JSON.parse(localStorage.getItem('itqan_fix'));retu
 function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}}
 function fxGet(r){return fxList().find(x=>x.room===r)||null}
 const fxSite=()=>location.origin+location.pathname;
-const fxUrl=(r,w)=>{const y=fxGet(r),n=y&&y.title?'&n='+encodeURIComponent(y.title):'';return fxSite()+'?c='+r+'&r='+w+n+(w=='t'&&y&&y.tn?schTj(y.tn):'')};
+const fxUrl=(r,w)=>{const y=fxGet(r),n=y&&y.title?'&n='+encodeURIComponent(y.title):'';return fxSite()+'?c='+r+'&r='+w+(y&&y.pub?'&v='+fpOf(y.pub):'')+n+(w=='t'&&y&&y.tn?schTj(y.tn):'')};
 /* مفتاح المعلم المتشفّر لكل غرفة ثابتة (للغرف القديمة بيتعمل أول مرة اللوحة تفتح) */
 /* الغرف الثابتة القديمة: مفتاحها يتحسب من «كود الحصة + كود المعلم» زي الجديدة، عشان المعلم يقدر يفتح بالكودين بس */
 async function fxEnsureTk(){await new Promise(r=>setTimeout(r,1200));const a=fxList();let ch=0;for(const x of a)if(!x.dk){await new Promise(r=>setTimeout(r,0));try{if(SXS[x.room])continue;const K=await roomKey(x.room,x.pin);x.pub=K.pub;x.jwk=K.jwk;x.tk=await tkMake(x.room,x.pin,K.jwk);x.dk=1;ch=1}catch(e){}}if(ch){fxPut(a);fxRender()}}
@@ -2467,7 +2486,7 @@ function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new
 function schText(tn){const S=schSlots().filter(sl=>!tn||sl.x.tn===tn);return DO.map(d=>{const T=S.filter(sl=>sl.d===d);return T.length?DN[d]+':\n'+T.map(sl=>'  • '+t12(sl.t)+' — '+(sl.x.title||fmtCode(sl.x.room))+(tn?'':(sl.x.tn?' ('+sl.x.tn+')':''))+' — '+sl.m+' دقيقة').join('\n'):''}).filter(Boolean).join('\n')}
 async function schCopy(){const t='🗓 جدول حصص أكاديمية إتقان'+(schT?' — '+schT:'')+':\n'+schText(schT);try{await navigator.clipboard.writeText(t);alert('✓ اتنسخ الجدول')}catch(e){prompt('انسخ الجدول:',t)}}
 /* جدول المعلم كله (كل غرفه) متشفّر في اللينك عشان يظهر عنده في «جدولي» */
-function schTj(tn){const R=fxList().filter(x=>tn&&x.tn===tn&&(x.sch||[]).length).map(x=>({c:x.room,t:x.title||'',s:x.sch.map(q=>[+q.d,q.t,+q.m||60])}));
+function schTj(tn){const R=fxList().filter(x=>tn&&x.tn===tn&&(x.sch||[]).length).map(x=>({c:x.room,t:x.title||'',v:fpOf(x.pub),s:x.sch.map(q=>[+q.d,q.t,+q.m||60])}));
  return R.length?'&tj='+b64u(new TextEncoder().encode(JSON.stringify(R))):''}
 function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو مكتوب في الغرف):',[...new Set(fxList().map(x=>x.tn).filter(Boolean))][0]||'');if(!tn)return;const t=schText(tn);if(!t)return alert('مفيش مواعيد للمعلم ده');
  const rooms=fxList().filter(x=>x.tn===tn);const m='مرحباً '+tn+'، ده جدول حصصك الثابت في أكاديمية إتقان:\n'+t+'\n\n📲 افتح اللينك ده مرة واحدة عشان جدولك يظهر عندك في التطبيق («🗓 جدولي») وتبدأ كل حصة بضغطة:\n'+fxSite()+'?r=t'+schTj(tn)+'\n\n'+rooms.map(x=>'🔢 '+(x.title||'')+': كود الحصة '+fmtCode(x.room)+' — كود المعلم '+x.pin).join('\n');
@@ -2632,10 +2651,10 @@ function hubCamEl(){if(!camT){_hcT=null;return null}
  return _hc}
 function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(o=>{try{o.c.send({t:'recon',on})}catch(e){}});}
 function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
- const c=Object.values(cohosts)[0];
- if(c){try{c.send({t:'rec',on:1})}catch(e){}coMedia();recWait=setTimeout(()=>{if(!recOwner)recSelf()},9000)}else recSelf()}
+ /* التسجيل دايماً على جهاز المعلم في ملف واحد (من غير تسليم للسكرتارية وتقسيم الملف لما تدخل أو تخرج) */
+ recSelf()}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
- try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audioTrack:()=>mxRecTrack()},RC.u,RC.k,recRefresh);recSet(1)}
+ try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
 function coMedia(){
  Object.values(cohosts).forEach(c=>{
@@ -2733,7 +2752,12 @@ function sSrStart(){if(sSr||sSrBlock||role!='s'||MOB)return;
  sSr=srMake('ar-EG',t=>{try{conn&&conn.open&&conn.send({t:'tr',x:t.slice(0,500)})}catch(e){}},()=>!!(micS&&micS.enabled&&canTalk&&admitted),0)}
 function tSwap(){if(role!='t')return;if(!(scrT||stuS)){if(!st.wb)tWb();else alert('ابدأ مشاركة الشاشة أولاً (🖥) ثم بدّل بينها وبين السبورة');return}
  if(st.wb)st.wb=0;else{st.wb=1;st.bg=1}bst();ui()}
-function scrBtn(){role=='t'?tScr():sScr()}
+/* زرار المشاركة عند المعلم: مشاركة الشاشة، أو ملف PDF/صور كصفحات على السبورة يتنقّل بينها (أوضح من مشاركة الشاشة وبيقبل ورق الملاحظات) */
+function scrBtn(){if(role!='t')return sScr();if(scrT)return tScr();let m=$('#shm');if(m&&!m.hidden){m.hidden=true;return}
+ if(!m){m=document.createElement('div');m.id='shm';m.style.cssText='position:fixed;z-index:62;background:#14283f;border:1px solid #35607f;border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px #000b';document.body.append(m);
+  document.addEventListener('pointerdown',e=>{const q=$('#shm');if(q&&!q.hidden&&!q.contains(e.target)&&e.target.id!='bs')q.hidden=true},true)}
+ m.innerHTML='';[['🖥 مشاركة الشاشة',()=>tScr()],['📄 مشاركة ملف PDF أو صور (صفحات تتنقّل بينها)',()=>{if(!st.wb)tWb();pgImport()}]].forEach(([t,f])=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='background:#27496b;border-radius:10px;padding:10px 14px;text-align:start;font:inherit';b.onclick=()=>{m.hidden=true;f()};m.append(b)});
+ const r=$('#bs').getBoundingClientRect();m.hidden=false;m.style.left=Math.max(6,Math.min(r.left-80,innerWidth-m.offsetWidth-6))+'px';m.style.top=Math.max(6,r.top-m.offsetHeight-8)+'px'}
 async function sScr(){if(sScrT)return stopSScr();if(!canScr)return alert('اطلب من المعلم السماح لك بمشاركة الشاشة');
  let t;sScrA=null;try{{const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}t=ms.getVideoTracks()[0];sScrA=ms.getAudioTracks()[0]||null}}
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
@@ -2760,8 +2784,7 @@ function mxRebuild(){const old=MX.ac;if(!old)return;
  src.forEach(([k,t])=>{if(k!=='T'&&t&&t.readyState=='live')mxSrc(k,t)});
  const pcs=[];Object.values(conns).forEach(o=>{o.call&&pcs.push(o.call.peerConnection)});Object.values(cohosts).forEach(c=>{c._mc&&pcs.push(c._mc.peerConnection)});
  pcs.forEach(pc=>{try{pc&&pc.getSenders().forEach(se=>{const n=se.track&&map.get(se.track);if(n)se.replaceTrack(n).catch(()=>{})})}catch(e){}});
- /* التسجيل كان ماسك صوت المحرّك القديم ← نكمّله في ملف جديد بالصوت الجديد عشان مايتسجلش سكوت */
- if(recSelfEng){const e=recSelfEng;recSelfEng=null;recOwner=null;Promise.resolve(e.stop()).finally(()=>{recSet(0);recSelf(' (تكملة)')})}}
+ /* التسجيل بيقرا صوت المحرّك من جديد كل نص ثانية، فبيكمّل في نفس الملف بالصوت الجديد */}
 function mxRecTrack(){try{mxAC();return MX.rec&&MX.rec.stream.getAudioTracks()[0]||null}catch(e){return null}}
 function mxSrc(key,t){const ac=mxAC();if(!ac||!t)return;mxSrcDel(key);let n;try{n=ac.createMediaStreamSource(new MediaStream([t]))}catch(e){return}
  n.connect(MX.rec);Object.keys(MX.bus).forEach(k=>{if(k!==mxOwn(key))try{n.connect(MX.bus[k])}catch(e){}});MX.src[key]={n,t};try{trTap(key,n)}catch(e){}}
