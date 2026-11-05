@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-e';
+const VER='2026.11.11-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -601,10 +601,19 @@ function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){retu
    الوقت بيتحسب على السيرفر بتوقيت القاهرة، فتغيير ساعة الجهاز مش هيفرق */
 const REG_URL='https://script.google.com/macros/s/AKfycbymPiG7SqYl_Z6ruGMb-1r_sscWyC3QC74wf6f4jLB20bMGZXMrHaGc8w1OyLXhFUydJw/exec';
 const regUrl=()=>{try{return (JSON.parse(localStorage.getItem('itqan_reg')||'{}').u)||REG_URL}catch(e){return REG_URL}};
-async function regChk(code){const u=regUrl();if(!u)return null;
- /* سكربت جوجل ساعات بياخد كذا ثانية أول ما يصحى، فبنستنى لحد 15 ثانية ونجرّب مرتين */
- for(let k=0;k<2;k++){try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),15000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal,redirect:'follow'});clearTimeout(tm);const j=await r.json();if(j&&j.ok)return j}catch(e){}}
- return null}
+/* الجدول على الموقع نفسه (schedule.json) — من غير جوجل. الوقت من ساعة السيرفر (Date header) بتوقيت القاهرة، مش من ساعة الموبايل */
+async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);
+ const r=await fetch('schedule.json?t='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);if(!r.ok)return null;const J=await r.json(),x=(J.rooms||{})[String(code).toLowerCase()];
+ const now=new Date(r.headers.get('date')||Date.now());if(isNaN(now))return null;
+ const P={};new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).forEach(q=>P[q.type]=q.value);
+ const d=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(P.weekday),hm=P.hour+':'+P.minute,m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);
+ if(!x)return{ok:true,known:false,now:hm,d,src:'site'};
+ const allow=(x.s||[]).some(q=>+q[0]===d&&n>=m(q[1])-10&&n<m(q[1])+(+q[2]||60));
+ return{ok:true,known:true,v:x.v,allow,s:x.s||[],now:hm,d,src:'site'}}catch(e){return null}}
+async function regOne(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
+/* بنسأل سجل جوجل وملف الموقع مع بعض: اللي يعرف الحصة هو اللي بيحكم (جوجل الأول) */
+async function regChk(code){const[G,S]=await Promise.all([regOne(code),siteChk(code)]);
+ if(G&&G.known)return G;if(S&&S.known)return S;return G||S||null}
 const DN4=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 function nextSlot(S,d,hm){const m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);let best=null;for(let k=0;k<8;k++){const dd=(d+k)%7;(S||[]).filter(q=>+q[0]===dd&&(k>0||m(q[1])-10>n)).forEach(q=>{const v=k*1440+m(q[1]);if(!best||v<best.v)best={v,q,dd}})}
  return best?(best.dd===d?'النهارده':'يوم '+DN4[best.dd])+' الساعة '+best.q[1]:''}
@@ -614,8 +623,8 @@ async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 
  const ok=(R&&R.known&&R.v)?R.v===fp:(await pinOk(code,pin))||(vGet(code)&&vGet(code)===fp);
  if(!ok)return /^\d{6}$/.test(String(pin))||(R&&R.known)?'كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).';
  /* السجل مش متوصّل أو مش بيرد: نكمّل بالكود + جدول المعلم المحفوظ على الجهاز بدل ما نقفل الحصة */
- if(!regUrl()||!R){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
- if(!R.known||!(R.s||[]).length)return 'الحصة دي مالهاش مواعيد مسجّلة — كلّم السكرتارية.';
+ if(!R||!R.known){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
+ if(!(R.s||[]).length)return 'الحصة دي مالهاش مواعيد مسجّلة — كلّم السكرتارية.';
  if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  return ''}
 async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
@@ -2382,7 +2391,7 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
 function sxHome(){$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
  '<h3 style="margin-top:8px">📌 الغرف الثابتة <small style="color:#a9bccd;font-weight:400">— كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small></h3><div id="sxfx"></div>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'⚠️ سجل الحصص مش متوصّل — المواعيد مش هتتطبّق على المعلمين لحد ما توصّليه من «🔗 سجل الحصص».';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
@@ -2453,6 +2462,11 @@ function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCf
  try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
+/* ملف الجدول للموقع: السكرتارية تحمّله وترفعه على GitHub باسم schedule.json (أو تبعته) */
+function siteExport(){const R={};fxList().forEach(x=>{R[x.room]={v:fpOf(x.pub),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}});
+ const n=Object.keys(R).length;if(!n)return alert('مفيش غرف ثابتة');
+ saveBlob(new Blob([JSON.stringify({updated:new Date().toISOString(),rooms:R},null,1)],{type:'application/json'}),'schedule.json');
+ alert('اتحمّل ملف schedule.json ('+n+' غرفة). ارفعه على GitHub مكان الملف القديم (Add file ← Upload files) — بعد دقيقة الموقع بيستخدم المواعيد الجديدة.')}
 function regSetup(){const c=regCfg();const u=prompt('رابط سجل الحصص (Google Apps Script Web app):',c.u||REG_URL);if(u===null)return;const k=prompt('مفتاح السجل السري:',c.k||'');if(k===null)return;
  try{localStorage.setItem('itqan_reg',JSON.stringify({u:u.trim(),k:k.trim()}))}catch(e){}regMsg='⏳ جارٍ رفع الجدول…';const el=$('#regst');if(el)el.textContent=regMsg;regSync(1)}
 function fxGet(r){return fxList().find(x=>x.room===r)||null}
