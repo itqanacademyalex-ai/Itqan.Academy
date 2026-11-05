@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-c';
+const VER='2026.11.11-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -601,7 +601,10 @@ function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){retu
    الوقت بيتحسب على السيرفر بتوقيت القاهرة، فتغيير ساعة الجهاز مش هيفرق */
 const REG_URL='https://script.google.com/macros/s/AKfycbymPiG7SqYl_Z6ruGMb-1r_sscWyC3QC74wf6f4jLB20bMGZXMrHaGc8w1OyLXhFUydJw/exec';
 const regUrl=()=>{try{return (JSON.parse(localStorage.getItem('itqan_reg')||'{}').u)||REG_URL}catch(e){return REG_URL}};
-async function regChk(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
+async function regChk(code){const u=regUrl();if(!u)return null;
+ /* سكربت جوجل ساعات بياخد كذا ثانية أول ما يصحى، فبنستنى لحد 15 ثانية ونجرّب مرتين */
+ for(let k=0;k<2;k++){try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),15000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal,redirect:'follow'});clearTimeout(tm);const j=await r.json();if(j&&j.ok)return j}catch(e){}}
+ return null}
 const DN4=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 function nextSlot(S,d,hm){const m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);let best=null;for(let k=0;k<8;k++){const dd=(d+k)%7;(S||[]).filter(q=>+q[0]===dd&&(k>0||m(q[1])-10>n)).forEach(q=>{const v=k*1440+m(q[1]);if(!best||v<best.v)best={v,q,dd}})}
  return best?(best.dd===d?'النهارده':'يوم '+DN4[best.dd])+' الساعة '+best.q[1]:''}
