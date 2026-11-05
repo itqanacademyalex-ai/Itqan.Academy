@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-l';
+const VER='2026.11.11-m';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2529,7 +2529,10 @@ const DN=['الأحد','الاتنين','التلات','الأربع','الخم�
 let schV='today',schT='';
 
 const hm=t=>{const[a,b]=String(t).split(':').map(Number);return a*60+(b||0)},t12=t=>{let[a,b]=String(t).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')};
-function schSlots(){const o=[];fxList().forEach(x=>(x.sch||[]).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
+/* الجدول بيظهر من ملف الموقع حتى لو الغرف مش متسجلة على الجهاز ده */
+let SITE_R={};
+function schRooms(){const L=fxList(),have=new Set(L.map(x=>x.room));return L.concat(Object.entries(SITE_R).filter(([c])=>!have.has(c)).map(([c,y])=>({room:c,title:y.n||'',tn:y.t||'',site:1,sch:(y.s||[]).map(q=>({d:+q[0],t:q[1],m:+q[2]||120}))})))}
+function schSlots(){const o=[];schRooms().forEach(x=>(x.sch||[]).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
 function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=x.sch||[];let m=$('#schm');
  if(!m){m=document.createElement('div');m.id='schm';m.style.cssText='position:fixed;inset:0;z-index:70;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px';document.body.append(m)}
  const draw=()=>{m.innerHTML='<div class="sxc" style="width:min(460px,100%);max-height:90vh;overflow:auto"><h3>🗓 مواعيد «'+esc(x.title||fmtCode(r))+'»'+(x.tn?' — '+esc(x.tn):'')+'</h3><div id="schl" style="display:flex;flex-direction:column;gap:6px"></div>'+
@@ -2545,14 +2548,14 @@ function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=
  m.hidden=false;draw()}
 function schSt(sl,now){const d=now.getDay(),n=now.getHours()*60+now.getMinutes(),a=hm(sl.t),b=a+sl.m;if(sl.d!==d)return'';
  if(n<a)return a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12(sl.t);if(n<b)return'🕒 وقتها دلوقتي';return'✅ خلصت'}
-function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new Date();el.hidden=!!SXV||!fxList().length;if(el.hidden)return;
- const teachers=[...new Set(fxList().map(x=>x.tn).filter(Boolean))],F=sl=>!schT||sl.x.tn===schT;
+function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new Date();el.hidden=!!SXV||!schSlots().length;if(el.hidden)return;
+ const teachers=[...new Set(schRooms().map(x=>x.tn).filter(Boolean))],F=sl=>!schT||sl.x.tn===schT;
  let h='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><h3>🗓 جدول الحصص</h3><span style="display:flex;gap:4px;flex-wrap:wrap">'+
   '<button class="sxb '+(schV=='today'?'g':'d')+'" onclick="schV=\'today\';schRender()">النهارده</button><button class="sxb '+(schV=='week'?'g':'d')+'" onclick="schV=\'week\';schRender()">الأسبوع</button>'+
   (teachers.length?'<select onchange="schT=this.value;schRender()" style="background:#1d3652;border:1px solid #27496b;border-radius:10px;color:#fff;padding:6px;font-family:inherit"><option value="">كل المعلمين</option>'+teachers.map(t=>'<option'+(t===schT?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>':'')+'</span></div>';
  if(!S.length)h+='<div class="sxr" style="color:#a9bccd">مفيش مواعيد لسه — من «الغرف الثابتة» اضغطي 🗓 جنب كل غرفة وحطي مواعيدها.</div>';
  else if(schV=='today'){const T=S.filter(sl=>sl.d===now.getDay()&&F(sl));
-  h+=T.length?T.map(sl=>'<div class="sxr"><span><b>'+t12(sl.t)+'</b> · '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?' <small style="color:#a9bccd">— '+esc(sl.x.tn)+'</small>':'')+'<br><small>'+schSt(sl,now)+' · '+sl.m+' دقيقة</small></span><span class="bt"><button class="sxb '+(SXS[sl.x.room]?'d':'g')+'" onclick="fxOpen(\''+sl.x.room+'\')">'+(SXS[sl.x.room]?'عرض':'👁 متابعة')+'</button></span></div>').join(''):'<div class="sxr" style="color:#a9bccd">مفيش حصص النهارده'+(schT?' للمعلم ده':'')+'.</div>'}
+  h+=T.length?T.map(sl=>'<div class="sxr"><span><b>'+t12(sl.t)+'</b> · '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?' <small style="color:#a9bccd">— '+esc(sl.x.tn)+'</small>':'')+'<br><small>'+schSt(sl,now)+' · '+sl.m+' دقيقة</small></span>'+(sl.x.site?'<small style="color:#a9bccd">'+fmtCode(sl.x.room)+'</small>':'<span class="bt"><button class="sxb '+(SXS[sl.x.room]?'d':'g')+'" onclick="fxOpen(\''+sl.x.room+'\')">'+(SXS[sl.x.room]?'عرض':'👁 متابعة')+'</button></span>')+'</div>').join(''):'<div class="sxr" style="color:#a9bccd">مفيش حصص النهارده'+(schT?' للمعلم ده':'')+'.</div>'}
  else{h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+DO.map(d=>{const T=S.filter(sl=>sl.d===d&&F(sl));
    return'<div style="background:#1d3652;border-radius:12px;padding:8px;'+(d===now.getDay()?'outline:2px solid #e3c08d':'')+'"><b style="color:#e3c08d">'+DN[d]+'</b>'+(T.length?T.map(sl=>'<div style="font-size:13px;margin-top:6px;line-height:1.6"><b>'+t12(sl.t)+'</b> '+esc(sl.x.title||fmtCode(sl.x.room))+(sl.x.tn?'<br><small style="color:#a9bccd">'+esc(sl.x.tn)+' · '+sl.m+'د</small>':'')+'</div>').join(''):'<div style="font-size:12px;color:#a9bccd;margin-top:6px">—</div>')+'</div>'}).join('')+'</div>'}
  h+='<small style="color:#a9bccd;line-height:1.8">ℹ️ الحصص الثابتة بيفتحها المعلم بنفسه في ميعادها من «حصصي» أو من لينكه — مش محتاجة اللوحة دي تكون مفتوحة. الطلاب بيستنوا في غرفة الانتظار لحد ما المعلم يدخّلهم.</small>'+
@@ -2570,7 +2573,7 @@ function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو م�
 setInterval(()=>{if(role=='c')schRender()},60000);
 /* لوحة السكرتارية: اسم المجموعة واسم المعلم والمواعيد بتيجي لوحدها من ملف الجدول على الموقع (schedule.json) */
 let fxSiteDone=0;
-async function fxSyncSite(){if(fxSiteDone)return;fxSiteDone=1;try{const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json(),R=J.rooms||{};
+async function fxSyncSite(){if(fxSiteDone)return;fxSiteDone=1;try{const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json(),R=J.rooms||{};SITE_R=R;try{schRender()}catch(e){}
  const a=fxList();let ch=0;a.forEach(x=>{const y=R[x.room];if(!y)return;
   if(y.n&&(!x.title||/^غرفة \d+$/.test(x.title))&&x.title!==y.n){x.title=y.n;ch=1}
   if(y.t&&x.tn!==y.t){x.tn=y.t;ch=1}
@@ -2608,7 +2611,7 @@ function sxSummary(){const L=sxAll();if(!L.length)return'';const on=L.filter(X=>
 function sxTick(){if(role!='c')return;const e=$('#sxst');if(e&&sxAll().length)e.textContent=sxSummary();document.querySelectorAll('#sxB [data-st]').forEach(s=>{const t=sxStat(SXS[s.dataset.st]);if(s.textContent!==t)s.textContent=t})}
 let sxRT=0;function sxRender(){clearTimeout(sxRT);sxRT=setTimeout(sxPaint,60)}
 function sxPaint(){if(role!='c'||!$('#sxB'))return;try{fxRender()}catch(e){}if(SXV&&!SXS[SXV])SXV=null;
- const det=!!SXV;$('#sxA').hidden=det;{const T=$('#sxT');if(T)T.hidden=det||!fxList().length}const R=$('#sxR');if(R)R.hidden=det;
+ const det=!!SXV;$('#sxA').hidden=det;{const T=$('#sxT');if(T)T.hidden=det||!schSlots().length}const R=$('#sxR');if(R)R.hidden=det;
  $('#sxB').innerHTML=det?sxDetail(SXS[SXV]):sxDash();sxTick();if(!sxAll().length)$('#sxst').textContent=''}
 const sxD=(r,k)=>' data-r="'+esc(r)+'"'+(k!=null?' data-k="'+esc(k)+'"':'');
 /* اللوحة: كارت لكل حصة — المهم (طلب معلم/طلاب منتظرين) يظهر فوق وعليه أزرار القبول */
