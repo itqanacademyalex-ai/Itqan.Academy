@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-i';
+const VER='2026.11.11-j';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -612,9 +612,9 @@ async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()
  const allow=(x.s||[]).some(q=>+q[0]===d&&n>=m(q[1])-10&&n<m(q[1])+(+q[2]||60));
  return{ok:true,known:true,v:x.v,allow,s:x.s||[],now:hm,d,src:'site'}}catch(e){return null}}
 async function regOne(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
-/* بنسأل سجل جوجل وملف الموقع مع بعض: اللي يعرف الحصة هو اللي بيحكم (جوجل الأول) */
+/* بنسأل ملف الموقع وسجل جوجل مع بعض: اللي يعرف الحصة هو اللي بيحكم (ملف الموقع الأول) */
 async function regChk(code){const[G,S]=await Promise.all([regOne(code),siteChk(code)]);
- if(G&&G.known)return G;if(S&&S.known)return S;return G||S||null}
+ if(S&&S.known)return S;if(G&&G.known)return G;return G||S||null}
 const DN4=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 function nextSlot(S,d,hm){const m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);let best=null;for(let k=0;k<8;k++){const dd=(d+k)%7;(S||[]).filter(q=>+q[0]===dd&&(k>0||m(q[1])-10>n)).forEach(q=>{const v=k*1440+m(q[1]);if(!best||v<best.v)best={v,q,dd}})}
  return best?(best.dd===d?'النهارده':'يوم '+DN4[best.dd])+' الساعة '+best.q[1]:''}
@@ -2554,7 +2554,15 @@ function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو م�
  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
 /* الحصص الثابتة بيفتحها المعلم بنفسه (من «حصصي» أو لينكه) — مفيش فتح من لوحة السكرتارية ولا اعتماد عليها */
 setInterval(()=>{if(role=='c')schRender()},60000);
-function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();try{schRender()}catch(e){}
+/* لوحة السكرتارية: اسم المجموعة واسم المعلم والمواعيد بتيجي لوحدها من ملف الجدول على الموقع (schedule.json) */
+let fxSiteDone=0;
+async function fxSyncSite(){if(fxSiteDone)return;fxSiteDone=1;try{const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json(),R=J.rooms||{};
+ const a=fxList();let ch=0;a.forEach(x=>{const y=R[x.room];if(!y)return;
+  if(y.n&&(!x.title||/^غرفة \d+$/.test(x.title))&&x.title!==y.n){x.title=y.n;ch=1}
+  if(y.t&&x.tn!==y.t){x.tn=y.t;ch=1}
+  const sc=(y.s||[]).map(q=>({d:+q[0],t:q[1],m:+q[2]||120}));if(sc.length&&JSON.stringify(sc)!==JSON.stringify(x.sch||[])){x.sch=sc;ch=1}});
+ if(ch){fxPut(a);fxRender()}}catch(e){}}
+function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();fxSyncSite();try{schRender()}catch(e){}
  if(!L.length){el.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش غرف ثابتة لسه — اعملي غرفة لكل معلم أو مجموعة، وابعتي الكود مرة واحدة بس.</div>';return}
  el.innerHTML=L.map(x=>{const on=!!SXS[x.room],r=x.room;return'<div class="sxr"><span style="display:flex;flex-direction:column;gap:2px"><b>'+(on?'🟢 ':'')+esc(x.title||'غرفة')+(x.tn?' <small style="color:#a9bccd">— '+esc(x.tn)+'</small>':'')+'</b><small style="direction:ltr;text-align:right;color:#e3c08d">'+fmtCode(r)+' · 🔑 '+esc(x.pin)+'</small></span><span class="bt">'+
   '<button class="sxb '+(on?'d':'g')+'" onclick="fxOpen(\''+r+'\')">'+(on?'عرض':'▶ فتح الحصة')+'</button><button class="sxb d" title="واتساب للمعلم" onclick="fxWa(\''+r+'\',\'t\')">📲 المعلم</button><button class="sxb d" title="واتساب للطلاب" onclick="fxWa(\''+r+'\',\'s\')">📲 الطلاب</button><button class="sxb d" title="نسخ لينك الطلاب" onclick="fxCopy(\''+r+'\',\'s\')">🔗</button><button class="sxb d" title="مواعيد الحصص" onclick="schEdit(\''+r+'\')">🗓'+((x.sch||[]).length?' '+x.sch.length:'')+'</button><button class="sxb '+(/^\d{6}$/.test(String(x.pin))?'d':'r')+'" title="كود معلم جديد" onclick="fxRenew(\''+r+'\')">🔄'+(/^\d{6}$/.test(String(x.pin))?'':' كود قديم')+'</button><button class="sxb d" title="تعديل الاسم" onclick="fxEdit(\''+r+'\')">✏️</button><button class="sxb d" title="حذف" onclick="fxDel(\''+r+'\')">🗑</button></span></div>'}).join('')}
