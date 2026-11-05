@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-h';
+const VER='2026.11.11-i';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -599,7 +599,7 @@ function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){retu
 /* ===== سجل الحصص على Google (apps-script/registry.gs) =====
    قبل ما المعلم يفتح غرفة ثابتة: (1) كود المعلم لازم يكون صح، (2) لازم يكون ميعاد الحصة — من قبلها بـ 10 دقايق لحد ما تخلص.
    الوقت بيتحسب على السيرفر بتوقيت القاهرة، فتغيير ساعة الجهاز مش هيفرق */
-const REG_URL='https://script.google.com/macros/s/AKfycbwEjLnPd5TulPn738nFh5yYuT9_WlkADdbchJ4ZwIfQTukpIRNEnV7S9nK3XyEi97s7hQ/exec';
+const REG_URL='https://script.google.com/macros/s/AKfycbzNUj6mfMewm5ZDKu--g33Na6pJK_wkLizk1E3f_p7pusJ74-WwNQgCWuhFMSYYA6hwtw/exec';
 /* الرابط المكتوب في البرنامج له الأولوية على أي رابط قديم محفوظ على الجهاز */
 const regUrl=()=>{if(REG_URL)return REG_URL;try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}').u||''}catch(e){return ''}};
 /* الجدول على الموقع نفسه (schedule.json) — من غير جوجل. الوقت من ساعة السيرفر (Date header) بتوقيت القاهرة، مش من ساعة الموبايل */
