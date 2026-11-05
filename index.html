@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-d';
+const VER='2026.11.11-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -613,8 +613,8 @@ async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 
  const R=await regChk(code),fp=fpOf(pub);
  const ok=(R&&R.known&&R.v)?R.v===fp:(await pinOk(code,pin))||(vGet(code)&&vGet(code)===fp);
  if(!ok)return /^\d{6}$/.test(String(pin))||(R&&R.known)?'كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).';
- if(!regUrl()){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
- if(!R)return 'تعذّر التأكد من ميعاد الحصة — اتأكد من النت وحاول تاني.';
+ /* السجل مش متوصّل أو مش بيرد: نكمّل بالكود + جدول المعلم المحفوظ على الجهاز بدل ما نقفل الحصة */
+ if(!regUrl()||!R){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  if(!R.known||!(R.s||[]).length)return 'الحصة دي مالهاش مواعيد مسجّلة — كلّم السكرتارية.';
  if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  return ''}
