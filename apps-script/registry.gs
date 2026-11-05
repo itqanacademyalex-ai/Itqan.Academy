@@ -91,3 +91,29 @@ function doPost(e) {
 
 /* اضغط ▶ Run على الدالة دي من المحرر عشان تشوف الحصص اللي اتقرت من الشيت (في Execution log) */
 function test() { CacheService.getScriptCache().remove('sch'); Logger.log(JSON.stringify(sheet_(), null, 1)); }
+
+/* ▶ Run مرة واحدة: بتكتب أكواد الغرف في عمود «كود الحصة» للمجموعات الأونلاين النشطة اللي لسه مالهاش كود،
+   بالترتيب، من غير ما تكرر كود متكتب قبل كده. وفي Execution log بتكتب كل مجموعة خدت أنهي غرفة. */
+const CODES = []; // أكواد الغرف بالترتيب (غرفة 1، غرفة 2، ...)
+function fillCodes() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
+  const V = sh.getDataRange().getDisplayValues(), H = V[0].map(norm_);
+  let cCode = H.findIndex(h => /كود الحصة/.test(h));
+  if (cCode < 0) { cCode = H.length; sh.getRange(1, cCode + 1).setValue('كود الحصة'); }
+  const cGrp = H.findIndex(h => /كود المجموعة/.test(h)), cT = H.findIndex(h => /المدرس/.test(h)), cType = H.findIndex(h => /نوع/.test(h)), cState = H.findIndex(h => /الحالة/.test(h));
+  const used = new Set(V.slice(1).map(r => String(r[cCode] || '').trim().toLowerCase()).filter(Boolean));
+  const free = CODES.map(c => c.toLowerCase()).filter(c => !used.has(c));
+  const log = [];
+  for (let r = 1; r < V.length && free.length; r++) {
+    const row = V[r];
+    if (String(row[cCode] || '').trim()) continue;
+    if (cType >= 0 && !/ونلاين|online/i.test(row[cType])) continue;
+    if (cState >= 0 && row[cState] && !/نشط/.test(row[cState])) continue;
+    const c = free.shift();
+    sh.getRange(r + 1, cCode + 1).setValue(c);
+    log.push('صف ' + (r + 1) + ' | ' + (cGrp >= 0 ? row[cGrp] : '') + ' | ' + (cT >= 0 ? row[cT] : '') + '  ←  ' + c + ' (غرفة ' + (CODES.map(x => x.toLowerCase()).indexOf(c) + 1) + ')');
+  }
+  CacheService.getScriptCache().remove('sch');
+  Logger.log(log.length ? log.join('\n') : 'مفيش مجموعات أونلاين محتاجة كود');
+  if (free.length) Logger.log('أكواد لسه ما اتوزعتش: ' + free.join(', '));
+}
