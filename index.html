@@ -79,7 +79,7 @@ body[data-role=s] #wclr{display:none}
 #mg{position:fixed;inset:0;z-index:60;background:rgba(10,20,34,.96);display:flex;align-items:center;justify-content:center}
 #mg[hidden]{display:none}
 /* النوافذ اللي بتتعمل من الكود عندها display في الـ style، فـ hidden لوحده مابيخفيهاش */
-#schm[hidden],#dirm[hidden],#qm[hidden]{display:none!important}#mg .card{max-height:92vh;overflow:auto}
+#schm[hidden],#dirm[hidden],#qm[hidden],#shm[hidden]{display:none!important}#mg .card{max-height:92vh;overflow:auto}
 .card{background:var(--side);padding:26px;border-radius:22px;width:min(380px,92vw);display:flex;flex-direction:column;gap:12px;text-align:center}
 .card h2{font-size:22px}.card input{background:#1d3652;border:1px solid #27496b;border-radius:12px;padding:11px;color:#fff;font-family:inherit;text-align:center;outline:0}
 .card .row{display:flex;gap:8px}.card .row button{flex:1;padding:11px;border-radius:12px;background:var(--p);font-weight:700}
@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.11-b';
+const VER='2026.11.11-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1163,7 +1163,7 @@ async function tScr(){
   const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;
   try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}
   catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}
-  scrT=ms.getVideoTracks()[0];scrT.contentHint='detail';
+  scrT=ms.getVideoTracks()[0];scrT.contentHint='detail';{const q=$('#shm');if(q)q.hidden=true}if(st.wb){st.wb=0;bst()}
   if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
   const a=ms.getAudioTracks()[0];
   if(a){scrAT=a;mxSrc('S',a);a.onended=()=>{if(scrAT===a)scrAEnd()};sys('🔊 صوت الشاشة المشاركة يصل للطلاب')}
@@ -2241,7 +2241,10 @@ function pgImport(){if(role!='t')return;const inp=document.createElement('input'
   if(!out.length)return;
   /* لو الصفحة الحالية فاضية نستخدمها لأول صفحة */
   let at=pi;if(!WPG[pi].s.length&&!WPG[pi].bg){WPG[pi].bg=out.shift()}else{WPG.splice(pi+1,0,{s:[],bg:out.shift()});at=pi+1}
-  out.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();sys('📄 اتضافت الصفحات للسبورة — اتنقّل بينهم بالأسهم ▶ ◀ في شريط الأدوات')};
+  if(scrT){scrT.stop();scrT=null;scrAEnd();sys('🖥 اتقفلت مشاركة الشاشة عشان الـ PDF يظهر — مشاركة واحدة بس في نفس الوقت')}
+  if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
+  if(!st.wb){st.wb=1;st.bg=1}
+  out.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();refresh();sys('📄 اتضافت الصفحات للسبورة — اتنقّل بينهم بالأسهم ▶ ◀ في شريط الأدوات')};
  inp.click()}
 /* الطالب: بنحفظ كل صفحة شافها (رسمها وخلفيتها وملاحظاتها) عشان يقدر يحمّل السبورة كلها PDF */
 const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PBG&&PBG.src||null,n:SNOTES}}
@@ -2796,7 +2799,7 @@ function tSwap(){if(role!='t')return;if(!(scrT||stuS)){if(!st.wb)tWb();else aler
 function scrBtn(){if(role!='t')return sScr();if(scrT)return tScr();let m=$('#shm');if(m&&!m.hidden){m.hidden=true;return}
  if(!m){m=document.createElement('div');m.id='shm';m.style.cssText='position:fixed;z-index:62;background:#14283f;border:1px solid #35607f;border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px #000b';document.body.append(m);
   document.addEventListener('pointerdown',e=>{const q=$('#shm');if(q&&!q.hidden&&!q.contains(e.target)&&e.target.id!='bs')q.hidden=true},true)}
- m.innerHTML='';[['🖥 مشاركة الشاشة',()=>tScr()],['📄 مشاركة ملف PDF أو صور (صفحات تتنقّل بينها)',()=>{if(!st.wb)tWb();pgImport()}]].forEach(([t,f])=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='background:#27496b;border-radius:10px;padding:10px 14px;text-align:start;font:inherit';b.onclick=()=>{m.hidden=true;f()};m.append(b)});
+ m.innerHTML='';[['🖥 مشاركة الشاشة',()=>tScr()],['📄 مشاركة ملف PDF أو صور (صفحات تتنقّل بينها)',()=>{pgImport()}]].forEach(([t,f])=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='background:#27496b;border-radius:10px;padding:10px 14px;text-align:start;font:inherit';b.onclick=()=>{m.hidden=true;f()};m.append(b)});
  const r=$('#bs').getBoundingClientRect();m.hidden=false;m.style.left=Math.max(6,Math.min(r.left-80,innerWidth-m.offsetWidth-6))+'px';m.style.top=Math.max(6,r.top-m.offsetHeight-8)+'px'}
 async function sScr(){if(sScrT)return stopSScr();if(!canScr)return alert('اطلب من المعلم السماح لك بمشاركة الشاشة');
  let t;sScrA=null;try{{const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}t=ms.getVideoTracks()[0];sScrA=ms.getAudioTracks()[0]||null}}
@@ -2993,6 +2996,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(role=='t'){
    if(scrT){try{scrT.stop()}catch(e){}scrT=null;scrAEnd()}
    if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
+   if(st.wb){st.wb=0;bst()}
    scrT=t;t.onended=()=>{scrT=null;scrAEnd();refresh()};refresh()}
   else{
    if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
