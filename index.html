@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.10-b';
+const VER='2026.11.11-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -596,8 +596,28 @@ async function pinOk(code,pin){pin=String(pin||'');if(!/^\d{6}$/.test(pin))retur
 async function pinGen(code){for(let i=0;i<300000;i++){const p=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000);if(await pinOk(code,p))return p}throw new Error('gen')}
 function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){return''}}
 {const q=new URLSearchParams(location.search),c=(q.get('c')||q.get('s')||'').toLowerCase(),v=q.get('v');if(c&&v&&/^[A-Za-z0-9_-]{14}$/.test(v))try{localStorage.setItem('itqan_v_'+c,v)}catch(e){}}
+/* ===== سجل الحصص على Google (apps-script/registry.gs) =====
+   قبل ما المعلم يفتح غرفة ثابتة: (1) كود المعلم لازم يكون صح، (2) لازم يكون ميعاد الحصة — من قبلها بـ 10 دقايق لحد ما تخلص.
+   الوقت بيتحسب على السيرفر بتوقيت القاهرة، فتغيير ساعة الجهاز مش هيفرق */
+const REG_URL='https://script.google.com/macros/s/AKfycbymPiG7SqYl_Z6ruGMb-1r_sscWyC3QC74wf6f4jLB20bMGZXMrHaGc8w1OyLXhFUydJw/exec';
+const regUrl=()=>{try{return (JSON.parse(localStorage.getItem('itqan_reg')||'{}').u)||REG_URL}catch(e){return REG_URL}};
+async function regChk(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
+const DN4=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
+function nextSlot(S,d,hm){const m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);let best=null;for(let k=0;k<8;k++){const dd=(d+k)%7;(S||[]).filter(q=>+q[0]===dd&&(k>0||m(q[1])-10>n)).forEach(q=>{const v=k*1440+m(q[1]);if(!best||v<best.v)best={v,q,dd}})}
+ return best?(best.dd===d?'النهارده':'يوم '+DN4[best.dd])+' الساعة '+best.q[1]:''}
+/* بيرجّع رسالة الرفض، أو '' لو مسموح */
+async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 'اكتب كود المعلم.';
+ const R=await regChk(code),fp=fpOf(pub);
+ const ok=(R&&R.known&&R.v)?R.v===fp:(await pinOk(code,pin))||(vGet(code)&&vGet(code)===fp);
+ if(!ok)return /^\d{6}$/.test(String(pin))||(R&&R.known)?'كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).';
+ if(!regUrl()){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
+ if(!R)return 'تعذّر التأكد من ميعاد الحصة — اتأكد من النت وحاول تاني.';
+ if(!R.known||!(R.s||[]).length)return 'الحصة دي مالهاش مواعيد مسجّلة — كلّم السكرتارية.';
+ if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
+ return ''}
 async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
- if(await pinOk(code,pin)){try{localStorage.setItem('itqan_v_'+code,fpOf(k.pub))}catch(e){}}else if(/^\d{6}$/.test(String(pin)))throw new Error('pin');else{
+ {const g=await tGate(code,pin,k.pub);if(g){const e=new Error('gate');e.g=g;throw e}}try{localStorage.setItem('itqan_v_'+code,fpOf(k.pub))}catch(e){}
+ if(0){
  let v=vGet(code);if(!v){/* كود قديم (4 أرقام): نتأكد من البصمة أو من السكرتارية لو فاتحة */try{const x=await Promise.race([resolveCode(code),new Promise((_,no)=>setTimeout(()=>no(0),9000))]);if(x&&x.k){v=fpOf(x.k);try{localStorage.setItem('itqan_v_'+code,v)}catch(e){}}}catch(e){}}
  if(!v)throw new Error(/^\d{6}$/.test(String(pin))?'pin':'old');if(fpOf(k.pub)!==v)throw new Error('pin')}
  const tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
@@ -637,13 +657,13 @@ function tWin(rm){const X=tsGet().find(x=>x.c===rm);if(!X||!X.s.length)return{ok
  return{ok:0,next:best?(best.d===D?'النهارده':'يوم '+DN3[best.d])+' الساعة '+best.q[1]:''}}
 function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm));return!!(o&&o.c&&o.c.e>Date.now()+6e5&&tkGet(rm))}catch(e){return false}}
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
-const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tCertOk(LK.room))})();
+const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
- if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tCertOk(LK.room)&&!lastGet()?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
+ if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
-  if(AUTO&&LK.r=='t'&&tCertOk(LK.room)){if(!$('#nm').value)try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}if($('#nm').value)setTimeout(()=>{if(!$('#join').hidden)join('t')},1200)}}}
+  if(0){if(!$('#nm').value)try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}if($('#nm').value)setTimeout(()=>{if(!$('#join').hidden)join('t')},1200)}}}
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
 const homeUrl=()=>location.origin+location.pathname+'?source=app';
@@ -669,7 +689,7 @@ function resolveCode(code){return new Promise(async(ok,no)=>{
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
- if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.message=='pin'?'كود المعلم غلط — ارجع وجرّب تاني.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).',1));return}}}
+ if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.g||'تعذّر فتح الحصة — حاول تاني.',1));return}}}
  if(window.__ln&&window.__ln.fill){window.__ln.fill(c,r);return}
  $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
@@ -698,14 +718,14 @@ function pwaHome(){if(window.itqanApp&&!APPHOME)return;
     r.innerHTML='<b style="color:#e3c08d">'+DN2[d]+'</b><br>'+T.map(x=>'<small>'+t12b(x.h)+' — '+esc(x.t||fmtCode(x.c))+' ('+x.m+' د)</small>').join('<br>');w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
-  const tick=()=>{if(!document.body.contains(w)||!autoOn()||$('#join').hidden)return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
+  const tick=()=>{return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
    for(const x of all){if(x.d!==now.getDay())continue;const a=hm2(x.h);if(n<a-10||n>=a+x.m)continue;const T=tkGet(x.c);if(!T||!tCertOk(x.c))continue;
     const k='itqan_tauto_'+x.c+'_'+x.h+'_'+key;let done=0;try{done=localStorage.getItem(k)}catch(e){}if(done)continue;try{localStorage.setItem(k,'1')}catch(e){}
     location.href=linkOf(x.c,T.k,'t')+'&auto=1';return}};
   const cb=document.createElement('label');cb.style.cssText='display:flex;gap:8px;align-items:center;font-size:12.5px;color:#c4d3e0;line-height:1.6';
   cb.innerHTML='<input type="checkbox" style="width:auto"'+(autoOn()?' checked':'')+'> افتح حصصي لوحدها قبل ميعادها بـ 10 دقايق (طول ما التطبيق مفتوح على الجهاز ده)';
   cb.querySelector('input').onchange=e=>{try{localStorage.setItem('itqan_tauto',e.target.checked?'1':'0')}catch(x){}};
-  draw();w.append(cb);setInterval(()=>{if(document.body.contains(w)){draw();w.append(cb);tick()}},30000);setTimeout(tick,1500);j.append(w)}}
+  draw();setInterval(()=>{if(document.body.contains(w))draw()},30000);j.append(w)}}
  {const M=myList();if(M.length){const w=document.createElement('div');w.id='jmy';w.style.cssText='display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:6px';
   const h=document.createElement('small');h.style.cssText='color:#a9bccd';h.textContent='📚 حصصي — اضغط وادخل على طول:';w.append(h);
   M.forEach(x=>{const r=document.createElement('div');r.style.cssText='display:flex;gap:6px';const b=document.createElement('button');b.className='w';
@@ -733,7 +753,7 @@ function pwaHome(){if(window.itqanApp&&!APPHOME)return;
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
   if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 4 أرقام.',1);
-   busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.message=='pin'?'⛔ كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':e&&e.message=='old'?'⛔ كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).':'تعذّر فتح الحصة — حاول تاني.',1)})}
+   busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم والمعاد…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.g?'⛔ '+e.g:'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
    /* الحصة لسه ماابتدتش: نستنى ونحاول تاني لوحدنا كل 8 ثواني — الطالب يسيب الصفحة مفتوحة ويدخل أول ما تبدأ */
@@ -831,8 +851,7 @@ function join(r){
  const rn=LK.room;
  const nm=$('#nm').value.trim().replace(/\s+/g,' ');
  const nw=nm.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length;
- if(r=='t'){const tw=tWin(rn);if(!tw.ok)return alert('⏰ مش وقت الحصة دي دلوقتي'+(tw.next?' — ميعادها الجاي '+tw.next:'')+'.\nتقدر تفتحها قبل ميعادها بربع ساعة.')}
- if(r=='t'){if(!nw){$('#nm').focus();return alert('اكتب اسمك')}if(!(RS&&tHasCert(rn))&&!/^\d{4,6}$/.test(($('#tpin').value||'').trim())){$('#tpin').hidden=false;$('#tpin').focus();return alert('اكتب كود الغرفة اللي أرسلته لك السكرتارية')}}
+ if(r=='t'){if(!nw){$('#nm').focus();return alert('اكتب اسمك')}if(!(RS&&tHasCert(rn)&&!tkGet(rn))&&!/^\d{4,6}$/.test(($('#tpin').value||'').trim())){$('#tpin').hidden=false;$('#tpin').focus();return alert('اكتب كود الغرفة اللي أرسلته لك السكرتارية')}}
  else if(nw<2&&!DIRM){$('#nm').focus();return alert('اكتب اسمك ثنائي (الاسم واسم الأب) — مثال: أحمد محمد')}
  name=nm.slice(0,40);try{localStorage.setItem('itqan_nm',name)}catch(e){}
  roomName=rn;room=rn;role=r;lastPut();if(!DIRM){const old=myList().find(x=>x.c===rn&&x.r===r);myAdd({c:rn,k:LK.k,r,t:pnOf(rn)||(old&&old.t)||''})}
@@ -858,6 +877,8 @@ async function initT(){
 let TC=null,TK=null;
 const pinH=async pin=>b64u(await crypto.subtle.digest('SHA-256',enc('P|'+room+'|'+pin)));
 async function tAuth(pin,resume){
+ /* غرفة ثابتة: كل مرة لازم كود المعلم الصح + ميعاد الحصة */
+ if(tkGet(room)){showGate('⏳','جارٍ التحقق من كود المعلم والمعاد…');const g=await tGate(room,pin,LK.k);if(g)return showGate('⛔',g,1);resume=false}
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&(resume||sv.ph&&sv.ph===await pinH(pin))&&await certOk(sv.c,sv.s,room,LK.k)){
   try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
@@ -2355,8 +2376,8 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
 function sxHome(){$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
  '<h3 style="margin-top:8px">📌 الغرف الثابتة <small style="color:#a9bccd;font-weight:400">— كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small></h3><div id="sxfx"></div>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
- rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk()}
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'⚠️ سجل الحصص مش متوصّل — المواعيد مش هتتطبّق على المعلمين لحد ما توصّليه من «🔗 سجل الحصص».';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
  const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
  let rm=genCode();while(sxList().some(x=>x.room===rm))rm=genCode();
@@ -2418,7 +2439,16 @@ function sxCmd(r,a,k,v){const X=SXS[r];if(X&&X.hub)try{X.hub.send({t:'cmd',a,k,v
 /* ===== الغرف الثابتة: كل غرفة ليها كود حصة ثابت + كود معلم ثابت + مفتاح ثابت — السكرتارية بتبعتهم مرة واحدة بس،
    وكل حصة بتضغط «فتح الحصة» بس. اللينكات ثابتة كمان وبتفتح والكود مكتوب لوحده ===== */
 function fxList(){try{const a=JSON.parse(localStorage.getItem('itqan_fix'));return Array.isArray(a)?a:[]}catch(e){return[]}}
-function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}}
+function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}regSync()}
+/* السكرتارية بترفع الغرف (بصمة المفتاح + المواعيد) لسجل جوجل كل ما حاجة تتغيّر */
+let regT=0,regMsg='';
+function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
+function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=c.u||REG_URL;if(!u||!c.k)return;
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
+  regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
+ const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
+function regSetup(){const c=regCfg();const u=prompt('رابط سجل الحصص (Google Apps Script Web app):',c.u||REG_URL);if(u===null)return;const k=prompt('مفتاح السجل السري:',c.k||'');if(k===null)return;
+ try{localStorage.setItem('itqan_reg',JSON.stringify({u:u.trim(),k:k.trim()}))}catch(e){}regMsg='⏳ جارٍ رفع الجدول…';const el=$('#regst');if(el)el.textContent=regMsg;regSync(1)}
 function fxGet(r){return fxList().find(x=>x.room===r)||null}
 const fxSite=()=>location.origin+location.pathname;
 const fxUrl=(r,w)=>{const y=fxGet(r),n=y&&y.title?'&n='+encodeURIComponent(y.title):'';return fxSite()+'?c='+r+'&r='+w+(y&&y.pub?'&v='+fpOf(y.pub):'')+n+(w=='t'&&y&&y.tn?schTj(y.tn):'')};
