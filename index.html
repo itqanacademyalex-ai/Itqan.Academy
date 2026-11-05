@@ -600,7 +600,8 @@ function vGet(c){try{return localStorage.getItem('itqan_v_'+c)||''}catch(e){retu
    قبل ما المعلم يفتح غرفة ثابتة: (1) كود المعلم لازم يكون صح، (2) لازم يكون ميعاد الحصة — من قبلها بـ 10 دقايق لحد ما تخلص.
    الوقت بيتحسب على السيرفر بتوقيت القاهرة، فتغيير ساعة الجهاز مش هيفرق */
 const REG_URL='https://script.google.com/macros/s/AKfycbwayjmawG6E-JwOOlPdz-o1oWabkiMmWMkDhFlgfWGjKWSR4Wht_m6tuE-Ab7JxM-mefg/exec';
-const regUrl=()=>{try{return (JSON.parse(localStorage.getItem('itqan_reg')||'{}').u)||REG_URL}catch(e){return REG_URL}};
+/* الرابط المكتوب في البرنامج له الأولوية على أي رابط قديم محفوظ على الجهاز */
+const regUrl=()=>{if(REG_URL)return REG_URL;try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}').u||''}catch(e){return ''}};
 /* الجدول على الموقع نفسه (schedule.json) — من غير جوجل. الوقت من ساعة السيرفر (Date header) بتوقيت القاهرة، مش من ساعة الموبايل */
 async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);
  const r=await fetch('schedule.json?t='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);if(!r.ok)return null;const J=await r.json(),x=(J.rooms||{})[String(code).toLowerCase()];
@@ -2458,7 +2459,7 @@ function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(
 /* السكرتارية بترفع الغرف (بصمة المفتاح + المواعيد) لسجل جوجل كل ما حاجة تتغيّر */
 let regT=0,regMsg='';
 function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
-function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=c.u||REG_URL;if(!u||!c.k)return;
+function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;
  try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
@@ -2467,7 +2468,7 @@ function siteExport(){const R={};fxList().forEach(x=>{R[x.room]={v:fpOf(x.pub),s
  const n=Object.keys(R).length;if(!n)return alert('مفيش غرف ثابتة');
  saveBlob(new Blob([JSON.stringify({updated:new Date().toISOString(),rooms:R},null,1)],{type:'application/json'}),'schedule.json');
  alert('اتحمّل ملف schedule.json ('+n+' غرفة). ارفعه على GitHub مكان الملف القديم (Add file ← Upload files) — بعد دقيقة الموقع بيستخدم المواعيد الجديدة.')}
-function regSetup(){const c=regCfg();const u=prompt('رابط سجل الحصص (Google Apps Script Web app):',c.u||REG_URL);if(u===null)return;const k=prompt('مفتاح السجل السري:',c.k||'');if(k===null)return;
+function regSetup(){const c=regCfg();const u=REG_URL||prompt('رابط سجل الحصص (Google Apps Script Web app):',c.u||'');if(u===null)return;const k=prompt('مفتاح السجل السري:',c.k||'');if(k===null)return;
  try{localStorage.setItem('itqan_reg',JSON.stringify({u:u.trim(),k:k.trim()}))}catch(e){}regMsg='⏳ جارٍ رفع الجدول…';const el=$('#regst');if(el)el.textContent=regMsg;regSync(1)}
 function fxGet(r){return fxList().find(x=>x.room===r)||null}
 const fxSite=()=>location.origin+location.pathname;
