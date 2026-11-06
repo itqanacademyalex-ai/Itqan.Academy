@@ -390,7 +390,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-a';
+const VER='2026.11.12-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -780,7 +780,7 @@ function pwaHome(){if(window.itqanApp&&!APPHOME)return;
    const r=u.searchParams.get('r');if(role&&r!==role)return msg(r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.',1);
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
-  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 4 أرقام.',1);
+  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 6 أرقام.',1);
    busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم والمعاد…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.g?'⛔ '+e.g:'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
@@ -2410,10 +2410,14 @@ function sxHome(){$('#sec').classList.add('sxwide');
  '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
- const kp=await crypto.subtle.generateKey(ALG,true,['sign','verify']);
- let rm=genCode();while(sxList().some(x=>x.room===rm))rm=genCode();
- const s={room:rm,pub:b64u(await crypto.subtle.exportKey('raw',kp.publicKey)),jwk:await crypto.subtle.exportKey('jwk',kp.privateKey),
-  pin:String(1000+crypto.getRandomValues(new Uint32Array(1))[0]%9000),title:$('#sxn').value.trim(),tn:$('#sxt').value.trim(),ts:Date.now()};
+ /* كود معلم 6 أرقام بيتأكد لوحده، ومفتاح الحصة جاي من الكود — فالمعلم يقدر يدخل بكود الحصة + كوده من أي جهاز (زي الغرف الثابتة) */
+ const bt=document.querySelector('button[onclick="sxNew()"]');if(bt){if(bt.disabled)return;bt.disabled=true;bt.textContent='⏳ جارٍ إنشاء الحصة…'}
+ let rm=genCode();while(sxList().some(x=>x.room===rm)||fxList().some(x=>x.room===rm))rm=genCode();
+ let s;try{const pin=await pinGen(rm),K=await roomKey(rm,pin);
+  s={room:rm,pub:K.pub,jwk:K.jwk,pin,title:$('#sxn').value.trim(),tn:$('#sxt').value.trim(),ts:Date.now()}}
+ catch(e){if(bt){bt.disabled=false;bt.textContent='إنشاء الحصة وتوليد الروابط'}return alert('تعذّر إنشاء الحصة — حاولي تاني.')}
+ if(bt){bt.disabled=false;bt.textContent='إنشاء الحصة وتوليد الروابط'}
+ const kp={privateKey:await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign'])};
  sxPut(sxList().concat([s]));$('#sxn').value='';$('#sxt').value='';
  SXV=s.room;sxStart(s,kp.privateKey)}
 async function sxResume(r){const s=sxList().find(x=>x.room===r);if(!s||SXS[r])return;try{sxStart(s,await crypto.subtle.importKey('jwk',s.jwk,ALG,false,['sign']))}catch(e){}}
