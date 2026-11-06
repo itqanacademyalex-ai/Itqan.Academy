@@ -390,7 +390,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-b';
+const VER='2026.11.12-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2255,13 +2255,19 @@ const ldJs=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.s
 /* الصفحة بتتحوّل لصورة 2400×1350 (أوضح من السبورة نفسها عشان التكبير) بخلفية بيضا */
 function pgFit(src){const W=2400,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
  const sw=src.width||src.naturalWidth,sh=src.height||src.naturalHeight,k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(src,(W-w)/2,(H-h)/2,w,h);return c.toDataURL('image/jpeg',.72)}
-function pgImport(){if(role!='t')return;const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';inp.multiple=true;
- inp.onchange=async()=>{const F=[...inp.files];if(!F.length)return;pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
+/* مكتبة قراءة الـ PDF: من الموقع نفسه الأول (أضمن على الموبايل)، ولو فشلت من cdnjs */
+let PDFL=null;function pdfLib(){if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+ return PDFL||(PDFL=ldJs('libs/pdf.min.js').then(()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='libs/pdf.worker.min.js'},()=>{const C='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';return ldJs(C+'pdf.min.js').then(()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=C+'pdf.worker.min.js'})}).then(()=>window.pdfjsLib,e=>{PDFL=null;throw e}))}
+/* اختيار ملف: الخانة لازم تبقى جوه الصفحة، وإلا الآيفون أحياناً مابيبعتش الملف المختار */
+function filePick(acc,multi,fn){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(i);
+ i.onchange=()=>{const f=[...i.files];setTimeout(()=>i.remove(),1000);if(f.length)fn(f)};i.click()}
+function pgImport(){if(role!='t')return;const inp={click(){filePick('application/pdf,image/*',1,F=>inp.onchange(F))}};
+ inp.onchange=async F=>{if(!F.length)return;pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
   try{for(const f of F){
    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){
-    if(!window.pdfjsLib){await ldJs('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
+    await pdfLib();
     const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,n=Math.min(doc.numPages,40);
-    for(let i=1;i<=n;i++){const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(2400/v0.width,1350/v0.height)*1.2,v=pg.getViewport({scale:sc}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);
+    for(let i=1;i<=n;i++){try{toast('⏳','جارٍ تجهيز صفحة '+i+' من '+n+'…')}catch(e){}const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(2400/v0.width,1350/v0.height)*(MOB?1:1.2),v=pg.getViewport({scale:sc}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);
      await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;out.push(pgFit(c))}
     if(doc.numPages>40)alert('اتضاف أول 40 صفحة بس من الملف')}
    else if(/^image\//.test(f.type)){const u=URL.createObjectURL(f),im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src=u});out.push(pgFit(im));URL.revokeObjectURL(u)}}}
@@ -3082,7 +3088,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(aud&&role=='t'){scrAT=aud;mxSrc('S',aud)}
   return run}
  async function pdf(f){
-  try{await ld(PJ+'pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc=PJ+'pdf.worker.min.js';
+  try{await pdfLib();
    const d=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
    let pc=null,n=1,busy=0,want=1,run=()=>{};const lb=document.createElement('span');
    const show=async()=>{if(busy)return;busy=1;try{while(want!=null){const k=want;want=null;const p=await d.getPage(k),v0=p.getViewport({scale:1}),v=p.getViewport({scale:Math.min(1920/v0.width,1080/v0.height)}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);await p.render({canvasContext:c.getContext('2d'),viewport:v}).promise;pc=c;n=k;lb.textContent=n+' / '+d.numPages;run()}}catch(e){}busy=0};
@@ -3112,7 +3118,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
    bar=>bar.append(mk('⏪',()=>{v.currentTime=Math.max(0,v.currentTime-10)}),mk('⏯',()=>{v.paused?v.play():v.pause()}),mk('⏩',()=>{v.currentTime=Math.min(v.duration||0,v.currentTime+10)}),mk('✕',stopShare)),
    ()=>{v.pause();URL.revokeObjectURL(v.src);v.removeAttribute('src');ac&&ac.close().catch(()=>{})},aud,66);
   if(role=='t'&&!aud)sys('⚠️ تعذر نقل صوت الفيديو — سيصل الفيديو بدون صوت')}
- function pick(acc,fn,multi){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.onchange=()=>{const f=[...i.files];if(f.length)fn(f)};i.click()}
+ function pick(acc,fn,multi){filePick(acc,multi,fn)}
  function menu(){
   const o=$('#msm');if(o)o.remove();
   const m=document.createElement('div');m.id='msm';
