@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>html,body{background:#0e1a2b}</style>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Itqan Academy – الفصل الافتراضي</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -42,6 +42,8 @@ button{font-family:inherit;cursor:pointer;border:0;color:#fff}
 #av{position:relative;z-index:1;text-align:center}
 #av b{display:flex;width:130px;height:130px;border-radius:50%;background:#1a9486;color:#ffffff;font-size:64px;align-items:center;justify-content:center;margin:0 auto 14px}
 #av span{color:#dce6ef}
+/* الصفحة نفسها ماتتكبّرش بالدبل تاب أو بإصبعين — التكبير للسبورة والشير بس (من أدوات التكبير بتاعتهم) */
+html,body{touch-action:pan-x pan-y}
 #wb{position:absolute;inset:0;width:100%;height:100%;z-index:2;touch-action:none;cursor:crosshair}
 #wb.bg{background:#fff}
 body[data-role=s] #wb{pointer-events:none}
@@ -390,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-h';
+const VER='2026.11.12-i';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -517,6 +519,8 @@ let hidAt=0;document.addEventListener('visibilitychange',()=>{if(document.hidden
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;setTimeout(()=>{window.acUnlock&&acUnlock();if(window.auInt)audioReset();else micHeal()},1000)});
 /* لو المستخدم سمح من إعدادات المتصفح من غير ما يضغط، نشغّل المايك لوحده */
 try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{p.onchange=()=>{if(p.state=='granted'&&window.MERR&&(role=='t'||role=='s'&&admitted&&canTalk))micRetry()}}).catch(()=>{})}catch(e){}
+/* سفاري الآيفون بيكبّر الصفحة بإصبعين حتى مع الإعدادات اللي فوق — نمنعه (تكبير السبورة شغّال بطريقته) */
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const U=s=>'<span translate="no">'+esc(s)+'</span>';
 let role,name,room,peer,conn,conns={},chat=[],roster={s:[],h:[]},tab='chat',canTalk=1,micS,myCall,camS,camCall,canCam=1,camBanAll=0,allMuted=0,gm=0,admitted=0,final=0,rt,st={cam:0,scr:0,mic:1,wb:0,bg:1,lock:0},
