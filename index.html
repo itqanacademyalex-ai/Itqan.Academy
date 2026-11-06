@@ -390,7 +390,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-d';
+const VER='2026.11.12-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1066,7 +1066,10 @@ function tuneCall(call,br,pref,fps){try{const pc=call&&call.peerConnection;if(!p
    BWF بيتظبط لوحده (تحت في الوضع الخفيف): ينزل بسرعة أول ما يبان ضغط، ويطلع بالراحة لما النت يستقر */
 window.BWF=1;
 function tuneBr(){const n=Object.values(conns).filter(x=>x.adm).length;return Math.max(1e5,(n<=1?1.5e6:n<=4?1e6:n<=10?6e5:3.5e5)*window.BWF)}
-function tune(o){const lt=window.LITE&&window.LITE();tuneCall(o.call,Math.max(8e4,tuneBr()*(o.wf||1))*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',lt?10:0)}
+/* مشاركة الشاشة/الصفحات: نفس النت بيتوزّع على فريمات أقل ← كل فريم بياخد بيانات أكتر فالكلام والصور بيبانوا واضحين بدل ما يبقوا مبكسلين.
+   الفيديو المتشارك (S.__vid) بيفضل بحركة طبيعية */
+function shareFps(lt){if(!(scrT||stuS))return lt?10:0;if(scrT&&scrT.__vid)return lt?10:15;if(scrT&&scrT.__st)return lt?3:5;return lt?5:8}
+function tune(o){const lt=window.LITE&&window.LITE();tuneCall(o.call,Math.max(8e4,tuneBr()*(o.wf||1))*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',shareFps(lt))}
 function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,4e5,'balanced'),900)}
 /* ===== الصوت بيعلّق: اتصال الصوت/الفيديو منفصل عن اتصال الحصة، فلو وقع لوحده محدش كان بيلاحظ =====
    المعلم: كل 5 ثواني يشوف اتصال كل طالب — لو فشل أو اتقفل والطالب لسه في الحصة يتصل بيه تاني.
@@ -2860,7 +2863,7 @@ async function sScr(){if(sScrT)return stopSScr();if(!canScr)return alert('اطل
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
  if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
  sScrT=t;t.contentHint='detail';t.onended=stopSScr;shareSig(true);sScrCall=peer.call('itqan-'+room,new MediaStream([t,...(sScrA?[sScrA]:[])]),{metadata:{k:'scr'}});
- setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution'),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}
+ setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution',8),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}
 function stopSScr(){shareSig(false);if(sScrA){try{sScrA.stop()}catch(e){}sScrA=null}if(sScrT){const t=sScrT;sScrT=null;t.onended=null;try{t.stop()}catch(e){}sys('🖥 توقفت مشاركة شاشتك')}if(sScrCall){try{sScrCall.close()}catch(e){}sScrCall=null}}
 function ssDrop(k){if(stuS&&stuS.k==k){mxSrcDel('SS:'+k);try{stuS.au&&(stuS.au.srcObject=null)}catch(e){}try{stuS.call.close()}catch(e){}stuS=null;refreshSoon()}}
 function ssp(k){const o=conns[k];if(!o||!o.adm)return;o.sp=o.sp?0:1;try{o.c.send({t:'ssp',on:o.sp})}catch(e){}if(!o.sp)ssDrop(k);render();sys((o.sp?'🖥 سمحت بمشاركة الشاشة لـ ':'🚫 أوقفت مشاركة الشاشة لـ ')+o.name)}
@@ -3056,7 +3059,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
    if(!canScr||sScrT||!peer||peer.destroyed){t.stop();return}
    sScrA=null;sScrT=t;t.onended=stopSScr;
    sScrCall=peer.call('itqan-'+room,new MediaStream([t]),{metadata:{k:'scr'}});
-   setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution'),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}}
+   setTimeout(()=>tuneCall(sScrCall,2e6,'maintain-resolution',t.__vid?15:t.__st?5:8),1200);sys('🖥 بدأت مشاركة شاشتك');$('#bs').classList.add('lt')}}
  const stopShare=()=>role=='t'?tScr():stopSScr();
  async function cam(){
   try{const ms=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});useTrack(ms.getVideoTracks()[0])}
@@ -3073,7 +3076,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   bar.append(mk('◀',()=>{i=(i-1+im.length)%im.length;draw();up()}),lb,mk('▶',()=>{i=(i+1)%im.length;draw();up()}),mk('✕',stopShare));up();
   document.body.appendChild(bar);
   const st0=t.stop.bind(t);t.stop=()=>{clearInterval(tm);bar.remove();im.forEach(b=>b.close&&b.close());st0()};
-  useTrack(t)}
+  t.__st=1;useTrack(t)}
  const PJ='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/',MJ='https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',LD={};
  const ld=u=>LD[u]||(LD[u]=new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{delete LD[u];no(new Error('load'))};document.head.appendChild(s)}));
  const mk=(txt,fn)=>{const b=document.createElement('button');b.textContent=txt;b.onclick=fn;return b};
@@ -3085,7 +3088,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   const t=cv.captureStream(fps?(LT?10:MOB?12:15):(MOB?3:LT?5:10)).getVideoTracks()[0],tm=setInterval(run,fps?(LT?100:MOB?83:fps):(MOB?1000:LT?300:200));
   const bar=document.createElement('div');bar.id='msn';items(bar);document.body.appendChild(bar);
   const st0=t.stop.bind(t);t.stop=()=>{clearInterval(tm);bar.remove();try{clean&&clean()}catch(e){}st0()};
-  useTrack(t);
+  if(fps)t.__vid=1;else t.__st=1;useTrack(t);
   if(aud&&role=='t'){scrAT=aud;mxSrc('S',aud)}
   return run}
  async function pdf(f){
