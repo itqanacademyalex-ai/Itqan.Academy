@@ -390,7 +390,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-g';
+const VER='2026.11.12-h';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1964,7 +1964,7 @@ window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
-function pfsSet(on){document.body.classList.toggle('pfs',!!on);const b=$('#fs');if(b)b.textContent=on?'✕':'⛶';setTimeout(()=>{try{fit();relayout()}catch(e){}},150)}
+function pfsSet(on){document.body.classList.toggle('pfs',!!on);const b=$('#fs');if(b)b.textContent=on?'✕':'⛶';setTimeout(()=>{try{fit();relayout()}catch(e){}},150);try{zFitSoon(700)}catch(e){}}
 function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitFullscreenElement;
  if(on){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return}
  if(el.classList.contains('pfs'))return pfsSet(0);
@@ -1973,7 +1973,7 @@ function fsToggle(){const d=document,el=d.body,on=d.fullscreenElement||d.webkitF
  try{const p=rq.call(el);if(p&&p.catch)p.catch(()=>pfsSet(1))}catch(e){pfsSet(1)}}
 if(!('onfullscreenchange' in document))document.addEventListener('webkitfullscreenchange',()=>document.dispatchEvent(new Event('fullscreenchange')));
 /* ملء الشاشة الحقيقي: السبورة/الشاشة نفسها تملا الشاشة كلها (نفس شكل وضع ملء الشاشة البديل)، مش بس يختفي شريط المتصفح */
-document.addEventListener('fullscreenchange',()=>{const on=!!(document.fullscreenElement||document.webkitFullscreenElement),b=$('#fs');if(b)b.textContent=on?'✕':'⛶';document.body.classList.toggle('pfs',on);[60,250,600].forEach(t=>setTimeout(()=>{try{fit();relayout()}catch(e){}},t))});
+document.addEventListener('fullscreenchange',()=>{const on=!!(document.fullscreenElement||document.webkitFullscreenElement),b=$('#fs');if(b)b.textContent=on?'✕':'⛶';document.body.classList.toggle('pfs',on);[60,250,600].forEach(t=>setTimeout(()=>{try{fit();relayout()}catch(e){}},t));try{zFitSoon(800)}catch(e){}});
 /* أي تغيير في مقاس السبورة (ملء الشاشة، لف الجهاز، إخفاء القايمة الجانبية، شريط المتصفح في الموبايل) ← نعيد ضبط السبورة فوراً
    بدل ما نستنى وقت ثابت — عشان ماتطلعش مقصوصة أو مضغوطة لو الشاشة لسه بتتحرك */
 if(window.ResizeObserver){let roF=0;new ResizeObserver(()=>{if(roF)return;roF=requestAnimationFrame(()=>{roF=0;try{fit();relayout()}catch(e){}})}).observe($('#stage'))}
@@ -2263,7 +2263,7 @@ function noteNew(p){const n={id:Date.now().toString(36),x:Math.max(0,Math.min(LW
 function noteInk(id,dx,dy){strokes.forEach(s=>{if(s.nid!==id)return;if(s.p)s.p.forEach(q=>{q[0]+=dx;q[1]+=dy});if(s.a){s.a=[s.a[0]+dx,s.a[1]+dy];s.b=[s.b[0]+dx,s.b[1]+dy]}if(s.pts)s.pts=s.pts.map(q=>[q[0]+dx,q[1]+dy])})}
 function noteDel(n){const L=NOTES();L.splice(L.indexOf(n),1);strokes=strokes.filter(s=>s.nid!==n.id);rebuild();bc({t:'restore',s:strokes});noteSync(1)}
 function pgSave(){pgInit();WPG[pi].s=strokes}
-function pgImg(u){if(!u)return null;const i=new Image();i.onload=()=>redraw();i.src=u;return i}
+function pgImg(u){if(!u)return null;const i=new Image();i.onload=()=>{redraw();if(document.body.classList.contains('pfs'))try{zFitSoon(200)}catch(e){}};i.src=u;return i}
 /* صفحات الـ PDF: كل صورة صفحة بتتبعت لكل طالب مرة واحدة بس — بعد كده التقليب بيبعت رقمها بس (فوري)،
    والصفحة اللي بعدها بتتبعت في الخلفية عشان تبقى جاهزة عنده قبل ما المعلم يقلب */
 const PGID=new Map();let pgN=0;function pgId(bg){let h=PGID.get(bg);if(!h){h='p'+(++pgN);PGID.set(bg,h)}return h}
@@ -2277,7 +2277,7 @@ function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||n
 function pgDel(){if(role!='t')return;pgSave();if(WPG.length<2)return alert('دي الصفحة الوحيدة — استخدم 🗑 لمسح الرسم');if(!confirm('تمسح الصفحة '+(pi+1)+' كلها؟'))return;WPG.splice(pi,1);pi=Math.min(pi,WPG.length-1);pgShow()}
 const ldJs=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 /* الصفحة بتتحوّل لصورة 2400×1350 (أوضح من السبورة نفسها عشان التكبير) بخلفية بيضا */
-function pgFit(src){const W=MOB?1920:2400,H=MOB?1080:1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
+function pgFit(src){const W=MOB?1920:2400,H=MOB?1080:1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');/* حوالين الصفحة رمادي فاتح: الصفحة بتبان، وملء الشاشة بيعرف حدودها ويكبّر عليها */x.fillStyle='#e6e8eb';x.fillRect(0,0,W,H);
  const sw=src.width||src.naturalWidth,sh=src.height||src.naturalHeight,k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(src,(W-w)/2,(H-h)/2,w,h);return c.toDataURL('image/jpeg',MOB?.68:.72)}
 /* مكتبة قراءة الـ PDF: من الموقع نفسه الأول (أضمن على الموبايل)، ولو فشلت من cdnjs */
 let PDFL=null;function pdfLib(){if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
@@ -3241,6 +3241,21 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   clearTimeout(rT);rT=setTimeout(()=>{const k=Math.round(z*4)/4;if((window.ZMK||1)!==k){window.ZMK=k;if(!w.hidden){dirty=1;try{fit()}catch(e){}}}},220)}
  function zoomAt(f,cx,cy){const nz=Math.min(MAXZ,Math.max(1,z*f)),k=nz/z;tx=cx-(cx-tx)*k;ty=cy-(cy-ty)*k;z=nz;apply()}
  function reset(){z=1;tx=ty=0;apply()}
+ /* ملء الشاشة: نكبّر لوحدنا على المحتوى نفسه (صفحة الـ PDF أو الشاشة المشاركة) بدل ما يفضل صغير في النص وحواليه فاضي */
+ function cBounds(src,sw,sh){try{if(!sw||!sh)return null;const k=Math.min(1,160/Math.max(sw,sh)),cw=Math.max(2,Math.round(sw*k)),ch=Math.max(2,Math.round(sh*k)),c=document.createElement('canvas');c.width=cw;c.height=ch;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,cw,ch);const D=g.getImageData(0,0,cw,ch).data,b0=[D[0],D[1],D[2]];let x0=cw,y0=ch,x1=-1,y1=-1;
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const i=(y*cw+x)*4;if(Math.abs(D[i]-b0[0])+Math.abs(D[i+1]-b0[1])+Math.abs(D[i+2]-b0[2])>36){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}
+  if(x1<0)return null;return{x:x0/cw,y:y0/ch,w:(x1-x0+1)/cw,h:(y1-y0+1)/ch}}catch(e){return null}}
+ function zTo(rx,ry,rw,rh){const W=stg.clientWidth,H=stg.clientHeight;if(!(rw>4&&rh>4))return;const nz=Math.min(4,Math.max(1,Math.min(W/rw,H/rh)*.98));
+  if(nz<1.08){reset();return}z=nz;tx=W/2-(rx+rw/2)*z;ty=H/2-(ry+rh/2)*z;apply()}
+ window.zFitContent=function(){if(!document.body.classList.contains('pfs'))return reset();const W=stg.clientWidth,H=stg.clientHeight;
+  if(!w.hidden&&st.wb&&PBG&&PBG.complete&&PBG.naturalWidth){const f=cBounds(PBG,PBG.naturalWidth,PBG.naturalHeight);if(!f)return;const d=wb.width/(wb.clientWidth||1);
+   return zTo((OX+f.x*LW*S)/d,(OY+f.y*LH*S)/d,f.w*LW*S/d,f.h*LH*S/d)}
+  if(v&&v.videoWidth&&!(st.wb&&!w.hidden&&st.bg)){const vw=v.videoWidth,vh=v.videoHeight,k=Math.min(W/vw,H/vh),dx=(W-vw*k)/2,dy=(H-vh*k)/2,f=cBounds(v,vw,vh)||{x:0,y:0,w:1,h:1};
+   return zTo(dx+f.x*vw*k,dy+f.y*vh*k,f.w*vw*k,f.h*vh*k)}
+  reset()};
+ let zfT=0;window.zFitSoon=t=>{clearTimeout(zfT);zfT=setTimeout(()=>{try{zFitContent()}catch(e){}},t||400)};
+ v.addEventListener('resize',()=>{if(document.body.classList.contains('pfs'))zFitSoon(600)});
  const rel=e=>{const r=stg.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
  const skip=e=>box.hidden||!!e.target.closest('.cb,#tb,#zm,#poll,#unm,#fs,#cvb,button,input,select');
  /* capture: نقرر قبل السبورة هل الحركة كتابة ولا تحريك/تكبير */
