@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-n';
+const VER='2026.11.12-o';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -634,7 +634,7 @@ async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 
  if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  return ''}
 async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
- {const g=await tGate(code,pin,k.pub);if(g){/* الكود صح بس مش وقتها: نحفظ جدوله عشان يظهر في «جدولي» */
+{const g=await tGate(code,pin,k.pub);if(!g)tpSet(code,pin);if(g){if(/كود المعلم/.test(g))tpSet(code,'');/* الكود صح بس مش وقتها: نحفظ جدوله عشان يظهر في «جدولي» */
   if(/وقت الحصة/.test(g))try{if(await Promise.race([tschSync(code),new Promise(r=>setTimeout(()=>r(false),4000))])&&!LK){sessionStorage.setItem('itqan_gmsg',g);location.reload();await new Promise(()=>{})}}catch(x){}
   const e=new Error('gate');e.g=g;throw e}}try{localStorage.setItem('itqan_v_'+code,fpOf(k.pub))}catch(e){}
  if(0){
@@ -643,6 +643,9 @@ async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
  const tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
  try{await Promise.race([tschSync(code),new Promise(r=>setTimeout(r,4000))])}catch(e){}
  return linkOf(code,k.pub,'t')}
+/* كود المعلم بيتحفظ على جهاز المعلم بعد أول دخول صح — بعد كده اللينك بيفتح الحصة على طول (وشرط الميعاد لسه شغّال) */
+function tpGet(r){try{return localStorage.getItem('itqan_tp_'+r)||''}catch(e){return''}}
+function tpSet(r,p){try{p?localStorage.setItem('itqan_tp_'+r,String(p)):localStorage.removeItem('itqan_tp_'+r)}catch(e){}}
 function tkGet(room){try{const o=JSON.parse(localStorage.getItem('itqan_tk_'+room));return o&&o.tk&&o.k?o:null}catch(e){return null}}
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
@@ -691,7 +694,7 @@ function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm)
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;setTimeout(()=>{try{if(!$('#join').hidden&&$('#nm').value.trim())join('t')}catch(e){}},500)}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
@@ -798,7 +801,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    const r=u.searchParams.get('r');if(role&&r!==role)return msg(r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.',1);
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
-  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 6 أرقام.',1);
+  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(tpGet(c)||prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 6 أرقام.',1);
    busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم والمعاد…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.g?'⛔ '+e.g:'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
@@ -925,7 +928,7 @@ let TC=null,TK=null;
 const pinH=async pin=>b64u(await crypto.subtle.digest('SHA-256',enc('P|'+room+'|'+pin)));
 async function tAuth(pin,resume){
  /* غرفة ثابتة: كل مرة لازم كود المعلم الصح + ميعاد الحصة */
- if(tkGet(room)){showGate('⏳','جارٍ التحقق من كود المعلم والمعاد…');const g=await tGate(room,pin,LK.k);if(g)return showGate('⛔',g,1);resume=false}
+ if(tkGet(room)){showGate('⏳','جارٍ التحقق من كود المعلم والمعاد…');const g=await tGate(room,pin,LK.k);if(g){if(/كود المعلم/.test(g))tpSet(room,'');return showGate('⛔',g,1)}tpSet(room,pin);resume=false}
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&(resume||sv.ph&&sv.ph===await pinH(pin))&&await certOk(sv.c,sv.s,room,LK.k)){
   try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
@@ -1036,6 +1039,7 @@ async function startTPeer(){
 }
 async function tData(c,d){
  if(!d||typeof d!=='object')return;
+ {const o=conns[c.peer];if(o){o.seen=Date.now();if(d.t=='hb'){o.hbOK=1;return}}}
  if(d.t=='pk?'){try{c.send({t:'pk',k:LK.k})}catch(e){}return}
  if(d.t=='chal'){tProof(c,d);return}
  if(d.t=='cohello'){coHello(c);return}
@@ -3185,6 +3189,12 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  let badge=null,was=0,wasAdm=0;
  setInterval(()=>{
   if(role=='t'){try{bc({t:'hb'})}catch(e){}try{Object.values(cohosts).forEach(c=>{try{c.send({t:'hb'})}catch(e){}})}catch(e){}}
+  /* الطالب بيقول «أنا لسه هنا» كل 3 ثواني — لو سكت المعلم بيشيله من القايمة */
+  if(role=='s'){try{conn&&conn.open&&conn.send({t:'hb'})}catch(e){}}
+  /* طالب قفل التطبيق أو النت فصل من غير ما الاتصال يتقفل رسمي: بعد 40 ثانية من غير أي إشارة بيتشال من القايمة */
+  if(role=='t'){const n=Date.now();Object.entries(conns).forEach(([k,o])=>{if(!o.hbOK||n-(o.seen||n)<40000)return;try{o.c.close()}catch(e){}
+   setTimeout(()=>{if(conns[k]!==o)return;delete conns[k];try{ssDrop(k);mxBusDel(k);dropMic(o);hands.delete(k);hideCam('s:'+k)}catch(e){}
+    if(o.adm&&!o.dir){LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});if(!o.rep)try{sdNote('🚪 '+o.name+' خرج من الحصة')}catch(e){}}try{roster2()}catch(e){}},1500)})}
  },3000);
  setInterval(()=>{
   if(typeof SXS!=='undefined')sxTick();
