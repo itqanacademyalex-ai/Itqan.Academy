@@ -61,12 +61,20 @@ function doGet(e) {
   if (p.a === 'chk') {
     const c = String(p.c || '').toLowerCase(), r = load_()[c] || {};
     let S = null; try { S = sheet_()[c] || null; } catch (x) { S = null; }
-    const s = S || r.s || [];
+    /* جدول السكرتارية (من لوحة التطبيق) ليه الأولوية، والشيت احتياطي */
+    const s = (r.s && r.s.length) ? r.s : (S || []);
     const now = new Date(), d = Number(Utilities.formatDate(now, TZ, 'u')) % 7; // 0 = الأحد
     const hm = Utilities.formatDate(now, TZ, 'HH:mm'), n = min_(hm);
     if (!r.v && !s.length) return out_({ ok: true, known: false, now: hm, d: d });
     const allow = s.some(q => +q[0] === d && n >= min_(q[1]) - EARLY && n < min_(q[1]) + (+q[2] || DUR));
-    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, src: S ? 'sheet' : 'app' });
+    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, src: (r.s && r.s.length) ? 'app' : 'sheet' });
+  }
+  /* حصص معلم واحد (لـ «حصصي» عند المعلم): بالاسم، أو باسم معلم الغرفة c */
+  if (p.a === 'tl') {
+    const all = load_(); let n = String(p.n || '').trim(); const c = String(p.c || '').toLowerCase();
+    if (!n && c && all[c]) n = all[c].t || '';
+    const R = {}; if (n) Object.keys(all).forEach(k => { const r = all[k]; if (r.t === n && (r.s || []).length) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s }; });
+    return out_({ ok: true, rooms: R });
   }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
@@ -81,7 +89,7 @@ function doPost(e) {
     (b.rooms || []).slice(0, 300).forEach(r => {
       const c = String(r.c || '').toLowerCase();
       if (!/^[a-z0-9]{4,6}$/.test(c)) return;
-      R[c] = { v: String(r.v || '').slice(0, 20), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => [+q[0], q[1], +q[2] || DUR]) };
+      R[c] = { v: String(r.v || '').slice(0, 20), t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => [+q[0], q[1], +q[2] || DUR]) };
     });
     PropertiesService.getScriptProperties().setProperty('rooms', JSON.stringify(R));
     return out_({ ok: true, n: Object.keys(R).length });
