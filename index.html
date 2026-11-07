@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-p';
+const VER='2026.11.12-q';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1185,7 +1185,7 @@ function dropCall(){if(micS)micS.enabled=false;if(myCall){const c=myCall;myCall=
 function stopMic(){if(micS){const t=micS;micS=null;t.stop()}if(sSr){sSr.stop();sSr=null}stopSScr();dropCall()}
 /* تطبيق الكمبيوتر: بنبلّغه ببداية/نهاية مشاركة الشاشة عشان يظهر زر القلم للرسم على الشاشة */
 const shareSig=on=>{try{window.itqanApp&&window.itqanApp.share&&window.itqanApp.share(on)}catch(e){}};
-function refresh(){shareSig(!!scrT);
+function refresh(){shareSig(!!scrT);if(!scrT){const b=$('#cscb');if(b)b.remove();window.CSC=0}
  stream.getVideoTracks().forEach(t=>stream.removeTrack(t));
  stream.addTrack(scrT||(stuS&&stuS.t)||dummy);
  $('#v').srcObject=stream;
@@ -1224,9 +1224,11 @@ async function tScr(){
  if(scrT){scrT.stop();scrT=null;scrAEnd()}
  else try{
   const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;
-  try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}
-  catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}
-  scrT=ms.getVideoTracks()[0];scrT.contentHint='detail';{const q=$('#shm');if(q)q.hidden=true}if(st.wb){st.wb=0;bst()}
+  /* Chrome/Edge: لو اتشارك «تبويب» نقدر نعمل سكرول للصفحة المشاركة من جوه الحصة (Captured Surface Control) */
+  const mkC=()=>window.CaptureController&&CaptureController.prototype.forwardWheel?new CaptureController():null;let ctl=mkC();
+  try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include',...(ctl?{controller:ctl}:{})})}
+  catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ctl=mkC();ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false,...(ctl?{controller:ctl}:{})})}
+  scrT=ms.getVideoTracks()[0];try{cscOffer(ctl,scrT)}catch(e){}scrT.contentHint='detail';{const q=$('#shm');if(q)q.hidden=true}if(st.wb){st.wb=0;bst()}
   if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
   const a=ms.getAudioTracks()[0];
   if(a){scrAT=a;mxSrc('S',a);a.onended=()=>{if(scrAT===a)scrAEnd()};sys('🔊 صوت الشاشة المشاركة يصل للطلاب')}
@@ -1235,6 +1237,12 @@ async function tScr(){
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
  refresh();
 }
+/* زرار فوق الشاشة المشاركة: يشغّل السكرول على التبويب المشارك من جوه الحصة (المتصفح بيطلب إذن أول مرة) */
+function cscOffer(ctl,t){let b=$('#cscb');if(b)b.remove();window.CSC=0;if(!ctl||!t||(t.getSettings&&t.getSettings().displaySurface)!=='browser')return;
+ b=document.createElement('button');b.id='cscb';b.style.cssText='position:absolute;top:10px;right:10px;z-index:8;background:#1a9486;color:#fff;border:0;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;box-shadow:0 4px 14px #0008;cursor:pointer';
+ const lbl=()=>b.textContent=window.CSC?'🖱 السكرول شغّال على الصفحة المشاركة — اضغط للإيقاف':'🖱 اعمل سكرول للصفحة المشاركة من هنا';lbl();
+ b.onclick=async()=>{try{if(window.CSC){await ctl.forwardWheel(null);window.CSC=0}else{await ctl.forwardWheel($('#stage'));window.CSC=1;toast('🖱','حرّك عجلة الماوس فوق الشاشة المشاركة — الصفحة هتتحرك عند الطلاب كمان')}}catch(e){window.CSC=0;alert('المتصفح مارضيش يدّي التحكم — اسمح بالإذن، أو شارك «تبويب» من Chrome أو Edge')}lbl()};
+ $('#stage').appendChild(b);t.addEventListener('ended',()=>{b.remove();window.CSC=0})}
 function tWb(){st.wb=st.wb?0:1;if(st.wb)st.bg=(scrT||stuS)?0:1;bst();ui()}
 const CLR=[];
 /* ===== القلم الذكي ✨: الرسمة بالإيد بتتحوّل لشكل منتظم (خط / دائرة / بيضاوي / مستطيل / مثلث / مضلّع) =====
@@ -3314,7 +3322,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(moved<8&&e.type=='pointerup'&&!drawable()){const t=Date.now();
    if(t-tapT<320&&Math.hypot(n[0]-tapX,n[1]-tapY)<30){tapT=0;z>1?reset():zoomAt(2.5,n[0],n[1])}else{tapT=t;tapX=n[0];tapY=n[1]}}};
  stg.addEventListener('pointerup',up,true);stg.addEventListener('pointercancel',up,true);
- stg.addEventListener('wheel',e=>{if(box.hidden)return;e.preventDefault();const[x,y]=rel(e);zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)),x,y)},{passive:false});
+ stg.addEventListener('wheel',e=>{if(box.hidden||window.CSC)return;e.preventDefault();const[x,y]=rel(e);zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)),x,y)},{passive:false});
  const typing=()=>{const a=document.activeElement;return a&&(a.tagName=='INPUT'||a.tagName=='TEXTAREA'||a.isContentEditable)};
  addEventListener('keydown',e=>{if(box.hidden||typing())return;
   if(e.code=='Space'&&!space){space=1;ui2();e.preventDefault()}
