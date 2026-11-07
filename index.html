@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-a';
+const VER='2026.11.13-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -728,7 +728,7 @@ function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm)
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;setTimeout(()=>{try{if(!$('#join').hidden&&$('#nm').value.trim())join('t')}catch(e){}},500)}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if($('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
@@ -795,15 +795,15 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
     ok.onclick=async()=>{ok.disabled=true;ok.textContent='⏳';const n=await tbUnlock(i.value);ok.disabled=false;ok.textContent='حفظ';if(n){tbok=1;toast('✅','اتحفظ — '+n+' حصة جاهزة على الجهاز ده');draw()}else er.textContent='الكود غلط — راجع رسالة السكرتارية'};
     i.onkeydown=e=>{if(e.key=='Enter')ok.click()};u.append(i,ok,er);w.append(u)}
    const hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center';{let nm='';try{nm=localStorage.getItem('itqan_tname')||''}catch(e){}hd.innerHTML='<b style="color:#e3c08d;font-size:16px">🗓 حصصي'+(nm?' — <span translate="no">'+esc(nm)+'</span>':'')+'</b>'};
-   const tg=document.createElement('button');tg.className='w';tg.style.cssText='flex:none;width:auto;padding:4px 10px;font-size:12px;background:#27496b';tg.textContent=wk?'النهارده':'الأسبوع كله';tg.onclick=()=>{wk=!wk;draw()};hd.append(tg);w.append(hd);
-   if(!wk){const T=all.filter(x=>x.d===now.getDay());
-    if(!T.length){const e=document.createElement('small');e.style.color='#a9bccd';const nx=[1,2,3,4,5,6].map(k=>(now.getDay()+k)%7).find(d=>all.some(x=>x.d===d));e.textContent='مفيش حصص النهارده'+(nx!=null?' — أقرب حصة يوم '+DN2[nx]+' '+t12b(all.find(x=>x.d===nx).h):'')+'.';w.append(e)}
-    T.forEach(x=>{const a=hm2(x.h),b=a+x.m,st=n<a?(a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12b(x.h)):n<b?'🔴 وقتها دلوقتي':'✅ خلصت',now2=n>=a-15&&n<b;
-     const r=document.createElement('div');r.style.cssText='display:flex;gap:8px;align-items:center;background:'+(now2?'#1a3d3a':'#1d3652')+';border-radius:12px;padding:8px 10px';
-     r.innerHTML='<div style="flex:1;line-height:1.6"><b>'+t12b(x.h)+'</b> · '+esc(x.t||fmtCode(x.c))+'<br><small style="color:#a9bccd">'+st+' · '+x.m+' دقيقة</small></div>';
-     if(n<b){const g=document.createElement('button');g.className='w';g.style.cssText='flex:none;width:auto;padding:8px 14px;font-weight:700;background:'+(now2?'#1a9486':'#27496b');g.textContent='▶ ابدأ';g.onclick=()=>start(x.c);r.append(g)}w.append(r)})}
-   else DO2.forEach(d=>{const T=all.filter(x=>x.d===d);if(!T.length)return;const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:6px 10px;line-height:1.8;'+(d===now.getDay()?'outline:2px solid #e3c08d':'');
-    r.innerHTML='<b style="color:#e3c08d">'+DN2[d]+'</b><br>'+T.map(x=>'<small>'+t12b(x.h)+' — '+esc(x.t||fmtCode(x.c))+' ('+x.m+' د)</small>').join('<br>');w.append(r)})};
+   w.append(hd);
+   /* كل حصة كارت واحد — اضغط على اسمها: لو وقتها (من قبلها بـ 10 دقايق لحد ما تخلص) بتفتح على طول، غير كده بيقولك إمتى */
+   const D=now.getDay(),G={};all.forEach(x=>{const a=hm2(x.h),b=a+x.m,live=x.d===D&&n>=a-10&&n<b;let k=((x.d-D+7)%7)*1440+a-n;if(k<0&&!live)k+=7*1440;
+    const g=G[x.c]||(G[x.c]={c:x.c,t:x.t,sl:[],k:1e9,live:0,x:null});g.sl.push(x);if(live){g.live=1;g.k=-1;g.x=x}else if(!g.live&&k<g.k){g.k=k;g.x=x}});
+   Object.values(G).sort((p,q)=>p.k-q.k).forEach(g=>{const x=g.x,a=hm2(x.h),when=(x.d===D&&g.k<1440?'النهارده':'يوم '+DN2[x.d])+' '+t12b(x.h),soon=!g.live&&g.k<=60;
+    const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#1a9486,#137a6f)':soon?'#22405f':'#1d3652')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
+    const st=g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
+    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'18px')+'">'+(g.live?'▶ ادخل':'🔒')+'</b>';
+    r.onclick=()=>{if(g.live)return start(g.c);toast('⏰','الحصة دي '+when+' — بتفتح من قبل ميعادها بـ 10 دقايق')};w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
   const tick=()=>{return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
