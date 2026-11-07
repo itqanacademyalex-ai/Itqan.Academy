@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-j';
+const VER='2026.11.12-k';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -850,12 +850,13 @@ function pwaInstall(){if(PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|I
  $('#join .card').append(d)}
 /* على كمبيوتر ويندوز من المتصفح: زر يفتح نفس الرابط في تطبيق إتقان (لو متثبّت) */
 /* ===== كمبيوتر ويندوز من المتصفح: زرار تحميل برنامج إتقان للكمبيوتر (رابط ثابت لآخر إصدار) ===== */
-var EXE='https://github.com/itqanacademyalex-ai/Itqan.Academy/releases/latest/download/ItqanAcademy-Setup.exe';
+/* ملف مضغوط (zip) بدل exe: المتصفح وويندوز أقل ما يمسحوه وهو بيتحمّل */
+var EXE='https://github.com/itqanacademyalex-ai/Itqan.Academy/releases/latest/download/ItqanAcademy-Windows.zip';
 function deskDl(){if(window.itqanApp||PWA||MOB||$('#dsk')||!/Windows/i.test(navigator.userAgent))return;const c=$('#join .card');if(!c)return;
  const d=document.createElement('div');d.id='dsk';d.style.cssText='display:flex;gap:10px;align-items:center;background:#1d3652;border:1px solid rgba(227,192,141,.35);border-radius:14px;padding:10px 12px;margin-top:6px;text-align:start;width:100%';
  const t=document.createElement('small');t.style.cssText='flex:1;line-height:1.7';t.textContent='💻 برنامج إتقان للكمبيوتر (ويندوز) — صوت أثبت، ومشاركة شاشة بالصوت، وقلم للكتابة على الشاشة.';
  const a=document.createElement('a');a.href=EXE;a.textContent='📥 تحميل';a.style.cssText='background:#1a9486;color:#fff;text-decoration:none;border-radius:10px;padding:9px 14px;font-weight:700;flex:none';
- a.onclick=()=>setTimeout(()=>{t.textContent='✓ التحميل بدأ — افتح «ItqanAcademy-Setup.exe» من التنزيلات. لو ظهر «Windows protected your PC» اضغط More info ← Run anyway.'},300);
+ a.onclick=()=>setTimeout(()=>{t.textContent='✓ التحميل بدأ — افتح «ItqanAcademy-Windows.zip» من التنزيلات، اضغط عليه كليك يمين ← «Extract All» (استخراج الكل)، وبعدين شغّل «ItqanAcademy-Setup.exe» اللي جواه. لو ظهر «Windows protected your PC» اضغط More info ← Run anyway.'},300);
  d.append(t,a);
  /* يظهر فوق زراير السكرتارية والمدير عشان يبان من غير ما حد ينزل لتحت */
  const sec=[...c.querySelectorAll('button')].find(b=>/دخول السكرتارية/.test(b.textContent));if(sec&&sec.parentNode){d.style.marginTop='0';sec.parentNode.insertBefore(d,sec)}else{const jl=$('#jlink');jl&&!jl.hidden?jl.append(d):c.append(d)}}
