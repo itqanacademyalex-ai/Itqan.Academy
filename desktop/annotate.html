@@ -39,6 +39,8 @@ window.itqanApp.onAnn(m=>{
  else if(m.t=='tool')tool=m.v;else if(m.t=='color'){color=m.v;if(tool=='era')tool='pen'}else if(m.t=='width')width=m.v;
  else if(m.t=='undo'){strokes.pop();redraw()}else if(m.t=='clear'){strokes=[];redraw()}
  state()});
+/* عجلة الماوس وانت بترسم: بتعدّي للبرنامج اللي تحت (سكرول للـ PDF أو الصفحة) ثانية ونص، وبعدين القلم بيرجع لوحده */
+addEventListener('wheel',()=>{if(on)window.itqanApp.ann({t:'wheel'})},{passive:true});
 addEventListener('resize',size);size();
 </script>
 </body>

@@ -186,6 +186,8 @@ ipcMain.on('ann', (e, m) => {
   if (!m || typeof m.t !== 'string') return;
   if (m.t === 'toggle') return annMode(!ANN.on);
   if (m.t === 'close') return annMode(false);
+  /* سكرول وانت بترسم: الماوس يعدّي للشاشة اللي تحت لحظة، وبعدها الرسم يرجع لوحده */
+  if (m.t === 'wheel') { const ov = annWin('ov'); if (!ov || !ANN.on) return; ov.setIgnoreMouseEvents(true); clearTimeout(ANN.wt); ANN.wt = setTimeout(() => { const o = annWin('ov'); if (o && ANN.on) o.setIgnoreMouseEvents(false); }, 1500); return; }
   if (['tool', 'color', 'width', 'undo', 'clear'].includes(m.t)) { const ov = annWin('ov'); if (ov) ov.webContents.send('ann', m); return; }
   if (m.t === 'state') { const tb = annWin('tb'); if (tb) tb.webContents.send('ann', m); }
 });

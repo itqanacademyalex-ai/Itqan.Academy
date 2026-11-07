@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-m';
+const VER='2026.11.12-n';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1586,15 +1586,16 @@ function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
   SP=()=>{const i=document.createElement('i');i.className='sp';t.appendChild(i)};
  const gr=B('⠿','اسحب لتحريك الشريط (يمكن وضعه خارج السبورة)',()=>{},'grip');mkDrag(t,'tb',gr);
  B('✏️','قلم — اضغط مرتين للون والسُمك',function(){toolTap(this,'pen')}).dataset.tool='pen';
+ /* صفحات السبورة جنب القلم عشان تبان على الموبايل: قبل / رقم الصفحة / بعد / صفحة جديدة / تحميل الكل PDF */
+ SP();B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));B('1/1','الصفحات: جديدة / استيراد PDF / حفظ PDF',function(){tbPop(this,'pg')},'pgl dd');B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));
+ B('➕','صفحة جديدة فاضية بعد الصفحة دي',()=>pgNew());B('📑','تحميل كل صفحات السبورة في ملف PDF واحد',()=>pgPdf());SP();
  B('✨','القلم الذكي — ارسم شكل بإيدك (خط، دائرة، مربع، مثلث…) ويتحوّل لشكل منتظم',()=>setTool('sm')).dataset.tool='sm';
  B('🖊','هايلايتر — اضغط مرتين للون والسُمك',function(){toolTap(this,'hl')}).dataset.tool='hl';
  B('🧽','ممحاة — اضغط مرتين لاختيار: ممحاة جزء / ممحاة الخط كله',function(){toolTap(this,tool=='se'?'se':'era')}).dataset.tool='era';
  B('▭','أشكال',function(){tbPop(this,'shp')},'dd').dataset.grp='shp';
  B('📐','المسطرة والمنقلة والبرجل',function(){tbPop(this,'ins')},'dd').dataset.grp='ins';
  B('🗒️','ورقة ملاحظات مسطّرة — اضغط على أي مكان في السبورة أو الشاشة المشاركة، واكتب عليها بالقلم',()=>setTool('note')).dataset.tool='note';
- SP();B('↩','تراجع',undo);B('↪','إعادة',redo);SP();
- B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));B('1/1','الصفحات: جديدة / استيراد PDF / حفظ PDF',function(){tbPop(this,'pg')},'pgl dd');B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));
- SP();B('⋯','المزيد',function(){tbPop(this,'more')},'dd');refTb()}
+ SP();B('↩','تراجع',undo);B('↪','إعادة',redo);SP();B('⋯','المزيد',function(){tbPop(this,'more')},'dd');refTb()}
 function tbPopX(){const m=$('#tbp');if(m)m.hidden=true}
 function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=true;return}
  if(!m){m=document.createElement('div');m.id='tbp';document.body.append(m);document.addEventListener('pointerdown',e=>{const q=$('#tbp');if(q&&!q.hidden&&!q.contains(e.target)&&!e.target.closest('#tb .dd'))q.hidden=true},true)}
@@ -2326,10 +2327,13 @@ async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg
  try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
  const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'px',format:[LW,LH],hotfixes:['px_scaling']}),keep=[strokes,PBG];
  const wasWb=st.wb;st.wb=1;
+ /* جودة عالية: كل صفحة بتترسم من جديد بحجم 3200×1800 بدل صورة الشاشة الصغيرة */
+ const EK=2,sv={w:lay.width,h:lay.height,S,OX,OY};lay.width=lay2.width=LW*EK;lay.height=lay2.height=LH*EK;S=EK;OX=OY=0;
+ const hiEnd=()=>{lay.width=lay2.width=sv.w;lay.height=lay2.height=sv.h;S=sv.S;OX=sv.OX;OY=sv.OY;dirty=1;try{fit()}catch(e){rebuild()}};
  for(let i=0;i<L.length;i++){window._xN=L[i].n||[];strokes=L[i].s;PBG=L[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=L[i].bg}):null;rebuild();
-  const full=wbCanvas(),c=document.createElement('canvas');c.width=LW;c.height=LH;c.getContext('2d').drawImage(full,OX,OY,LW*S,LH*S,0,0,LW,LH);
-  if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,LW,LH)}
- window._xN=null;strokes=keep[0];PBG=keep[1];st.wb=wasWb;rebuild();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+  const c=wbCanvas();
+  if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,LW,LH,undefined,'FAST')}
+ window._xN=null;strokes=keep[0];PBG=keep[1];st.wb=wasWb;hiEnd();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
 /* ===== 📖 المصحف على السبورة =====
    المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
    يشرح ويكتب ويلوّن عليها بالقلم، والطلاب بيشوفوها. النص من موسوعة القرآن الكريم (quranenc.com) — رخصة CC BY-SA 4.0 */
