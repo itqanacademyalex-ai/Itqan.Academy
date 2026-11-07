@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-o';
+const VER='2026.11.12-p';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1011,7 +1011,11 @@ async function startTPeer(){
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
-   tTries++;try{p.destroy()}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
+   /* رقم الغرفة لسه محجوز من المرة اللي فاتت (التطبيق اتقفل فجأة، أو الحصة مفتوحة في تبويب/جهاز تاني) — الخادم بيفكّه لوحده خلال دقيقة */
+   tTries++;try{p.destroy()}catch(x){}
+   if(tTries==1)sys('⏳ الغرفة لسه محجوزة من آخر مرة اتفتحت — بنحاول نفتحها تاني لوحدنا (ممكن تاخد لحد دقيقة). سيب الصفحة مفتوحة.');
+   if(tTries==14)sys('⚠️ الغرفة لسه مفتوحة في مكان تاني — لو الحصة مفتوحة على جهاز أو تبويب تاني اقفلها، وهنا هتفتح لوحدها.');
+   try{H.t.peer++}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
   if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');if(!opened||p.destroyed)setTimeout(()=>{if(peer===p){try{p.destroy()}catch(x){}startTPeer()}},4000);return}
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
@@ -1976,7 +1980,9 @@ function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()))
  if(Array.isArray(o.seen))o.seen.forEach(x=>SEEN.add(x));if(o.h&&o.h.stu){H.ev=o.h.ev||[];H.stu=o.h.stu;Object.assign(H.t,o.h.t||{})}hEv('↩️ صفحة المعلم اتعملها إعادة تحميل');if(Array.isArray(o.strokes)&&o.strokes.length){strokes=o.strokes;try{rebuild()}catch(e){}}
  sys('↩️ تمت استعادة الحصة بعد إعادة تحميل الصفحة — الطلاب سيعودون تلقائياً');render();return true}
 window.addEventListener('beforeunload',e=>{if(role=='t'&&LOG.start&&!mailDone&&!endDone){e.preventDefault();e.returnValue=''}});
-window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
+window.addEventListener('pagehide',e=>{tSave();mailEnd(1,'','',1);
+ /* المعلم قفل الصفحة أو عمل تحديث: نسيب رقم الغرفة فوراً عشان يقدر يرجع على طول (من غير ما يستنى الخادم دقيقة) */
+ if(role=='t'&&!(e&&e.persisted))try{peer&&!peer.destroyed&&peer.destroy()}catch(x){}});
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
