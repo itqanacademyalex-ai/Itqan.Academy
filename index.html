@@ -341,7 +341,7 @@ body,#join,#gate,#sec{background:linear-gradient(160deg,#0a1422 0%,#0f2236 60%,#
    <button data-t="chat" class="a">الشات (0)</button><button data-t="stu">الطلاب (0)</button><button data-t="hand">اليد المرفوعة (0)</button>
   </div>
   <div id="list"></div>
-  <div class="inp"><input id="ci" placeholder="اكتب للطلاب..." autocomplete="off"><button onclick="send()">➤</button></div>
+  <div class="inp"><input id="ci" placeholder="اكتب للطلاب..." autocomplete="off"><button id="cimg" onclick="chatImg()" title="إرسال صورة" style="flex:none">🖼</button><button onclick="send()">➤</button></div>
  </div>
 </div>
 
@@ -392,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-n';
+const VER='2026.11.12-r';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -634,7 +634,7 @@ async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 
  if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  return ''}
 async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
- {const g=await tGate(code,pin,k.pub);if(g){/* الكود صح بس مش وقتها: نحفظ جدوله عشان يظهر في «جدولي» */
+{const g=await tGate(code,pin,k.pub);if(!g)tpSet(code,pin);if(g){if(/كود المعلم/.test(g))tpSet(code,'');/* الكود صح بس مش وقتها: نحفظ جدوله عشان يظهر في «جدولي» */
   if(/وقت الحصة/.test(g))try{if(await Promise.race([tschSync(code),new Promise(r=>setTimeout(()=>r(false),4000))])&&!LK){sessionStorage.setItem('itqan_gmsg',g);location.reload();await new Promise(()=>{})}}catch(x){}
   const e=new Error('gate');e.g=g;throw e}}try{localStorage.setItem('itqan_v_'+code,fpOf(k.pub))}catch(e){}
  if(0){
@@ -643,6 +643,9 @@ async function tCodeOpen(code,pin){const k=await roomKey(code,pin);
  const tk=await tkMake(code,pin,k.jwk);try{localStorage.setItem('itqan_tk_'+code,JSON.stringify({tk,k:k.pub}));sessionStorage.setItem('itqan_pinpre',String(pin))}catch(e){}
  try{await Promise.race([tschSync(code),new Promise(r=>setTimeout(r,4000))])}catch(e){}
  return linkOf(code,k.pub,'t')}
+/* كود المعلم بيتحفظ على جهاز المعلم بعد أول دخول صح — بعد كده اللينك بيفتح الحصة على طول (وشرط الميعاد لسه شغّال) */
+function tpGet(r){try{return localStorage.getItem('itqan_tp_'+r)||''}catch(e){return''}}
+function tpSet(r,p){try{p?localStorage.setItem('itqan_tp_'+r,String(p)):localStorage.removeItem('itqan_tp_'+r)}catch(e){}}
 function tkGet(room){try{const o=JSON.parse(localStorage.getItem('itqan_tk_'+room));return o&&o.tk&&o.k?o:null}catch(e){return null}}
 async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&&typeof c.e==='number'&&c.e>Date.now()&&/^[A-Za-z0-9_-]{86,88}$/.test(c.p)&&await vfy(key,certMsg(c),s)}catch(e){return false}}
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
@@ -691,7 +694,7 @@ function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm)
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;setTimeout(()=>{try{if(!$('#join').hidden&&$('#nm').value.trim())join('t')}catch(e){}},500)}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
@@ -798,7 +801,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    const r=u.searchParams.get('r');if(role&&r!==role)return msg(r=='s'?'ده رابط طالب — لو أنت المعلم اطلب رابط المعلم من السكرتارية.':'ده رابط المعلم — الطالب محتاج رابط الحصة الخاص بالطلاب.',1);
    return location.href=u.href}
   const c=parseCode(v);if(!c)return msg('الكود لازم يكون 4 حروف وأرقام — زي K7M2.',1);
-  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 6 أرقام.',1);
+  if(role=='t'){const T=tkGet(c);if(T)return location.href=linkOf(c,T.k,'t');const pin=(tpGet(c)||prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim();if(!pin)return;if(!/^\d{4,6}$/.test(pin))return msg('كود المعلم 6 أرقام.',1);
    busy=1;go.disabled=true;msg('⏳ جارٍ التحقق من كود المعلم والمعاد…');return tCodeOpen(c,pin).then(u=>{location.href=u},e=>{busy=0;go.disabled=false;msg(e&&e.g?'⛔ '+e.g:'تعذّر فتح الحصة — حاول تاني.',1)})}
   inp.value=fmtCode(c);busy=1;go.disabled=true;msg('⏳ جارٍ البحث عن الحصة…');
   resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,role||'s')},e=>{busy=0;go.disabled=false;
@@ -925,7 +928,7 @@ let TC=null,TK=null;
 const pinH=async pin=>b64u(await crypto.subtle.digest('SHA-256',enc('P|'+room+'|'+pin)));
 async function tAuth(pin,resume){
  /* غرفة ثابتة: كل مرة لازم كود المعلم الصح + ميعاد الحصة */
- if(tkGet(room)){showGate('⏳','جارٍ التحقق من كود المعلم والمعاد…');const g=await tGate(room,pin,LK.k);if(g)return showGate('⛔',g,1);resume=false}
+ if(tkGet(room)){showGate('⏳','جارٍ التحقق من كود المعلم والمعاد…');const g=await tGate(room,pin,LK.k);if(g){if(/كود المعلم/.test(g))tpSet(room,'');return showGate('⛔',g,1)}tpSet(room,pin);resume=false}
  let sv=null;try{sv=JSON.parse(localStorage.getItem('itqan_tc_'+room))}catch(e){}
  if(sv&&sv.c&&(resume||sv.ph&&sv.ph===await pinH(pin))&&await certOk(sv.c,sv.s,room,LK.k)){
   try{TK={priv:await crypto.subtle.importKey('jwk',sv.j,ALG,false,['sign']),pub:sv.c.p,j:sv.j};TC={c:sv.c,s:sv.s};RC=recCfgOk(sv.rc)||RC;MAILLIVE=sv.ml?1:0;return tStart()}catch(e){}
@@ -1008,7 +1011,11 @@ async function startTPeer(){
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   if(e.type=='unavailable-id'){
-   tTries++;try{p.destroy()}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
+   /* رقم الغرفة لسه محجوز من المرة اللي فاتت (التطبيق اتقفل فجأة، أو الحصة مفتوحة في تبويب/جهاز تاني) — الخادم بيفكّه لوحده خلال دقيقة */
+   tTries++;try{p.destroy()}catch(x){}
+   if(tTries==1)sys('⏳ الغرفة لسه محجوزة من آخر مرة اتفتحت — بنحاول نفتحها تاني لوحدنا (ممكن تاخد لحد دقيقة). سيب الصفحة مفتوحة.');
+   if(tTries==14)sys('⚠️ الغرفة لسه مفتوحة في مكان تاني — لو الحصة مفتوحة على جهاز أو تبويب تاني اقفلها، وهنا هتفتح لوحدها.');
+   try{H.t.peer++}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
   if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');if(!opened||p.destroyed)setTimeout(()=>{if(peer===p){try{p.destroy()}catch(x){}startTPeer()}},4000);return}
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
@@ -1036,6 +1043,7 @@ async function startTPeer(){
 }
 async function tData(c,d){
  if(!d||typeof d!=='object')return;
+ {const o=conns[c.peer];if(o){o.seen=Date.now();if(d.t=='hb'){o.hbOK=1;return}}}
  if(d.t=='pk?'){try{c.send({t:'pk',k:LK.k})}catch(e){}return}
  if(d.t=='chal'){tProof(c,d);return}
  if(d.t=='cohello'){coHello(c);return}
@@ -1054,7 +1062,7 @@ async function tData(c,d){
   return}
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'&&o.dir){pmGot(c.peer,{m:d.m,ts:Date.now()});return}
- if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m).slice(0,500),ts:Date.now()};chat.push(m);bc({t:'chat',...m});render()}
+ if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m||'').slice(0,500),ts:Date.now()};if(typeof d.img=='string'&&d.img.length<700000&&CIMG.test(d.img))m.img=d.img;if(!m.m&&!m.img)return;chat.push(m);bc({t:'chat',...m});render()}
  else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
@@ -1177,7 +1185,7 @@ function dropCall(){if(micS)micS.enabled=false;if(myCall){const c=myCall;myCall=
 function stopMic(){if(micS){const t=micS;micS=null;t.stop()}if(sSr){sSr.stop();sSr=null}stopSScr();dropCall()}
 /* تطبيق الكمبيوتر: بنبلّغه ببداية/نهاية مشاركة الشاشة عشان يظهر زر القلم للرسم على الشاشة */
 const shareSig=on=>{try{window.itqanApp&&window.itqanApp.share&&window.itqanApp.share(on)}catch(e){}};
-function refresh(){shareSig(!!scrT);
+function refresh(){shareSig(!!scrT);if(!scrT){const b=$('#cscb');if(b)b.remove();window.CSC=0}
  stream.getVideoTracks().forEach(t=>stream.removeTrack(t));
  stream.addTrack(scrT||(stuS&&stuS.t)||dummy);
  $('#v').srcObject=stream;
@@ -1216,9 +1224,11 @@ async function tScr(){
  if(scrT){scrT.stop();scrT=null;scrAEnd()}
  else try{
   const V={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};let ms;
-  try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include'})}
-  catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false})}
-  scrT=ms.getVideoTracks()[0];scrT.contentHint='detail';{const q=$('#shm');if(q)q.hidden=true}if(st.wb){st.wb=0;bst()}
+  /* Chrome/Edge: لو اتشارك «تبويب» نقدر نعمل سكرول للصفحة المشاركة من جوه الحصة (Captured Surface Control) */
+  const mkC=()=>window.CaptureController&&CaptureController.prototype.forwardWheel?new CaptureController():null;let ctl=mkC();
+  try{ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},systemAudio:'include',...(ctl?{controller:ctl}:{})})}
+  catch(e1){if(e1&&e1.name=='NotAllowedError')throw e1;ctl=mkC();ms=await navigator.mediaDevices.getDisplayMedia({video:V,audio:false,...(ctl?{controller:ctl}:{})})}
+  scrT=ms.getVideoTracks()[0];try{cscOffer(ctl,scrT)}catch(e){}scrT.contentHint='detail';{const q=$('#shm');if(q)q.hidden=true}if(st.wb){st.wb=0;bst()}
   if(stuS){const k=stuS.k;try{conns[k]&&conns[k].c.send({t:'ssd'})}catch(e){}ssDrop(k)}
   const a=ms.getAudioTracks()[0];
   if(a){scrAT=a;mxSrc('S',a);a.onended=()=>{if(scrAT===a)scrAEnd()};sys('🔊 صوت الشاشة المشاركة يصل للطلاب')}
@@ -1227,6 +1237,12 @@ async function tScr(){
  catch(e){return alert(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia?'تعذرت مشاركة الشاشة — افتح الصفحة مباشرة في Chrome أو Edge':'مشاركة الشاشة غير مدعومة في متصفح الموبايل — استخدم كمبيوتر')}
  refresh();
 }
+/* زرار فوق الشاشة المشاركة: يشغّل السكرول على التبويب المشارك من جوه الحصة (المتصفح بيطلب إذن أول مرة) */
+function cscOffer(ctl,t){let b=$('#cscb');if(b)b.remove();window.CSC=0;if(!ctl||!t||(t.getSettings&&t.getSettings().displaySurface)!=='browser')return;
+ b=document.createElement('button');b.id='cscb';b.style.cssText='position:absolute;top:10px;right:10px;z-index:8;background:#1a9486;color:#fff;border:0;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;box-shadow:0 4px 14px #0008;cursor:pointer';
+ const lbl=()=>b.textContent=window.CSC?'🖱 السكرول شغّال على الصفحة المشاركة — اضغط للإيقاف':'🖱 اعمل سكرول للصفحة المشاركة من هنا';lbl();
+ b.onclick=async()=>{try{if(window.CSC){await ctl.forwardWheel(null);window.CSC=0}else{await ctl.forwardWheel($('#stage'));window.CSC=1;toast('🖱','حرّك عجلة الماوس فوق الشاشة المشاركة — الصفحة هتتحرك عند الطلاب كمان')}}catch(e){window.CSC=0;alert('المتصفح مارضيش يدّي التحكم — اسمح بالإذن، أو شارك «تبويب» من Chrome أو Edge')}lbl()};
+ $('#stage').appendChild(b);t.addEventListener('ended',()=>{b.remove();window.CSC=0})}
 function tWb(){st.wb=st.wb?0:1;if(st.wb)st.bg=(scrT||stuS)?0:1;bst();ui()}
 const CLR=[];
 /* ===== القلم الذكي ✨: الرسمة بالإيد بتتحوّل لشكل منتظم (خط / دائرة / بيضاوي / مستطيل / مثلث / مضلّع) =====
@@ -1333,7 +1349,7 @@ function sData(d){
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
  else if(d.t=='denied'||d.t=='kicked'){final=1;lastDel();stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
  else if(d.t=='init'){admitted=1;if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
- else if(d.t=='chat'){chat.push(d)}
+ else if(d.t=='chat'){if(d.img&&!(typeof d.img=='string'&&CIMG.test(d.img)))delete d.img;chat.push(d)}
  else if(d.t=='roster'){roster=d}
  else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
@@ -1381,6 +1397,16 @@ function endCall(){
 }
 
 /* ---------- الشات والواجهة ---------- */
+/* صورة في الشات: بتتصغّر على الجهاز (أقصى 1280 بكسل) قبل ما تتبعت */
+const CIMG=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
+function chatImg(){if(role!='t'&&(st.lock||!conn||!conn.open))return alert('الشات مقفول دلوقتي');
+ filePick('image/*',0,async F=>{try{const u=URL.createObjectURL(F[0]),im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src=u});URL.revokeObjectURL(u);
+  let K=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)),q=.75,d='';
+  for(let t=0;t<5;t++){const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*K));c.height=Math.max(1,Math.round(im.naturalHeight*K));const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);d=c.toDataURL('image/jpeg',q);if(d.length<450000)break;K*=.75;q=Math.max(.5,q-.08)}
+  if(role=='t'){const o={n:name+' (المعلم)',m:'',img:d,ts:Date.now()};chat.push(o);bc({t:'chat',...o});render()}else conn.send({t:'chat',n:name,m:'',img:d});toast('🖼','الصورة اتبعتت')}
+  catch(e){alert('تعذّر إرسال الصورة — جرّب صورة تانية')}})}
+function imgView(el){const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:300;background:#000d;display:flex;align-items:center;justify-content:center;padding:12px';o.onclick=()=>o.remove();
+ const i=new Image();i.src=el.src;i.style.cssText='max-width:100%;max-height:100%;border-radius:10px';o.append(i);document.body.append(o)}
 function send(){
  const i=$('#ci'),m=i.value.trim();if(!m)return;
  if(role=='t'){const o={n:name+' (المعلم)',m,ts:Date.now()};chat.push(o);bc({t:'chat',...o});render()}
@@ -1397,7 +1423,7 @@ function render(){
  b.textContent='الطلاب ('+stu.length+')'+(wn?' 🔔'+wn:'');c.textContent='اليد المرفوعة ('+hd.length+')';
  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('a',x.dataset.t==tab));
  $('#cnt').textContent=stu.length;
- if(tab=='chat')L.innerHTML=chat.map(x=>x.sys?'<div class="m s">'+esc(x.m)+'</div>':'<div class="m"><b>'+U(x.n)+'</b>'+U(x.m)+'</div>').join('')||'<div class="m s">لا توجد رسائل بعد</div>';
+ if(tab=='chat')L.innerHTML=chat.map(x=>x.sys?'<div class="m s">'+esc(x.m)+'</div>':'<div class="m"><b>'+U(x.n)+'</b>'+U(x.m||'')+(x.img&&CIMG.test(x.img)?'<img src="'+x.img+'" onclick="imgView(this)" style="display:block;max-width:100%;max-height:220px;border-radius:10px;margin-top:4px;cursor:zoom-in" alt="">':'')+'</div>').join('')||'<div class="m s">لا توجد رسائل بعد</div>';
  else if(role=='t'&&tab=='stu'){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
   E=Object.entries(conns),W=E.filter(([k,x])=>!x.adm),A=E.filter(([k,x])=>x.adm),
   row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span>'+i+U(n)+'</span><span style="display:flex;gap:5px;flex-wrap:wrap">'+b+'</span></div>';
@@ -1460,7 +1486,7 @@ function rebuild(){[lx,lx2].forEach(q=>{q.setTransform(1,0,0,1,0,0);q.clearRect(
 const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
 function sty(c,s){c.lineCap=c.lineJoin='round';c.lineWidth=s.w;c.strokeStyle=s.c;c.globalCompositeOperation=s.e?'destination-out':'source-over'}
 function penSeg(c,s,i){if(s.h)c=lx2;else if(s.e)penSeg1(lx2,s,i);penSeg1(c,s,i)}
-function penSeg1(c,s,i){const p=s.p;c.save();sty(c,s);{const q=p[Math.max(0,i)];if(q&&q[2]!=null)c.lineWidth=s.w*(.35+1.3*q[2])}c.beginPath();
+function penSeg1(c,s,i){const p=s.p;c.save();sty(c,s);/* سُمك القلم ثابت — مابيتغيّرش بقوة الضغط */c.beginPath();
  if(i<1){c.moveTo(p[0][0],p[0][1]);c.lineTo(p[0][0]+.01,p[0][1])}
  else{const a=i>=2?mid(p[i-2],p[i-1]):p[0],e=mid(p[i-1],p[i]);c.moveTo(a[0],a[1]);c.quadraticCurveTo(p[i-1][0],p[i-1][1],e[0],e[1])}
  c.stroke();c.restore()}
@@ -1564,7 +1590,7 @@ function up(){
  else if(w=='se'){drag=null;const g=ERU[ERU.length-1];if(g){g.open=0;if(!g.L.length)ERU.pop()}if(seDirty){seDirty=0;bc({t:'restore',s:strokes})}redraw();return}
  drag=null;cur=null;redraw()}
 /* قلم الآيباد/التابلت: الضغط بيتحفظ مع كل نقطة فالخط بيتخن ويرفع زي القلم الحقيقي */
-function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width,P=[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S];if(e.pointerType=='pen'&&e.pressure>0&&tool=='pen'&&e.type!='pointerleave')P.push(Math.round(e.pressure*100)/100);return P}
+function lp(e){const r=wb.getBoundingClientRect(),k=wb.width/r.width,P=[((e.clientX-r.left)*k-OX)/S,((e.clientY-r.top)*k-OY)/S];if(0)P.push(Math.round(e.pressure*100)/100);return P}
 wb.onpointerdown=e=>{if(role!='t')return sDown(e);e.preventDefault();try{wb.setPointerCapture(e.pointerId)}catch(x){};down(lp(e))};
 wb.onpointermove=e=>{if(role!='t')return sMove(e);const E=drag&&drag.w=='pen'&&e.getCoalescedEvents?e.getCoalescedEvents():null;if(E&&E.length>1){E.forEach(x=>move(lp(x)));hov=lp(e)}else{hov=lp(e);move(hov)}};
 wb.onpointerup=wb.onpointercancel=e=>{if(role=='t')up();else sUp(e)};
@@ -1804,7 +1830,7 @@ function calcGo(){const i=$('#cin'),o=$('#cout');try{const v=calcEval(i.value,cd
  const i=$('#cin');['keydown','keyup','keypress'].forEach(ev=>i.addEventListener(ev,e=>{e.stopPropagation();if(ev=='keydown'&&e.key=='Enter'){e.preventDefault();calcGo()}}))}
 Object.assign(I18.ar,{bgs:'خلفية السبورة',bg_sq:'مربعات صغيرة',bg_blank:'فارغة',bg_lines:'سطور',bg_grid:'شبكة',bg_xy:'شبكة إحداثيات X-Y'});
 Object.assign(I18.en,{bgs:'Whiteboard background',bg_sq:'Small squares',bg_blank:'Blank',bg_lines:'Lines',bg_grid:'Grid',bg_xy:'X-Y coordinate grid'});
-function setBgT(k){if(role!='t')return;st.bt=k;st.bg=1;bst();ui()}
+function setBgT(k){if(role!='t')return;st.bt=k;st.bg=1;try{if(WPG&&WPG[pi])WPG[pi].bt=k}catch(e){}bst();ui()}
 function bgMenu(btn){let m=$('#bgm');if(m&&!m.hidden){m.hidden=true;return}
  if(!m){m=document.createElement('div');m.id='bgm';document.body.append(m)}
  m.textContent='';['sq','blank','lines','grid','xy'].forEach(k=>{const b=document.createElement('button');b.textContent=((st.bt||'blank')==k?'✓ ':'')+T('bg_'+k);b.onclick=()=>{setBgT(k);m.hidden=true};m.append(b)});
@@ -1964,7 +1990,7 @@ function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;
 const tsKey=()=>'itqan_ts_'+room;
 function tSave(){if(role!='t'||!LOG.start||mailDone||endDone)return;
  const now=Date.now(),att=LOG.att.concat(Object.values(conns).filter(o=>o.adm&&!o.dir).map(o=>({ts:now,n:o.name,ev:'خرج'})));
- const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300),att,seen:[...SEEN],strokes,h:H};
+ const o={at:now,t0:sessT0,ls:LOG.start,chat:chat.filter(x=>!x.sys).slice(-300).map(x=>x.img?{n:x.n,m:(x.m?x.m+' ':'')+'🖼 (صورة)',ts:x.ts}:x),att,seen:[...SEEN],strokes,h:H};
  try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(e){o.strokes=[];try{sessionStorage.setItem(tsKey(),JSON.stringify(o))}catch(x){}}}
 function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()));sessionStorage.removeItem(tsKey())}catch(e){}
  if(!o||!(Date.now()-o.at<20*60000))return false;
@@ -1972,7 +1998,9 @@ function tRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(tsKey()))
  if(Array.isArray(o.seen))o.seen.forEach(x=>SEEN.add(x));if(o.h&&o.h.stu){H.ev=o.h.ev||[];H.stu=o.h.stu;Object.assign(H.t,o.h.t||{})}hEv('↩️ صفحة المعلم اتعملها إعادة تحميل');if(Array.isArray(o.strokes)&&o.strokes.length){strokes=o.strokes;try{rebuild()}catch(e){}}
  sys('↩️ تمت استعادة الحصة بعد إعادة تحميل الصفحة — الطلاب سيعودون تلقائياً');render();return true}
 window.addEventListener('beforeunload',e=>{if(role=='t'&&LOG.start&&!mailDone&&!endDone){e.preventDefault();e.returnValue=''}});
-window.addEventListener('pagehide',()=>{tSave();mailEnd(1,'','',1)});
+window.addEventListener('pagehide',e=>{tSave();mailEnd(1,'','',1);
+ /* المعلم قفل الصفحة أو عمل تحديث: نسيب رقم الغرفة فوراً عشان يقدر يرجع على طول (من غير ما يستنى الخادم دقيقة) */
+ if(role=='t'&&!(e&&e.persisted))try{peer&&!peer.destroyed&&peer.destroy()}catch(x){}});
 Object.assign(I18.ar,{board:'السبورة',fsNo:'ملء الشاشة غير متاح هنا (متصفح الموبايل أو إطار مدمج) — افتح الصفحة مباشرة في Chrome أو Edge.'});
 Object.assign(I18.en,{board:'Whiteboard',fsNo:'Full screen is not available here (mobile browser or embedded frame) — open the page directly in Chrome or Edge.'});
 /* ===== ملء الشاشة ===== */
@@ -2274,7 +2302,7 @@ function noteNew(p){const n={id:Date.now().toString(36),x:Math.max(0,Math.min(LW
 /* تحريك حبر الورقة معاها */
 function noteInk(id,dx,dy){strokes.forEach(s=>{if(s.nid!==id)return;if(s.p)s.p.forEach(q=>{q[0]+=dx;q[1]+=dy});if(s.a){s.a=[s.a[0]+dx,s.a[1]+dy];s.b=[s.b[0]+dx,s.b[1]+dy]}if(s.pts)s.pts=s.pts.map(q=>[q[0]+dx,q[1]+dy])})}
 function noteDel(n){const L=NOTES();L.splice(L.indexOf(n),1);strokes=strokes.filter(s=>s.nid!==n.id);rebuild();bc({t:'restore',s:strokes});noteSync(1)}
-function pgSave(){pgInit();WPG[pi].s=strokes}
+function pgSave(){pgInit();WPG[pi].s=strokes;WPG[pi].bt=st.bt||'blank'}
 function pgImg(u){if(!u)return null;const i=new Image();i.onload=()=>{redraw();if(document.body.classList.contains('pfs'))try{zFitSoon(200)}catch(e){}};i.src=u;return i}
 /* صفحات الـ PDF: كل صورة صفحة بتتبعت لكل طالب مرة واحدة بس — بعد كده التقليب بيبعت رقمها بس (فوري)،
    والصفحة اللي بعدها بتتبعت في الخلفية عشان تبقى جاهزة عنده قبل ما المعلم يقلب */
@@ -2283,7 +2311,8 @@ function pbgTo(x,bg){try{if(!bg){x.c.send({t:'pbg',img:''});return}const h=pgId(
 let pfT=0;function pbgPre(){clearTimeout(pfT);pfT=setTimeout(()=>{if(!WPG)return;[pi+1,pi-1].forEach(k=>{const bg=WPG[k]&&WPG[k].bg;if(!bg)return;const h=pgId(bg);
  Object.values(conns).filter(x=>x.adm).forEach(x=>{x.pgs=x.pgs||new Set();if(!x.pgs.has(h)){try{x.c.send({t:'pbgc',h,img:bg});x.pgs.add(h)}catch(e){}}})})},1500)}
 function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
-function pgShow(){strokes=WPG[pi].s;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
+/* كل صفحة ليها الخلفية بتاعتها (سطور/مربعات/محاور) — الصفحة الجديدة بتاخد خلفية الصفحة اللي قبلها */
+function pgShow(){strokes=WPG[pi].s;if(WPG[pi].bt)st.bt=WPG[pi].bt;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
 function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
 function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||null});pi++;pgShow()}
 function pgDel(){if(role!='t')return;pgSave();if(WPG.length<2)return alert('دي الصفحة الوحيدة — استخدم 🗑 لمسح الرسم');if(!confirm('تمسح الصفحة '+(pi+1)+' كلها؟'))return;WPG.splice(pi,1);pi=Math.min(pi,WPG.length-1);pgShow()}
@@ -2317,23 +2346,32 @@ function pgImport(){if(role!='t')return;const inp={click(){filePick('application
   out.forEach((b,j)=>WPG.splice(at+1+j,0,{s:[],bg:b}));pi=at;pgShow();refresh();sys('📄 اتضافت الصفحات للسبورة — اتنقّل بينهم بالأسهم ▶ ◀ في شريط الأدوات')};
  inp.click()}
 /* الطالب: بنحفظ كل صفحة شافها (رسمها وخلفيتها وملاحظاتها) عشان يقدر يحمّل السبورة كلها PDF */
-const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PBG&&PBG.src||null,n:SNOTES}}
+const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PBG&&PBG.src||null,n:SNOTES,bt:st.bg?st.bt:'blank'}}
 /* حفظ الملف بطريقة مضمونة: على الآيفون/الآيباد بنفتح «مشاركة» (حفظ في الملفات)، وغير كده تحميل عادي */
 async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
  if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
-async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[]}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
+async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[],bt:p.bt}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
  if(!L.length)return;sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}
  try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
- const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'px',format:[LW,LH],hotfixes:['px_scaling']}),keep=[strokes,PBG];
+ const {jsPDF}=window.jspdf;let doc=null;const keep=[strokes,PBG,st.bt];
  const wasWb=st.wb;st.wb=1;
- /* جودة عالية: كل صفحة بتترسم من جديد بحجم 3200×1800 بدل صورة الشاشة الصغيرة */
- const EK=2,sv={w:lay.width,h:lay.height,S,OX,OY};lay.width=lay2.width=LW*EK;lay.height=lay2.height=LH*EK;S=EK;OX=OY=0;
+ /* حدود الصفحة = السبورة كلها + أي رسم أو ورقة اتكتبت برّه (فوق/تحت/جنب) — عشان مفيش حاجة تتقص */
+ const box=(P,N)=>{let x0=0,y0=0,x1=LW,y1=LH;const add=(x,y,m)=>{if(!isFinite(x)||!isFinite(y))return;x0=Math.min(x0,x-m);y0=Math.min(y0,y-m);x1=Math.max(x1,x+m);y1=Math.max(y1,y+m)};
+  (P||[]).forEach(q=>{const m=(q.w||4)/2+12;(q.p||[]).forEach(t=>add(t[0],t[1],m));if(q.a)add(q.a[0],q.a[1],m);if(q.b)add(q.b[0],q.b[1],m);(q.pts||[]).forEach(t=>add(t[0],t[1],m));
+   if(q.k=='c'&&q.a&&q.b){const r=Math.hypot(q.b[0]-q.a[0],q.b[1]-q.a[1]);add(q.a[0]-r,q.a[1]-r,m);add(q.a[0]+r,q.a[1]+r,m)}});
+  (N||[]).forEach(n=>{add(n.x,n.y,8);add(n.x+(n.w||NW),n.y+(n.h||NH),8)});
+  x0=Math.max(x0,-2*LW);y0=Math.max(y0,-3*LH);x1=Math.min(x1,3*LW);y1=Math.min(y1,4*LH);return[x0,y0,x1-x0,y1-y0]};
+ const sv={w:lay.width,h:lay.height,S,OX,OY};
  const hiEnd=()=>{lay.width=lay2.width=sv.w;lay.height=lay2.height=sv.h;S=sv.S;OX=sv.OX;OY=sv.OY;dirty=1;try{fit()}catch(e){rebuild()}};
- for(let i=0;i<L.length;i++){window._xN=L[i].n||[];strokes=L[i].s;PBG=L[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=L[i].bg}):null;rebuild();
-  const c=wbCanvas();
-  if(i)doc.addPage([LW,LH],'landscape');doc.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,LW,LH,undefined,'FAST')}
- window._xN=null;strokes=keep[0];PBG=keep[1];st.wb=wasWb;hiEnd();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+ for(let i=0;i<L.length;i++){window._xN=L[i].n||[];strokes=L[i].s;st.bt=L[i].bt||keep[2]||'blank';PBG=L[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=L[i].bg}):null;
+  const [bx,by,bw,bh]=box(L[i].s,L[i].n),EK=Math.min(2,Math.sqrt(1.4e7/(bw*bh)));
+  /* جودة عالية: الصفحة بتترسم من جديد (مش صورة الشاشة الصغيرة) */
+  lay.width=lay2.width=Math.round(bw*EK);lay.height=lay2.height=Math.round(bh*EK);S=EK;OX=-bx*EK;OY=-by*EK;rebuild();
+  const c=wbCanvas(),ori=bw>=bh?'landscape':'portrait';
+  if(!doc)doc=new jsPDF({orientation:ori,unit:'px',format:[bw,bh],hotfixes:['px_scaling']});else doc.addPage([bw,bh],ori);
+  doc.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,bw,bh,undefined,'FAST')}
+ window._xN=null;strokes=keep[0];PBG=keep[1];st.bt=keep[2];st.wb=wasWb;hiEnd();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
 /* ===== 📖 المصحف على السبورة =====
    المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
    يشرح ويكتب ويلوّن عليها بالقلم، والطلاب بيشوفوها. النص من موسوعة القرآن الكريم (quranenc.com) — رخصة CC BY-SA 4.0 */
@@ -3185,6 +3223,12 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  let badge=null,was=0,wasAdm=0;
  setInterval(()=>{
   if(role=='t'){try{bc({t:'hb'})}catch(e){}try{Object.values(cohosts).forEach(c=>{try{c.send({t:'hb'})}catch(e){}})}catch(e){}}
+  /* الطالب بيقول «أنا لسه هنا» كل 3 ثواني — لو سكت المعلم بيشيله من القايمة */
+  if(role=='s'){try{conn&&conn.open&&conn.send({t:'hb'})}catch(e){}}
+  /* طالب قفل التطبيق أو النت فصل من غير ما الاتصال يتقفل رسمي: بعد 40 ثانية من غير أي إشارة بيتشال من القايمة */
+  if(role=='t'){const n=Date.now();Object.entries(conns).forEach(([k,o])=>{if(!o.hbOK||n-(o.seen||n)<40000)return;try{o.c.close()}catch(e){}
+   setTimeout(()=>{if(conns[k]!==o)return;delete conns[k];try{ssDrop(k);mxBusDel(k);dropMic(o);hands.delete(k);hideCam('s:'+k)}catch(e){}
+    if(o.adm&&!o.dir){LOG.att.push({ts:Date.now(),n:o.name,ev:'خرج'});if(!o.rep)try{sdNote('🚪 '+o.name+' خرج من الحصة')}catch(e){}}try{roster2()}catch(e){}},1500)})}
  },3000);
  setInterval(()=>{
   if(typeof SXS!=='undefined')sxTick();
@@ -3298,7 +3342,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(moved<8&&e.type=='pointerup'&&!drawable()){const t=Date.now();
    if(t-tapT<320&&Math.hypot(n[0]-tapX,n[1]-tapY)<30){tapT=0;z>1?reset():zoomAt(2.5,n[0],n[1])}else{tapT=t;tapX=n[0];tapY=n[1]}}};
  stg.addEventListener('pointerup',up,true);stg.addEventListener('pointercancel',up,true);
- stg.addEventListener('wheel',e=>{if(box.hidden)return;e.preventDefault();const[x,y]=rel(e);zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)),x,y)},{passive:false});
+ stg.addEventListener('wheel',e=>{if(box.hidden||window.CSC)return;e.preventDefault();const[x,y]=rel(e);zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)),x,y)},{passive:false});
  const typing=()=>{const a=document.activeElement;return a&&(a.tagName=='INPUT'||a.tagName=='TEXTAREA'||a.isContentEditable)};
  addEventListener('keydown',e=>{if(box.hidden||typing())return;
   if(e.code=='Space'&&!space){space=1;ui2();e.preventDefault()}
