@@ -66,8 +66,10 @@ function doGet(e) {
     const now = new Date(), d = Number(Utilities.formatDate(now, TZ, 'u')) % 7; // 0 = الأحد
     const hm = Utilities.formatDate(now, TZ, 'HH:mm'), n = min_(hm);
     if (!r.v && !s.length) return out_({ ok: true, known: false, now: hm, d: d });
-    const allow = s.some(q => +q[0] === d && n >= min_(q[1]) - EARLY && n < min_(q[1]) + (+q[2] || DUR));
-    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, src: (r.s && r.s.length) ? 'app' : 'sheet' });
+    /* ميعاد ليه تاريخ (حصة استثنائية) بيشتغل في اليوم ده بس */
+    const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
+    const allow = s.some(q => (q[3] ? q[3] === today : +q[0] === d) && n >= min_(q[1]) - EARLY && n < min_(q[1]) + (+q[2] || DUR));
+    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, today: today, src: (r.s && r.s.length) ? 'app' : 'sheet' });
   }
   /* حصص معلم واحد (لـ «حصصي» عند المعلم): بالاسم، أو باسم معلم الغرفة c */
   if (p.a === 'tl') {
@@ -103,7 +105,7 @@ function doPost(e) {
     (b.rooms || []).slice(0, 300).forEach(r => {
       const c = String(r.c || '').toLowerCase();
       if (!/^[a-z0-9]{4,6}$/.test(c)) return;
-      R[c] = { v: String(r.v || '').slice(0, 20), t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => [+q[0], q[1], +q[2] || DUR]) };
+      R[c] = { v: String(r.v || '').slice(0, 20), t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
     });
     PropertiesService.getScriptProperties().setProperty('rooms', JSON.stringify(R));
     return out_({ ok: true, n: Object.keys(R).length });

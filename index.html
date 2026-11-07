@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-h';
+const VER='2026.11.13-i';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -714,7 +714,7 @@ function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));retu
  if(tb&&/^[A-Za-z0-9_-]{40,4000}$/.test(tb))try{if(localStorage.getItem('itqan_tb')!==tb){localStorage.setItem('itqan_tb',tb);localStorage.removeItem('itqan_tbok')}}catch(e){}}
 {const tj=new URLSearchParams(location.search).get('tj');if(tj)try{const a=JSON.parse(new TextDecoder().decode(ub64(tj)));if(Array.isArray(a)){
  a.forEach(x=>{if(x&&/^[a-z0-9]{4,6}$/.test(x.c)&&/^[A-Za-z0-9_-]{14}$/.test(x.v||''))try{localStorage.setItem('itqan_v_'+x.c,x.v)}catch(e){}});
- const ok=a.filter(x=>x&&/^[a-z0-9]{4,6}$/.test(x.c)&&Array.isArray(x.s)).map(x=>({c:x.c,t:String(x.t||'').slice(0,50),s:x.s.filter(q=>Array.isArray(q)&&q[0]>=0&&q[0]<=6&&/^\d{1,2}:\d{2}$/.test(q[1])).map(q=>[+q[0],q[1],+q[2]||60]).slice(0,20)})).slice(0,20);
+ const ok=a.filter(x=>x&&/^[a-z0-9]{4,6}$/.test(x.c)&&Array.isArray(x.s)).map(x=>({c:x.c,t:String(x.t||'').slice(0,50),s:x.s.filter(q=>Array.isArray(q)&&q[0]>=0&&q[0]<=6&&/^\d{1,2}:\d{2}$/.test(q[1])).map(q=>/^\d{4}-\d\d-\d\d$/.test(q[3]||'')?[+q[0],q[1],+q[2]||60,q[3]]:[+q[0],q[1],+q[2]||60]).slice(0,20)})).slice(0,20);
  if(ok.length){const m=tsGet().filter(x=>!ok.some(y=>y.c===x.c));localStorage.setItem('itqan_tsch',JSON.stringify(ok.concat(m)));try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}}}}catch(e){}}
 /* «جدولي» من ملف الجدول على الموقع: أول ما المعلم يدخل بكود أي حصة من حصصه، جهازه بيحفظ جدول كل حصصه (بنفس اسم المعلم)
    وكل ما يفتح التطبيق بيتحدّث لوحده — من غير لينك */
@@ -725,7 +725,7 @@ async function tschSync(code){let R={};
  if(!Object.keys(R).length){const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json();R=J.rooms||{}}
  let me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}if(!me){let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me||!me.t)return false;
  const L=Object.entries(R).filter(([c,y])=>y.t===me.t&&Array.isArray(y.s)).map(([c,y])=>{if(/^[A-Za-z0-9_-]{14}$/.test(y.v||''))try{localStorage.setItem('itqan_v_'+c,y.v)}catch(e){}
-  return{c,t:String(y.n||'').slice(0,50),s:y.s.map(q=>[+q[0],q[1],+q[2]||120])}});
+  return{c,t:String(y.n||'').slice(0,50),s:y.s.map(q=>q[3]?[+q[0],q[1],+q[2]||120,q[3]]:[+q[0],q[1],+q[2]||120])}});
  const old=localStorage.getItem('itqan_tsch')||'',nw=JSON.stringify(L);if(old===nw)return false;
  localStorage.setItem('itqan_tsch',nw);try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}return true}
 setTimeout(()=>{try{const m=sessionStorage.getItem('itqan_gmsg');if(m){sessionStorage.removeItem('itqan_gmsg');toast('⏰',m+' — جدولك كله ظاهر في «🗓 جدولي».')}}catch(e){}},800);
@@ -734,7 +734,8 @@ if(!new URLSearchParams(location.search).get('s')&&(tsGet().length||localStorage
 /* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
 /* المعلم يفتح حصته في ميعادها بس (من قبلها بربع ساعة لحد ما تخلص) — لو جدول الحصة متسجّل على جهازه */
 function tWin(rm){const X=tsGet().find(x=>x.c===rm);if(!X||!X.s.length)return{ok:1};const now=new Date(),n=now.getHours()*60+now.getMinutes(),D=now.getDay(),hm3=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
- if(X.s.some(q=>q[0]===D&&n>=hm3(q[1])-15&&n<hm3(q[1])+q[2]))return{ok:1};
+ const td=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+ if(X.s.some(q=>(q[3]?q[3]===td:q[0]===D)&&n>=hm3(q[1])-15&&n<hm3(q[1])+q[2]))return{ok:1};
  const DN3=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];let best=null;for(let k=0;k<8;k++){const d=(D+k)%7;X.s.filter(q=>q[0]===d&&(k>0||hm3(q[1])-15>n)).forEach(q=>{const v=k*1440+hm3(q[1]);if(!best||v<best.v)best={v,q,d}})}
  return{ok:0,next:best?(best.d===D?'النهارده':'يوم '+DN3[best.d])+' الساعة '+best.q[1]:''}}
 function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm));return!!(o&&o.c&&o.c.e>Date.now()+6e5&&tkGet(rm))}catch(e){return false}}
@@ -804,7 +805,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  const j=$('#jnone');j.textContent='';let role='';{const nm=$('#nm');if(nm)nm.style.display='none'}
  {const TS=tsGet();try{window.itqanApp&&itqanApp.setHomeSite&&itqanApp.setHomeSite(TS.length>0)}catch(e){}if(TS.length){const DN2=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'],DO2=[6,0,1,2,3,4,5],hm2=t=>{const[a,b]=t.split(':').map(Number);return a*60+b},
    t12b=t=>{let[a,b]=t.split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b).padStart(2,'0')+(pm?' م':' ص')};
-  const all=[];TS.forEach(x=>x.s.forEach(q=>all.push({c:x.c,t:x.t,d:q[0],h:q[1],m:q[2]})));all.sort((a,b)=>hm2(a.h)-hm2(b.h));
+  const all=[],td=(d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'))(new Date());TS.forEach(x=>x.s.forEach(q=>{if(q[3]&&q[3]!==td)return;all.push({c:x.c,t:x.t,d:q[0],h:q[1],m:q[2],ex:!!q[3]})}));all.sort((a,b)=>hm2(a.h)-hm2(b.h));
   const w=document.createElement('div');w.id='jts';w.style.cssText='width:100%;background:#14283f;border:1px solid rgba(227,192,141,.3);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;text-align:start';
   let wk=0;const start=c=>tOpenCode(c);
   let tbok=0;try{tbok=localStorage.getItem('itqan_tbok')==='1'}catch(e){}
@@ -821,7 +822,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    try{Object.keys(localStorage).filter(k=>/^itqan_xp_/.test(k)).map(k=>k.slice(9)).forEach(c=>{if(!G[c]&&xpGet(c))G[c]={c,t:'حصة استثنائية — '+fmtCode(c),sl:[],k:-1,live:1,x:{c,t:'حصة استثنائية — '+fmtCode(c),d:D,h:'00:00',m:0}}})}catch(e){}
    Object.values(G).sort((p,q)=>p.k-q.k).forEach(g=>{const x=g.x,a=hm2(x.h),when=(x.d===D&&g.k<1440?'النهارده':'يوم '+DN2[x.d])+' '+t12b(x.h),soon=!g.live&&g.k<=60;
     const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#1a9486,#137a6f)':soon?'#22405f':'#1d3652')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
-    const xp=xpGet(g.c),st=xp&&!(x.d===D&&n>=a-10&&n<a+x.m)?'⚡ حصة استثنائية — متاحة لحد '+t12b(String(new Date(xp.e).getHours()).padStart(2,'0')+':'+String(new Date(xp.e).getMinutes()).padStart(2,'0')):g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
+    const xp=xpGet(g.c),st=g.live&&x.ex?'⚡ حصة استثنائية — اضغط وادخل':xp&&!(x.d===D&&n>=a-10&&n<a+x.m)?'⚡ حصة استثنائية — متاحة لحد '+t12b(String(new Date(xp.e).getHours()).padStart(2,'0')+':'+String(new Date(xp.e).getMinutes()).padStart(2,'0')):g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
     r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'18px')+'">'+(g.live?'▶ ادخل':'🔒')+'</b>';
     r.onclick=()=>{if(g.live)return start(g.c);toast('⏰','الحصة دي '+when+' — بتفتح من قبل ميعادها بـ 10 دقايق')};w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
@@ -2585,7 +2586,7 @@ async function fxCloudPull(){try{const K=await syk(),u=regUrl();if(!u)return;if(
 /* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
 function sxHome(){setTimeout(fxCloudPull,800);$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
- '<button class="sxb g" onclick="tPanel()" style="margin-top:8px;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين (كود ولينك لكل معلم)</button>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="sxb g" onclick="tPanel()" style="flex:1;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين</button><button class="sxb g" onclick="sPanel()" style="flex:1;font-size:15px;padding:11px;background:#27496b">🎓 لينكات الطلاب</button></div>'+
  '<details id="fxd" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:17px;padding:6px 0">📌 الغرف الثابتة <span id="fxn" style="color:#e3c08d"></span> <small style="color:#a9bccd;font-weight:400">— اضغطي للعرض</small></summary><small style="color:#a9bccd">كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small><div id="sxfx"></div></details>'+
  '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
@@ -2659,7 +2660,7 @@ function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(
 let regT=0,regMsg='';
 function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
 function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;
- try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
 /* ملف الجدول للموقع: السكرتارية تحمّله وترفعه على GitHub باسم schedule.json (أو تبعته) */
@@ -2717,7 +2718,8 @@ const hm=t=>{const[a,b]=String(t).split(':').map(Number);return a*60+(b||0)},t12
 /* الجدول بيظهر من ملف الموقع حتى لو الغرف مش متسجلة على الجهاز ده */
 let SITE_R={};
 function schRooms(){const L=fxList(),have=new Set(L.map(x=>x.room));return L.concat(Object.entries(SITE_R).filter(([c])=>!have.has(c)).map(([c,y])=>({room:c,title:y.n||'',tn:y.t||'',site:1,sch:(y.s||[]).map(q=>({d:+q[0],t:q[1],m:+q[2]||120}))})))}
-function schSlots(){const o=[];schRooms().forEach(x=>(x.sch||[]).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
+const todayS=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function schSlots(){const o=[],td=todayS();schRooms().forEach(x=>(x.sch||[]).filter(q=>!q.date||q.date===td).forEach(q=>o.push({x,d:+q.d,t:q.t,m:+q.m||60})));return o.sort((a,b)=>hm(a.t)-hm(b.t))}
 function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=x.sch||[];let m=$('#schm');
  if(!m){m=document.createElement('div');m.id='schm';m.style.cssText='position:fixed;inset:0;z-index:70;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px';document.body.append(m)}
  const draw=()=>{m.innerHTML='<div class="sxc" style="width:min(460px,100%);max-height:90vh;overflow:auto"><h3>🗓 مواعيد «'+esc(x.title||fmtCode(r))+'»'+(x.tn?' — '+esc(x.tn):'')+'</h3><div id="schl" style="display:flex;flex-direction:column;gap:6px"></div>'+
@@ -2749,7 +2751,7 @@ function schRender(){const el=$('#sxT');if(!el)return;const S=schSlots(),now=new
 function schText(tn){const S=schSlots().filter(sl=>!tn||sl.x.tn===tn);return DO.map(d=>{const T=S.filter(sl=>sl.d===d);return T.length?DN[d]+':\n'+T.map(sl=>'  • '+t12(sl.t)+' — '+(sl.x.title||fmtCode(sl.x.room))+(tn?'':(sl.x.tn?' ('+sl.x.tn+')':''))+' — '+sl.m+' دقيقة').join('\n'):''}).filter(Boolean).join('\n')}
 async function schCopy(){const t='🗓 جدول حصص أكاديمية إتقان'+(schT?' — '+schT:'')+':\n'+schText(schT);try{await navigator.clipboard.writeText(t);alert('✓ اتنسخ الجدول')}catch(e){prompt('انسخ الجدول:',t)}}
 /* جدول المعلم كله (كل غرفه) متشفّر في اللينك عشان يظهر عنده في «جدولي» */
-function schTj(tn){const R=fxList().filter(x=>tn&&x.tn===tn&&(x.sch||[]).length).map(x=>({c:x.room,t:x.title||'',v:fpOf(x.pub),s:x.sch.map(q=>[+q.d,q.t,+q.m||60])}));
+function schTj(tn){const R=fxList().filter(x=>tn&&x.tn===tn&&(x.sch||[]).length).map(x=>({c:x.room,t:x.title||'',v:fpOf(x.pub),s:x.sch.filter(q=>!q.date||q.date>=todayS()).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}));
  return R.length?'&tj='+b64u(new TextEncoder().encode(JSON.stringify(R))):''}
 /* كود واحد لكل معلم (6 أرقام) — محفوظ في اللوحة، وأكواد غرفه بتتشفّر بيه في لينكه الشخصي */
 function tcGet(){try{return JSON.parse(localStorage.getItem('itqan_tcodes')||'{}')}catch(e){return{}}}
@@ -2757,21 +2759,34 @@ function tcFor(tn){const a=tcGet();if(!/^\d{6}$/.test(a[tn]||'')){a[tn]=String(1
 const DN7=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 const t12a=t=>{let[a,b]=String(t).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')};
 /* المواعيد مجمّعة: «الأحد والتلات 2:30 م» */
-function slotTxt(sch){const g={};(sch||[]).forEach(q=>{const k=q.t;(g[k]=g[k]||[]).push(+q.d)});return Object.entries(g).map(([t,ds])=>[6,0,1,2,3,4,5].filter(d=>ds.includes(d)).map(d=>DN7[d]).join(' و')+' '+t12a(t)).join(' + ')}
+function slotTxt(sch){const g={};(sch||[]).filter(q=>!q.date).forEach(q=>{const k=q.t;(g[k]=g[k]||[]).push(+q.d)});return Object.entries(g).map(([t,ds])=>[6,0,1,2,3,4,5].filter(d=>ds.includes(d)).map(d=>DN7[d]).join(' و')+' '+t12a(t)).join(' + ')}
 async function tLink(tn){const rooms=fxList().filter(x=>x.tn===tn&&/^\d{4,6}$/.test(String(x.pin)));const code=tcFor(tn),r={};rooms.forEach(x=>r[x.room]=String(x.pin));
  const b=await tbMake(code,{r});return{code,rooms,url:fxSite()+'?r=t&tn='+encodeURIComponent(tn)+'&b='+b+schTj(tn)}}
 async function tMsg(tn){const{code,rooms,url}=await tLink(tn);if(!rooms.length)return'';
  return 'مرحباً أ/ '+tn+' 👋\nدي بيانات حصصك في أكاديمية إتقان — احفظها:\n\n🔑 كود المعلم (واحد لكل حصصك): '+code+'\n📲 لينك حصصك: '+url+'\n\n🗓 حصصك:\n'+rooms.map(x=>'• '+(slotTxt(x.sch)||'—')+' — '+(x.title||'حصة')+' — غرفة '+fmtCode(x.room)).join('\n')+
   '\n\n👈 افتح اللينك مرة واحدة واكتب كود المعلم، وبعد كده هتلاقي حصصك في التطبيق، وكل حصة بتفتح بضغطة «▶ ابدأ» قبل ميعادها بـ 10 دقايق. الطلاب بيستنوا في غرفة الانتظار لحد ما تدخّلهم.'}
-/* حصة استثنائية: اختاري الغرفة والمدة ← بتتوقّع بمفتاح المدير ← رسالة للمعلم فيها لينكه + الإذن */
+/* حصة استثنائية (السكرتارية بس): ميعاد لليوم ده بس — بيتسجّل في جدول السجل، والمعلم بيلاقيها في «حصصي» ويدخل بكوده */
 async function xpMake(tn){const rooms=fxList().filter(x=>x.tn===tn);if(!rooms.length)return alert('مفيش غرف للمعلم ده');
+ if(!regCfg().k)return alert('وصّلي «🔗 سجل الحصص (جوجل)» الأول — الحصة الاستثنائية بتتسجّل فيه');
  let x=rooms[0];if(rooms.length>1){const i=prompt('أنهي حصة؟ اكتبي رقمها:\n'+rooms.map((r,i)=>(i+1)+') '+(r.title||fmtCode(r.room))).join('\n'),'1');if(i===null)return;x=rooms[(+i||1)-1];if(!x)return alert('رقم غلط')}
- const h=prompt('الحصة الاستثنائية متاحة لمدة كام ساعة من دلوقتي؟','3');if(h===null)return;const hrs=Math.min(48,Math.max(.5,+h||3));
- let K=await dirKey();if(!K){const pw=prompt('كلمة سر المدير (عشان الإذن يبقى موقّع):');if(!pw)return;try{K=await dirUnlock(pw)}catch(e){K=null}if(!K)return alert('كلمة سر المدير غلط')}
- const e=Math.round(await srvNow()+hrs*3600e3),g=await sgn(K.priv||K,'X|'+x.room+'|'+e),{url}=await tLink(tn),link=url+'&x='+x.room+'.'+e+'.'+g;
- const until=new Date(e).toLocaleString('ar-EG',{weekday:'long',hour:'numeric',minute:'2-digit'});
- const msg='⚡ أ/ '+tn+' — عندك حصة استثنائية:\n📚 '+(x.title||fmtCode(x.room))+'\n⏰ متاحة من دلوقتي لحد '+until+'\n\n📲 افتح اللينك واضغط على الحصة:\n'+link+'\n\n(بكود المعلم بتاعك زي كل مرة)';
- window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}
+ const st=prompt('الحصة تبدأ الساعة كام النهارده؟ (زي 18:30 — أو سيبيها فاضية = دلوقتي)','');if(st===null)return;
+ const h=prompt('مدة الحصة بالساعات؟','2');if(h===null)return;const mins=Math.round(Math.min(12,Math.max(.5,+h||2))*60);
+ const now=new Date(),t=/^\d{1,2}:\d{2}$/.test(st.trim())?st.trim().padStart(5,'0'):String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),date=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+ const a=fxList(),y=a.find(r=>r.room===x.room);y.sch=(y.sch||[]).filter(q=>!q.date||q.date>=date);y.sch.push({d:now.getDay(),t,m:mins,date});y.schL=1;fxPut(a);regSync(1);
+ const{url}=await tLink(tn);const msg='⚡ أ/ '+tn+' — عندك حصة استثنائية النهارده:\n📚 '+(x.title||fmtCode(x.room))+'\n⏰ الساعة '+t12a(t)+' لمدة '+(mins/60)+' ساعة (تقدر تدخل قبلها بـ 10 دقايق)\n\n📲 افتح لينك حصصك واضغط على الحصة:\n'+url;
+ toast('⚡','الحصة الاستثنائية اتسجّلت');window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}
+/* ===== 🎓 لينكات الطلاب: لينك ثابت لكل مجموعة — الطالب يضغط ويدخل غرفة الانتظار ===== */
+function sPanel(){let m=$('#spn');if(m)m.remove();m=document.createElement('div');m.id='spn';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
+ const L=fxList().slice().sort((p,q)=>String(p.tn||'').localeCompare(String(q.tn||''))||String(p.title||'').localeCompare(String(q.title||'')));
+ m.innerHTML='<div class="sxc" style="width:min(560px,100%);max-height:90vh;overflow:auto;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>🎓 لينكات الطلاب</h3><button class="sxb d" id="spx">✕</button></div><small style="color:#a9bccd;line-height:1.8">لكل مجموعة لينك ثابت مايتغيّرش — ابعتيه في جروب المجموعة مرة واحدة. الطالب يضغط عليه ويكتب اسمه أول مرة بس، ويستنى المعلم يقبله.</small><div id="spl" style="display:flex;flex-direction:column;gap:8px"></div></div>';
+ document.body.appendChild(m);m.onclick=e=>{if(e.target===m)m.remove()};$('#spx').onclick=()=>m.remove();const box=$('#spl');
+ if(!L.length){box.innerHTML='<small style="color:#fca5a5">مفيش غرف على الجهاز ده</small>';return}
+ L.forEach(x=>{const r=document.createElement('div');r.className='sxr';r.style.cssText='flex-wrap:wrap;gap:8px';
+  r.innerHTML='<span style="flex:1;min-width:180px;line-height:1.7"><b translate="no">'+esc(x.title||fmtCode(x.room))+'</b><br><small style="color:#a9bccd">'+(x.tn?esc(x.tn)+' · ':'')+esc(slotTxt((x.sch||[]).filter(q=>!q.date))||'—')+'</small></span>';
+  const bt=document.createElement('span');bt.className='bt';const mk=(t,c,f)=>{const b=document.createElement('button');b.className='sxb '+c;b.textContent=t;b.onclick=f;bt.append(b)};
+  mk('📲 واتساب','g',()=>window.open('https://wa.me/?text='+encodeURIComponent(fxMsg(x,'s')),'_blank'));
+  mk('🔗 نسخ اللينك','d',async()=>{const u=fxUrl(x.room,'s');try{await navigator.clipboard.writeText(u);toast('✅','اتنسخ لينك '+(x.title||''))}catch(e){prompt('انسخ اللينك:',u)}});
+  r.append(bt);box.append(r)})}
 /* لوحة «لينكات المعلمين»: لكل معلم كوده ولينكه الشخصي — نسخ أو واتساب */
 async function tPanel(){try{await Promise.race([fxCloudPull(),new Promise(r=>setTimeout(r,6000))])}catch(e){}const T=[...new Set(fxList().map(x=>x.tn).filter(Boolean))].sort();
  let m=$('#tpn');if(m)m.remove();m=document.createElement('div');m.id='tpn';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
