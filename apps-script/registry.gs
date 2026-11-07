@@ -76,6 +76,12 @@ function doGet(e) {
     const R = {}; if (n) Object.keys(all).forEach(k => { const r = all[k]; if (r.t === n && (r.s || []).length) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s }; });
     return out_({ ok: true, rooms: R });
   }
+  /* غرف السكرتارية المتشفّرة (بكلمة سر السكرتارية) — للمزامنة بين أجهزة السكرتارية */
+  if (p.a === 'fxget') {
+    const P = PropertiesService.getScriptProperties(), n = +(P.getProperty('fxb_n') || 0); let d = '';
+    for (let i = 0; i < n; i++) d += P.getProperty('fxb_' + i) || '';
+    return out_({ ok: true, d: d, t: +(P.getProperty('fxb_t') || 0) });
+  }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
 }
@@ -84,6 +90,14 @@ function doPost(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
   if (b.k !== KEY) return out_({ ok: false, e: 'key' });
+  if (b.a === 'fxput') {
+    const d = String(b.d || ''); if (!/^[A-Za-z0-9_-]{20,400000}$/.test(d)) return out_({ ok: false, e: 'data' });
+    const P = PropertiesService.getScriptProperties(), old = +(P.getProperty('fxb_n') || 0), parts = [];
+    for (let i = 0; i < d.length; i += 8000) parts.push(d.slice(i, i + 8000));
+    const o = { fxb_n: String(parts.length), fxb_t: String(Date.now()) }; parts.forEach((x, i) => o['fxb_' + i] = x);
+    P.setProperties(o); for (let i = parts.length; i < old; i++) P.deleteProperty('fxb_' + i);
+    return out_({ ok: true, n: parts.length });
+  }
   if (b.a === 'put') {
     const R = {};
     (b.rooms || []).slice(0, 300).forEach(r => {
