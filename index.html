@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-a';
+const VER='2026.11.13-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -632,14 +632,14 @@ async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()
  const allow=(x.s||[]).some(q=>+q[0]===d&&n>=m(q[1])-10&&n<m(q[1])+(+q[2]||60));
  return{ok:true,known:true,v:x.v,allow,s:x.s||[],now:hm,d,src:'site'}}catch(e){return null}}
 async function regOne(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
-/* بنسأل ملف الموقع وسجل جوجل مع بعض: اللي يعرف الحصة هو اللي بيحكم (ملف الموقع الأول) */
+/* بنسأل سجل جوجل (جدول السكرتارية) وملف الموقع مع بعض: سجل جوجل الأول، والملف احتياطي */
 async function regChk(code){const[G,S]=await Promise.all([regOne(code),siteChk(code)]);
- if(S&&S.known)return S;if(G&&G.known)return G;return G||S||null}
+ if(G&&G.known&&(G.s||[]).length){if(!G.v&&S&&S.v)G.v=S.v;return G}if(S&&S.known)return S;if(G&&G.known)return G;return G||S||null}
 const DN4=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 /* «يوم الأحد الساعة 2:30 م» */
 function nextSlot(S,d,hm){const m=t=>{const a=String(t).split(':');return +a[0]*60+(+a[1]||0)},n=m(hm);let best=null;for(let k=0;k<8;k++){const dd=(d+k)%7;(S||[]).filter(q=>+q[0]===dd&&(k>0||m(q[1])-10>n)).forEach(q=>{const v=k*1440+m(q[1]);if(!best||v<best.v)best={v,q,dd}})}
  return best?(best.dd===d?'النهارده':'يوم '+DN4[best.dd])+' الساعة '+(()=>{let[a,b]=String(best.q[1]).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')})():''}
-let NXC={};async function nextFor(c){if(NXC[c]!==undefined)return NXC[c];let t='';try{const R=await siteChk(c);if(R&&R.known&&(R.s||[]).length){t=R.allow?'':nextSlot(R.s,R.d,R.now)}}catch(e){}NXC[c]=t;setTimeout(()=>{delete NXC[c]},60000);return t}
+let NXC={};async function nextFor(c){if(NXC[c]!==undefined)return NXC[c];let t='';try{const R=await regChk(c);if(R&&R.known&&(R.s||[]).length){t=R.allow?'':nextSlot(R.s,R.d,R.now)}}catch(e){}NXC[c]=t;setTimeout(()=>{delete NXC[c]},60000);return t}
 /* بيرجّع رسالة الرفض، أو '' لو مسموح */
 async function tGate(code,pin,pub){if(!/^\d{4,6}$/.test(String(pin||'')))return 'اكتب كود المعلم.';
  const R=await regChk(code),fp=fpOf(pub);
@@ -709,7 +709,11 @@ function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));retu
  if(ok.length){const m=tsGet().filter(x=>!ok.some(y=>y.c===x.c));localStorage.setItem('itqan_tsch',JSON.stringify(ok.concat(m)));try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}}}}catch(e){}}
 /* «جدولي» من ملف الجدول على الموقع: أول ما المعلم يدخل بكود أي حصة من حصصه، جهازه بيحفظ جدول كل حصصه (بنفس اسم المعلم)
    وكل ما يفتح التطبيق بيتحدّث لوحده — من غير لينك */
-async function tschSync(code){const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json(),R=J.rooms||{};
+async function tschSync(code){let R={};
+ /* جدول المعلم من سجل جوجل (اللي السكرتارية بتعدّله) — ولو مش متاح من ملف الموقع */
+ try{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}const u=regUrl();if(u&&(n||code)){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);
+  const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tl&n='+encodeURIComponent(n)+'&c='+encodeURIComponent(code||'')+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);if(j&&j.ok&&j.rooms&&Object.keys(j.rooms).length)R=j.rooms}}catch(e){}
+ if(!Object.keys(R).length){const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json();R=J.rooms||{}}
  let me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}if(!me){let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me||!me.t)return false;
  const L=Object.entries(R).filter(([c,y])=>y.t===me.t&&Array.isArray(y.s)).map(([c,y])=>{if(/^[A-Za-z0-9_-]{14}$/.test(y.v||''))try{localStorage.setItem('itqan_v_'+c,y.v)}catch(e){}
   return{c,t:String(y.n||'').slice(0,50),s:y.s.map(q=>[+q[0],q[1],+q[2]||120])}});
@@ -728,7 +732,8 @@ function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm)
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;$('#jrole').textContent=LK.r=='t'?'👨‍🏫 دخول المعلم':'🎓 دخول الطالب';if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;setTimeout(()=>{try{if(!$('#join').hidden&&$('#nm').value.trim())join('t')}catch(e){}},500)}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;{const n=new URLSearchParams(location.search).get('n');$('#jrole').textContent=n?'📚 '+n.slice(0,60):'📚 الحصة'}if(LK.r=='s'&&!DIRM&&!document.getElementById('dko')){const nv=$('#nm').value.trim();if(nv.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length>=2){showGate('⏳','جارٍ دخول الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('s')}catch(e){}},300)}}
+if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if($('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
@@ -769,10 +774,13 @@ function deskOffer(go){if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.
  return true}
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  if(deskOffer(()=>codeLanding0(c,r)))return;codeLanding0(c,r)}
+function tOpenCode(c){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));$('#join').hidden=true;showGate('⏳','جارٍ فتح الحصة '+fmtCode(c)+'…');
+ tPinFor(c).then(pin=>{if(!pin||!/^\d{4,6}$/.test(pin)){$('#gate').hidden=true;$('#join').hidden=false;return}showGate('⏳','جارٍ التحقق من الكود والميعاد…');
+  tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.g||'تعذّر فتح الحصة — حاول تاني.',1))})}
 function codeLanding0(c,r){
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
- if(r=='t'){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));if(window.itqanApp||!window.__ln){const pin=(prompt('اكتب كود المعلم السري للحصة '+fmtCode(c)+':')||'').trim();if(/^\d{4,6}$/.test(pin)){showGate('⏳','جارٍ التحقق من كود المعلم…');tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.g||'تعذّر فتح الحصة — حاول تاني.',1));return}}}
- if(window.__ln&&window.__ln.fill){window.__ln.fill(c,r);return}
+ /* لينك المعلم: الكود المحفوظ (أو كود المعلم مرة واحدة) ← الحصة على طول. لينك الطالب: على طول لغرفة الانتظار — من غير اختيار دور ولا أرقام */
+ if(r=='t')return tOpenCode(c);
  $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');nextFor(c).then(n=>{if(n&&!$('#gate').hidden)$('#gt').textContent='🗓 الحصة الجاية '+n+'\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.'});setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
 function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
@@ -787,7 +795,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    t12b=t=>{let[a,b]=t.split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b).padStart(2,'0')+(pm?' م':' ص')};
   const all=[];TS.forEach(x=>x.s.forEach(q=>all.push({c:x.c,t:x.t,d:q[0],h:q[1],m:q[2]})));all.sort((a,b)=>hm2(a.h)-hm2(b.h));
   const w=document.createElement('div');w.id='jts';w.style.cssText='width:100%;background:#14283f;border:1px solid rgba(227,192,141,.3);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;text-align:start';
-  let wk=0;const start=c=>{const T=tkGet(c);if(T)location.href=linkOf(c,T.k,'t');else if(window.__ln)window.__ln.fill(c,'t')};
+  let wk=0;const start=c=>tOpenCode(c);
   let tbok=0;try{tbok=localStorage.getItem('itqan_tbok')==='1'}catch(e){}
   const draw=()=>{const now=new Date(),n=now.getHours()*60+now.getMinutes();w.innerHTML='';
    if(tbGet()&&!tbok){const u=document.createElement('div');u.id='tcu';u.innerHTML='<b>🔑 اكتب كود المعلم مرة واحدة</b><small style="color:#cfe3df;line-height:1.7">نفس الكود لكل حصصك — بعد كده كل حصة بتفتح بضغطة.</small>';
@@ -795,15 +803,15 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
     ok.onclick=async()=>{ok.disabled=true;ok.textContent='⏳';const n=await tbUnlock(i.value);ok.disabled=false;ok.textContent='حفظ';if(n){tbok=1;toast('✅','اتحفظ — '+n+' حصة جاهزة على الجهاز ده');draw()}else er.textContent='الكود غلط — راجع رسالة السكرتارية'};
     i.onkeydown=e=>{if(e.key=='Enter')ok.click()};u.append(i,ok,er);w.append(u)}
    const hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center';{let nm='';try{nm=localStorage.getItem('itqan_tname')||''}catch(e){}hd.innerHTML='<b style="color:#e3c08d;font-size:16px">🗓 حصصي'+(nm?' — <span translate="no">'+esc(nm)+'</span>':'')+'</b>'};
-   const tg=document.createElement('button');tg.className='w';tg.style.cssText='flex:none;width:auto;padding:4px 10px;font-size:12px;background:#27496b';tg.textContent=wk?'النهارده':'الأسبوع كله';tg.onclick=()=>{wk=!wk;draw()};hd.append(tg);w.append(hd);
-   if(!wk){const T=all.filter(x=>x.d===now.getDay());
-    if(!T.length){const e=document.createElement('small');e.style.color='#a9bccd';const nx=[1,2,3,4,5,6].map(k=>(now.getDay()+k)%7).find(d=>all.some(x=>x.d===d));e.textContent='مفيش حصص النهارده'+(nx!=null?' — أقرب حصة يوم '+DN2[nx]+' '+t12b(all.find(x=>x.d===nx).h):'')+'.';w.append(e)}
-    T.forEach(x=>{const a=hm2(x.h),b=a+x.m,st=n<a?(a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12b(x.h)):n<b?'🔴 وقتها دلوقتي':'✅ خلصت',now2=n>=a-15&&n<b;
-     const r=document.createElement('div');r.style.cssText='display:flex;gap:8px;align-items:center;background:'+(now2?'#1a3d3a':'#1d3652')+';border-radius:12px;padding:8px 10px';
-     r.innerHTML='<div style="flex:1;line-height:1.6"><b>'+t12b(x.h)+'</b> · '+esc(x.t||fmtCode(x.c))+'<br><small style="color:#a9bccd">'+st+' · '+x.m+' دقيقة</small></div>';
-     if(n<b){const g=document.createElement('button');g.className='w';g.style.cssText='flex:none;width:auto;padding:8px 14px;font-weight:700;background:'+(now2?'#1a9486':'#27496b');g.textContent='▶ ابدأ';g.onclick=()=>start(x.c);r.append(g)}w.append(r)})}
-   else DO2.forEach(d=>{const T=all.filter(x=>x.d===d);if(!T.length)return;const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:6px 10px;line-height:1.8;'+(d===now.getDay()?'outline:2px solid #e3c08d':'');
-    r.innerHTML='<b style="color:#e3c08d">'+DN2[d]+'</b><br>'+T.map(x=>'<small>'+t12b(x.h)+' — '+esc(x.t||fmtCode(x.c))+' ('+x.m+' د)</small>').join('<br>');w.append(r)})};
+   w.append(hd);
+   /* كل حصة كارت واحد — اضغط على اسمها: لو وقتها (من قبلها بـ 10 دقايق لحد ما تخلص) بتفتح على طول، غير كده بيقولك إمتى */
+   const D=now.getDay(),G={};all.forEach(x=>{const a=hm2(x.h),b=a+x.m,live=x.d===D&&n>=a-10&&n<b;let k=((x.d-D+7)%7)*1440+a-n;if(k<0&&!live)k+=7*1440;
+    const g=G[x.c]||(G[x.c]={c:x.c,t:x.t,sl:[],k:1e9,live:0,x:null});g.sl.push(x);if(live){g.live=1;g.k=-1;g.x=x}else if(!g.live&&k<g.k){g.k=k;g.x=x}});
+   Object.values(G).sort((p,q)=>p.k-q.k).forEach(g=>{const x=g.x,a=hm2(x.h),when=(x.d===D&&g.k<1440?'النهارده':'يوم '+DN2[x.d])+' '+t12b(x.h),soon=!g.live&&g.k<=60;
+    const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#1a9486,#137a6f)':soon?'#22405f':'#1d3652')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
+    const st=g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
+    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'18px')+'">'+(g.live?'▶ ادخل':'🔒')+'</b>';
+    r.onclick=()=>{if(g.live)return start(g.c);toast('⏰','الحصة دي '+when+' — بتفتح من قبل ميعادها بـ 10 دقايق')};w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
   const tick=()=>{return;const now=new Date(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
@@ -853,7 +861,16 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  window.__ln={fill:(c,r)=>{pick(r,RB[r]);inp.value=fmtCode(c);enter()},open:()=>!f.hidden,reset:()=>{clearTimeout(wT);role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>{sec.textContent='⏳ جارٍ فتح لوحة السكرتارية…';setTimeout(()=>{secOpen();setTimeout(()=>{sec.textContent='🗂️ دخول السكرتارية'},1500)},30)};
  const dir=document.createElement('button');dir.className='w';dir.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px';dir.textContent='👔 دخول المدير';dir.onclick=()=>dirOpen();
- j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,sec,dir)}
+ /* مفيش اختيار «معلم/طالب» ولا كتابة أكواد: اللينك هو اللي بيحدد كل حاجة. لو حد فتح التطبيق من غير لينك: يلصق اللينك */
+ row.style.display='none';f.style.display='none';
+ const hint=document.createElement('div');hint.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%;background:rgba(29,54,82,.6);border:1px dashed rgba(227,192,141,.35);border-radius:16px;padding:12px;text-align:center';
+ hint.innerHTML='<small style="line-height:1.8;color:#c4d3e0">📲 افتح اللينك اللي وصلك من السكرتارية — هيدخلك الحصة على طول.</small>';
+ const pl=document.createElement('button');pl.className='w';pl.style.cssText='background:#1a9486;font-weight:700';pl.textContent='📋 الصق لينك الحصة';
+ const pe=document.createElement('small');pe.style.cssText='color:#fca5a5;min-height:0';
+ pl.onclick=async()=>{let v='';try{v=(await navigator.clipboard.readText()||'').trim()}catch(e){v=(prompt('الصق لينك الحصة هنا:')||'').trim()}if(!v)return;
+  try{const u=new URL(v);if(u.origin===location.origin&&u.pathname===location.pathname&&(u.searchParams.get('s')||u.searchParams.get('c')||u.searchParams.get('tn'))){location.href=u.href;return}}catch(e){}pe.textContent='ده مش لينك حصة من أكاديمية إتقان — انسخ اللينك كامل من الرسالة.'};
+ hint.append(pl,pe);
+ j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';j.append(row,f,hint,sec,dir)}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
 var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;pwaInstall()});
 /* أندرويد من المتصفح: زرار ثابت فوق شاشة الدخول «تحميل التطبيق على الجهاز» — بيثبّت تطبيق إتقان من Chrome بضغطة،
@@ -2366,8 +2383,10 @@ let PDFL=null;function pdfLib(){if(window.pdfjsLib)return Promise.resolve(window
 /* اختيار ملف: الخانة لازم تبقى جوه الصفحة، وإلا الآيفون أحياناً مابيبعتش الملف المختار */
 function filePick(acc,multi,fn){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(i);
  i.onchange=()=>{const f=[...i.files];setTimeout(()=>i.remove(),1000);if(f.length)fn(f)};i.click()}
+/* الملفات اللي المعلم شاركها (PDF/صور) بتتحفظ عشان تترفع على Drive مع السبورة في آخر الحصة */
+const SHF=[];
 function pgImport(){if(role!='t')return;const inp={click(){filePick('application/pdf,image/*',1,F=>inp.onchange(F))}};
- inp.onchange=async F=>{if(!F.length)return;pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
+ inp.onchange=async F=>{if(!F.length)return;try{F.forEach(f=>{if(SHF.reduce((a,x)=>a+x.size,0)+f.size<60e6&&!SHF.some(x=>x.name===f.name&&x.size===f.size))SHF.push(f)})}catch(e){}pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
   try{for(const f of F){
    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){
     await pdfLib();
@@ -2391,8 +2410,8 @@ const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PB
 async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
  if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
-async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[],bt:p.bt}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
- if(!L.length)return;sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}
+async function pgPdf(noSave){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[],bt:p.bt}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
+ if(!L.length)return;if(!noSave){sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}}
  try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
  const {jsPDF}=window.jspdf;let doc=null;const keep=[strokes,PBG,st.bt];
  const wasWb=st.wb;st.wb=1;
@@ -2411,7 +2430,7 @@ async function pgPdf(){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg
   const c=wbCanvas(),ori=bw>=bh?'landscape':'portrait';
   if(!doc)doc=new jsPDF({orientation:ori,unit:'px',format:[bw,bh],hotfixes:['px_scaling']});else doc.addPage([bw,bh],ori);
   doc.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,bw,bh,undefined,'FAST')}
- window._xN=null;strokes=keep[0];PBG=keep[1];st.bt=keep[2];st.wb=wasWb;hiEnd();await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
+ window._xN=null;strokes=keep[0];PBG=keep[1];st.bt=keep[2];st.wb=wasWb;hiEnd();if(noSave)return doc.output('blob');await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
 /* ===== 📖 المصحف على السبورة =====
    المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
    يشرح ويكتب ويلوّن عليها بالقلم، والطلاب بيشوفوها. النص من موسوعة القرآن الكريم (quranenc.com) — رخصة CC BY-SA 4.0 */
@@ -2602,7 +2621,7 @@ function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(
 let regT=0,regMsg='';
 function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
 function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;
- try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
 /* ملف الجدول للموقع: السكرتارية تحمّله وترفعه على GitHub باسم schedule.json (أو تبعته) */
@@ -2672,7 +2691,7 @@ function schEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;x.sch=
    row.querySelectorAll('select,input').forEach(e=>e.style.cssText+=';background:#1d3652;border:1px solid #27496b;border-radius:8px;color:#fff;padding:6px;font-family:inherit');L.append(row)});
   if(!x.sch.length)L.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش مواعيد — اضغطي «إضافة ميعاد».</div>';
   m.querySelector('#scha').onclick=()=>{const l=x.sch[x.sch.length-1];x.sch.push({d:l?DO[(DO.indexOf(+l.d)+1)%7]:DO[0],t:l?l.t:'17:00',m:l?l.m:60});draw()};
-  m.querySelector('#schs').onclick=()=>{fxPut(a);m.hidden=true;fxRender();schRender()};m.querySelector('#schc').onclick=()=>{m.hidden=true}};
+  m.querySelector('#schs').onclick=()=>{x.schL=1;fxPut(a);m.hidden=true;fxRender();schRender();regSync(1);toast('✅','المواعيد اتحفظت'+(regCfg().k?' واترفعت':' — وصّلي «🔗 سجل الحصص» عشان توصل للمعلمين'))};m.querySelector('#schc').onclick=()=>{m.hidden=true}};
  m.hidden=false;draw()}
 function schSt(sl,now){const d=now.getDay(),n=now.getHours()*60+now.getMinutes(),a=hm(sl.t),b=a+sl.m;if(sl.d!==d)return'';
  if(n<a)return a-n<=60?'⏰ بعد '+(a-n)+' دقيقة':'⏳ '+t12(sl.t);if(n<b)return'🕒 وقتها دلوقتي';return'✅ خلصت'}
@@ -2720,7 +2739,7 @@ async function fxSyncSite(){if(fxSiteDone)return;fxSiteDone=1;try{const J=await 
  const a=fxList();let ch=0;a.forEach(x=>{const y=R[x.room];if(!y)return;
   if(y.n&&(!x.title||/^غرفة \d+$/.test(x.title))&&x.title!==y.n){x.title=y.n;ch=1}
   if(y.t&&x.tn!==y.t){x.tn=y.t;ch=1}
-  const sc=(y.s||[]).map(q=>({d:+q[0],t:q[1],m:+q[2]||120}));if(sc.length&&JSON.stringify(sc)!==JSON.stringify(x.sch||[])){x.sch=sc;ch=1}});
+  const sc=(y.s||[]).map(q=>({d:+q[0],t:q[1],m:+q[2]||120}));if(!x.schL&&sc.length&&JSON.stringify(sc)!==JSON.stringify(x.sch||[])){x.sch=sc;ch=1}});
  if(ch){fxPut(a);fxRender()}}catch(e){}}
 function fxRender(){const el=$('#sxfx');if(!el)return;const L=fxList();fxSyncSite();{const n=$('#fxn');if(n)n.textContent='('+L.length+')'}try{schRender()}catch(e){}
  if(!L.length){el.innerHTML='<div class="sxr" style="color:#a9bccd">مفيش غرف ثابتة لسه — اعملي غرفة لكل معلم أو مجموعة، وابعتي الكود مرة واحدة بس.</div>';return}
@@ -2882,6 +2901,14 @@ function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(
 function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
  /* التسجيل دايماً على جهاز المعلم في ملف واحد (من غير تسليم للسكرتارية وتقسيم الملف لما تدخل أو تخرج) */
  recSelf()}
+/* رفع ملف على نفس فولدر Drive بتاع التسجيل (أجزاء 1.5 ميجا زي التسجيل) */
+function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0};
+ const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;for(let o=0;o<blob.size;o+=REC_CH){const end=Math.min(blob.size,o+REC_CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
+ try{hEv('📄 بيترفع على Drive: '+name)}catch(e){}return true}
+/* آخر الحصة: السبورة كلها PDF + الملفات اللي اتشاركت */
+async function boardToDrive(){if(role!='t'||!RC)return;const base=recName(RC.n);
+ try{pgSave();const has=WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
+ SHF.forEach(f=>{try{driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
@@ -3110,6 +3137,7 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();
  showGate('⏳','جارٍ إنهاء الحصة وتجهيز الملخص… لا تغلق الصفحة');
  if(!forced)Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'انتهت الحصة — شكراً لكم'})}catch(e){}});
  const recP=recSelfEng?recSelfEng.stop().catch(()=>{}):Promise.resolve();
+ try{$('#gt').textContent='⏳ جارٍ رفع السبورة والملفات على Drive…';await Promise.race([boardToDrive(),new Promise(r=>setTimeout(r,40000))])}catch(e){}
  try{await trFlush()}catch(e){}
  try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
  let sum='',why='';
