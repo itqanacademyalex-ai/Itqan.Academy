@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-i';
+const VER='2026.11.13-j';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2586,9 +2586,9 @@ async function fxCloudPull(){try{const K=await syk(),u=regUrl();if(!u)return;if(
 /* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
 function sxHome(){setTimeout(fxCloudPull,800);$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
- '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="sxb g" onclick="tPanel()" style="flex:1;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين</button><button class="sxb g" onclick="sPanel()" style="flex:1;font-size:15px;padding:11px;background:#27496b">🎓 لينكات الطلاب</button></div>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="sxb g" onclick="tPanel()" style="flex:1;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين</button><button class="sxb g" onclick="sPanel()" style="flex:1;font-size:15px;padding:11px;background:#27496b">🎓 لينكات الطلاب</button></div><button class="sxb g" onclick="fxAdd()" style="margin-top:8px;font-size:15px;padding:11px;width:100%;background:#8a6d1d">➕ مجموعة جديدة (الاسم والمعلم والمواعيد)</button>'+
  '<details id="fxd" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:17px;padding:6px 0">📌 الغرف الثابتة <span id="fxn" style="color:#e3c08d"></span> <small style="color:#a9bccd;font-weight:400">— اضغطي للعرض</small></summary><small style="color:#a9bccd">كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small><div id="sxfx"></div></details>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ مجموعة جديدة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
  /* كود معلم 6 أرقام بيتأكد لوحده، ومفتاح الحصة جاي من الكود — فالمعلم يقدر يدخل بكود الحصة + كوده من أي جهاز (زي الغرف الثابتة) */
@@ -2680,8 +2680,29 @@ async function fxMake(title,tn,taken){const kp=await crypto.subtle.generateKey(A
  const pin=await pinGen(rm),K=await roomKey(rm,pin);
  return{room:rm,pub:K.pub,jwk:K.jwk,pin,title,tn,fixed:1,dk:1,tk:await tkMake(rm,pin,K.jwk)}}
 const fxTaken=()=>new Set(fxList().map(x=>x.room).concat(sxList().map(x=>x.room)));
-async function fxAdd(){const t=prompt('اسم الغرفة (مثلاً: رياضيات 3 ثانوي):');if(t===null)return;const tn=prompt('اسم المعلم (اختياري):')||'';
- const a=fxList();a.push(await fxMake(t.trim()||('غرفة '+(a.length+1)),tn.trim(),fxTaken()));fxPut(a);fxRender()}
+/* ➕ حصة/مجموعة جديدة: فورم واحد فيه اسم المجموعة واسم المعلم والمواعيد — وبعد الحفظ لينك الطلاب ورسالة المعلم جاهزين */
+async function fxAdd(){let m=$('#fxa');if(m)m.remove();m=document.createElement('div');m.id='fxa';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
+ const T=[...new Set(fxList().map(x=>x.tn).filter(Boolean))].sort(),DY=[[6,'السبت'],[0,'الأحد'],[1,'الاتنين'],[2,'التلات'],[3,'الأربع'],[4,'الخميس'],[5,'الجمعة']];
+ const ip='background:#1d3652;border:1px solid #27496b;border-radius:12px;padding:11px;color:#fff;font:inherit;width:100%';
+ m.innerHTML='<div class="sxc" style="width:min(480px,100%);max-height:92vh;overflow:auto;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>➕ مجموعة جديدة</h3><button class="sxb d" id="fax">✕</button></div>'+
+  '<label style="display:flex;flex-direction:column;gap:4px"><small>📚 اسم المجموعة</small><input id="fan" style="'+ip+'" placeholder="مثال: Math Junior 6 — لي لي" maxlength="60"></label>'+
+  '<label style="display:flex;flex-direction:column;gap:4px"><small>👩‍🏫 اسم المعلم</small><input id="fat" list="fatl" style="'+ip+'" placeholder="اكتبي أو اختاري" maxlength="40"><datalist id="fatl">'+T.map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist></label>'+
+  '<small>🗓 أيام الحصة</small><div id="fad2" style="display:flex;flex-wrap:wrap;gap:6px">'+DY.map(([d,n])=>'<label style="display:flex;gap:4px;align-items:center;background:#1d3652;border:1px solid #27496b;border-radius:10px;padding:7px 10px;cursor:pointer"><input type="checkbox" value="'+d+'" style="width:auto"> '+n+'</label>').join('')+'</div>'+
+  '<div style="display:flex;gap:8px"><label style="flex:1;display:flex;flex-direction:column;gap:4px"><small>⏰ الساعة</small><input id="fah" type="time" value="17:00" style="'+ip+'"></label>'+
+  '<label style="flex:1;display:flex;flex-direction:column;gap:4px"><small>⏳ المدة</small><select id="fam" style="'+ip+'"><option value="60">ساعة</option><option value="90">ساعة ونص</option><option value="120" selected>ساعتين</option><option value="150">ساعتين ونص</option><option value="180">3 ساعات</option></select></label></div>'+
+  '<small style="color:#a9bccd">لو المجموعة ليها أكتر من ميعاد بساعات مختلفة، زوّدي الباقي بعد الحفظ من 🗓 على الغرفة.</small><small id="fae" style="color:#fca5a5"></small>'+
+  '<button class="sxb g" id="fas" style="padding:12px;font-size:15px">حفظ وإنشاء المجموعة</button></div>';
+ document.body.appendChild(m);m.onclick=e=>{if(e.target===m)m.remove()};$('#fax').onclick=()=>m.remove();$('#fan').focus();
+ $('#fas').onclick=async()=>{const n=$('#fan').value.trim(),tn=$('#fat').value.trim(),ds=[...m.querySelectorAll('#fad2 input:checked')].map(i=>+i.value),h=$('#fah').value,mm=+$('#fam').value||120;
+  if(!n)return $('#fae').textContent='اكتبي اسم المجموعة';if(!tn)return $('#fae').textContent='اكتبي اسم المعلم';if(!ds.length)return $('#fae').textContent='اختاري يوم واحد على الأقل';if(!/^\d{1,2}:\d{2}$/.test(h))return $('#fae').textContent='اختاري الساعة';
+  const b=$('#fas');b.disabled=true;b.textContent='⏳ جارٍ الإنشاء…';
+  try{const x=await fxMake(n,tn,fxTaken());x.sch=ds.map(d=>({d,t:h,m:mm}));x.schL=1;const a=fxList();a.push(x);fxPut(a);fxRender();try{schRender()}catch(e){}regSync(1);
+   const box=m.firstChild;box.innerHTML='<h3>✅ المجموعة اتعملت</h3><div class="sxr" style="flex-direction:column;align-items:stretch;gap:4px;line-height:1.8"><b translate="no">'+esc(n)+'</b><small>👩‍🏫 '+esc(tn)+'</small><small>🗓 '+esc(slotTxt(x.sch))+'</small><small style="color:#e3c08d">🔢 كود الحصة: '+fmtCode(x.room)+'</small></div>'+
+    '<button class="sxb g" id="faw1" style="padding:11px">📲 ابعتي لينك الطلاب (واتساب)</button><button class="sxb g" id="faw2" style="padding:11px;background:#27496b">📲 ابعتي للمعلم رسالته الجديدة</button><button class="sxb d" id="faw3">تمام</button>'+
+    '<small style="color:#a9bccd;line-height:1.7">المعلم لو عنده حصص قبل كده، ابعتيله رسالته تاني عشان الحصة الجديدة تتضاف عنده (نفس الكود).</small>';
+   $('#faw1').onclick=()=>window.open('https://wa.me/?text='+encodeURIComponent(fxMsg(x,'s')),'_blank');
+   $('#faw2').onclick=async()=>{const t=await tMsg(tn);window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')};$('#faw3').onclick=()=>m.remove()}
+  catch(e){b.disabled=false;b.textContent='حفظ وإنشاء المجموعة';$('#fae').textContent='تعذّر الإنشاء — حاولي تاني'}}}
 async function fxBulk(){const n=parseInt(prompt('عدد الغرف الثابتة اللي عايزة تعمليها:','20'),10);if(!(n>0))return;if(n>60)return alert('أقصى عدد 60 غرفة');
  const a=fxList(),tk=fxTaken(),st0=a.length;for(let i=1;i<=n;i++)a.push(await fxMake('غرفة '+(st0+i),'',tk));fxPut(a);fxRender();alert('✓ اتعملت '+n+' غرفة ثابتة. عدّلي اسم كل غرفة واسم المعلم من ✏️، وخدي «نسخة احتياطية» عشان الأكواد ماتضيعش لو الجهاز اتغيّر.')}
 function fxEdit(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;const t=prompt('اسم الغرفة:',x.title||'');if(t===null)return;const tn=prompt('اسم المعلم:',x.tn||'');if(tn===null)return;x.title=t.trim();x.tn=tn.trim();fxPut(a);fxRender()}
