@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>html,body{background:#0e1a2b}</style>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Itqan Academy – الفصل الافتراضي</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -42,6 +42,8 @@ button{font-family:inherit;cursor:pointer;border:0;color:#fff}
 #av{position:relative;z-index:1;text-align:center}
 #av b{display:flex;width:130px;height:130px;border-radius:50%;background:#1a9486;color:#ffffff;font-size:64px;align-items:center;justify-content:center;margin:0 auto 14px}
 #av span{color:#dce6ef}
+/* الصفحة نفسها ماتتكبّرش بالدبل تاب أو بإصبعين — التكبير للسبورة والشير بس (من أدوات التكبير بتاعتهم) */
+html,body{touch-action:pan-x pan-y}
 #wb{position:absolute;inset:0;width:100%;height:100%;z-index:2;touch-action:none;cursor:crosshair}
 #wb.bg{background:#fff}
 body[data-role=s] #wb{pointer-events:none}
@@ -390,7 +392,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.12-h';
+const VER='2026.11.12-j';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -517,6 +519,8 @@ let hidAt=0;document.addEventListener('visibilitychange',()=>{if(document.hidden
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;setTimeout(()=>{window.acUnlock&&acUnlock();if(window.auInt)audioReset();else micHeal()},1000)});
 /* لو المستخدم سمح من إعدادات المتصفح من غير ما يضغط، نشغّل المايك لوحده */
 try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{p.onchange=()=>{if(p.state=='granted'&&window.MERR&&(role=='t'||role=='s'&&admitted&&canTalk))micRetry()}}).catch(()=>{})}catch(e){}
+/* سفاري الآيفون بيكبّر الصفحة بإصبعين حتى مع الإعدادات اللي فوق — نمنعه (تكبير السبورة شغّال بطريقته) */
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const U=s=>'<span translate="no">'+esc(s)+'</span>';
 let role,name,room,peer,conn,conns={},chat=[],roster={s:[],h:[]},tab='chat',canTalk=1,micS,myCall,camS,camCall,canCam=1,camBanAll=0,allMuted=0,gm=0,admitted=0,final=0,rt,st={cam:0,scr:0,mic:1,wb:0,bg:1,lock:0},
@@ -1410,7 +1414,7 @@ function sdNote(m){if(role!='t'||!document.body.classList.contains('nos'))return
 function sdUp(){const b=$('#sdu');if(!b)return;const n=chat.filter(x=>!x.sys).length;if(!document.body.classList.contains('nos')){sdSeen=n;b.textContent='';return}
  const wn=role=='t'?Object.values(conns).filter(x=>!x.adm).length:0,hd=role=='t'?roster.h.length:0;b.textContent=[n>sdSeen?'💬'+(n-sdSeen):'',wn?'🔔'+wn:'',hd?'✋'+hd:''].filter(Boolean).join(' ')}
 try{if(localStorage.getItem('itqan_side')=='0')document.body.classList.add('nos')}catch(e){}
-function ui(){try{pgNav()}catch(e){}
+function ui(){
  $('#av').hidden=!!(st.scr||isBigT());
  $('#avt').textContent=(st.cam?'':'الكاميرا مقفولة — ')+(st.mic?'الصوت شغّال':'الصوت مكتوم');
  $('#v').style.visibility=st.scr?'visible':'hidden';
@@ -1434,14 +1438,6 @@ const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 let lastRs=0;
 /* صفحات السبورة (زي دفتر Notability): WPG = [{s:الرسومات, bg:صورة الصفحة (PDF/صورة) أو null}]، pi = الصفحة الحالية، PBG = صورة خلفية الصفحة الظاهرة */
 let WPG=null,pi=0,PBG=null,SNOTES=[],PGC={};
-/* أسهم تقليب الصفحات عائمة فوق السبورة عند المعلم (على الموبايل شريط الأدوات بيبقى أعرض من الشاشة فالأسهم بتستخبى) */
-function pgNav(){let n=document.getElementById('pgnav');const on=role=='t'&&st.wb&&WPG&&WPG.length>1;
- if(!on){if(n)n.style.display='none';return}
- if(!n){n=document.createElement('div');n.id='pgnav';n.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 150px);z-index:58;display:flex;gap:6px;align-items:center;background:rgba(14,26,43,.88);padding:5px 8px;border-radius:24px;color:#fff;direction:ltr;box-shadow:0 6px 18px #0007';
-  const b=(t,f,ti)=>{const x=document.createElement('button');x.textContent=t;x.title=ti;x.style.cssText='width:44px;height:40px;border-radius:20px;border:0;background:#27496b;color:#fff;font-size:18px';x.onclick=f;return x};
-  const l=document.createElement('span');l.id='pgnl';l.style.cssText='min-width:58px;text-align:center;font-weight:700;font-size:14px';
-  n.append(b('◀',()=>pgGo(pi+1),'الصفحة اللي بعدها'),l,b('▶',()=>pgGo(pi-1),'الصفحة اللي قبلها'));document.body.appendChild(n)}
- n.style.display='flex';document.getElementById('pgnl').textContent=(pi+1)+' / '+WPG.length}
 function fit(){const w=wb.clientWidth,h=wb.clientHeight;if(!w)return;
  const d0=Math.min(window.devicePixelRatio||1,3),d=Math.max(d0,Math.min(d0*(window.ZMK||1),Math.sqrt(8e6/(w*h)))),W=Math.round(w*d),H=Math.round(h*d),rs=(st.wb&&w>520&&camVis())?Math.round(108*d):0;
  if(W!==wb.width||H!==wb.height||dirty||rs!==lastRs){lastRs=rs;wb.width=lay.width=lay2.width=W;wb.height=lay.height=lay2.height=H;const W2=W-rs;S=Math.min(W2/LW,H/LH);OX=(W2-LW*S)/2;OY=(H-LH*S)/2;dirty=0;rebuild()}else redraw()}
@@ -2270,7 +2266,7 @@ const PGID=new Map();let pgN=0;function pgId(bg){let h=PGID.get(bg);if(!h){h='p'
 function pbgTo(x,bg){try{if(!bg){x.c.send({t:'pbg',img:''});return}const h=pgId(bg);x.pgs=x.pgs||new Set();if(x.pgs.has(h))x.c.send({t:'pbg',h});else{x.c.send({t:'pbg',h,img:bg});x.pgs.add(h)}}catch(e){}}
 let pfT=0;function pbgPre(){clearTimeout(pfT);pfT=setTimeout(()=>{if(!WPG)return;[pi+1,pi-1].forEach(k=>{const bg=WPG[k]&&WPG[k].bg;if(!bg)return;const h=pgId(bg);
  Object.values(conns).filter(x=>x.adm).forEach(x=>{x.pgs=x.pgs||new Set();if(!x.pgs.has(h)){try{x.c.send({t:'pbgc',h,img:bg});x.pgs.add(h)}catch(e){}}})})},1500)}
-function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}try{pgNav()}catch(e){}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
+function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
 function pgShow(){strokes=WPG[pi].s;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
 function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
 function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||null});pi++;pgShow()}
