@@ -27,11 +27,20 @@ jobs:
       - run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # نسخة مضغوطة (zip) — المتصفح وويندوز أقل ما يمسحوها وهي بتتحمّل من ملف exe مباشر
+      - name: Zip the installer
+        shell: pwsh
+        run: |
+          $d = New-Item -ItemType Directory -Force -Path zipsrc
+          Copy-Item dist/ItqanAcademy-Setup.exe $d
+          Set-Content -Encoding UTF8 -Path (Join-Path $d 'اقرأني.txt') -Value "شغّل ItqanAcademy-Setup.exe لتثبيت برنامج أكاديمية إتقان.`r`nلو ظهر Windows protected your PC اضغط More info ثم Run anyway."
+          Compress-Archive -Force -Path zipsrc/* -DestinationPath dist/ItqanAcademy-Windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: ItqanAcademy-Windows
           path: |
             desktop/dist/*.exe
+            desktop/dist/*.zip
           if-no-files-found: error
       # تشغيل يدوي من Actions (Run workflow) أو tag باسم desktop-v* ← ينشر Release برقم إصدار التطبيق
       - name: Read app version
@@ -48,8 +57,11 @@ jobs:
           make_latest: true
           body: |
             تطبيق أكاديمية إتقان للكمبيوتر (Windows).
-            - **ItqanAcademy-Setup.exe** — برنامج التثبيت (مُوصى به).
+            - **ItqanAcademy-Windows.zip** — برنامج التثبيت مضغوط (مُوصى به): فك الضغط وشغّل ItqanAcademy-Setup.exe.
+            - **ItqanAcademy-Setup.exe** — برنامج التثبيت.
             - **ItqanAcademy-Portable.exe** — يشتغل من غير تثبيت.
 
             أول مرة: لو ظهرت «Windows protected your PC» اضغط More info ← Run anyway.
-          files: desktop/dist/*.exe
+          files: |
+            desktop/dist/*.exe
+            desktop/dist/*.zip
