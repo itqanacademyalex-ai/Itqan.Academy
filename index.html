@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-e';
+const VER='2026.11.13-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2542,15 +2542,40 @@ function sxLogin(){$('#sxst').textContent='🔒';$('#sxB').innerHTML='';
 async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b.disabled=true;
  let h='';try{const k=await crypto.subtle.importKey('raw',enc(i.value),'PBKDF2',false,['deriveBits']);
   h=[...new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc('itqan-sec-v1'),iterations:200000},k,256))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){}
- if(h&&h===SEC_HASH){sxFail=0;try{sessionStorage.setItem('itqan_su',SEC_HASH)}catch(e){}sxHome();return}
+ if(h&&h===SEC_HASH){sxFail=0;try{sessionStorage.setItem('itqan_su',SEC_HASH)}catch(e){}try{await sykMake(i.value)}catch(e){}sxHome();return}
  sxFail++;i.value='';$('#sxpe').textContent='كلمة السر غير صحيحة'+(sxFail>2?' — انتظر '+Math.min(sxFail*3,30)+' ثانية':'');
  setTimeout(()=>{b.disabled=false;i.focus()},sxFail>2?Math.min(sxFail*3,30)*1000:600)}
+/* ===== مزامنة الغرف بين أجهزة السكرتارية: الغرف (بأكواد المعلمين) وأكواد المعلمين بتتحفظ في سجل جوجل
+   متشفّرة بمفتاح طالع من كلمة سر السكرتارية — ماحدش يقدر يقراها من غيرها ===== */
+async function sykMake(pw){const k=await crypto.subtle.importKey('raw',enc(pw),'PBKDF2',false,['deriveBits']);
+ const raw=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc('itqan-fxsync-v1'),iterations:200000},k,256);sessionStorage.setItem('itqan_syk',b64u(raw))}
+async function syk(){const r=sessionStorage.getItem('itqan_syk');return r?crypto.subtle.importKey('raw',ub64(r),'AES-GCM',false,['encrypt','decrypt']):null}
+const fxDelGet=()=>{try{return JSON.parse(localStorage.getItem('itqan_fxdel')||'[]')}catch(e){return[]}};
+/* مانرفعش أي حاجة قبل ما نقرا اللي على السجل وندمجه — عشان جهاز عليه غرف أقل مايمسحش غرف الأجهزة التانية */
+let fxUpT=0,fxSyncMsg='',fxPulled=0;
+function fxSyncSt(t){fxSyncMsg=t;const e=$('#fxsy');if(e)e.textContent=t}
+/* رفع: الغرف من غير المفاتيح التقيلة (بتتحسب تاني من الكود على أي جهاز) */
+function fxCloudPush(){if(!fxPulled)return;clearTimeout(fxUpT);fxUpT=setTimeout(async()=>{try{const K=await syk(),c=regCfg(),u=regUrl();if(!K||!u||!c.k||!fxPulled)return;
+ const rooms=fxList().map(x=>({room:x.room,pin:String(x.pin),pub:x.pub,title:x.title||'',tn:x.tn||'',sch:x.sch||[],schL:x.schL?1:0}));
+ const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K,new TextEncoder().encode(JSON.stringify({v:1,rooms,tc:tcGet(),del:fxDelGet(),at:Date.now()})))),o=new Uint8Array(12+ct.length);o.set(iv);o.set(ct,12);
+ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'fxput',k:c.k,d:b64u(o)})});const j=await r.json();
+ fxSyncSt(j&&j.ok?'☁️ الغرف متزامنة بين الأجهزة ('+rooms.length+' غرفة)':'⚠️ تعذّرت مزامنة الغرف'+(j&&j.e=='key'?' — مفتاح السجل غلط':''))}catch(e){fxSyncSt('⚠️ تعذّرت مزامنة الغرف — هنحاول تاني')}},1500)}
+/* تنزيل ودمج: أي غرفة أو كود معلم موجود على جهاز تاني بيظهر هنا */
+async function fxCloudPull(){try{const K=await syk(),u=regUrl();if(!u)return;if(!K){fxSyncSt('🔐 اخرجي وادخلي اللوحة بكلمة السر تاني عشان الغرف تتزامن بين الأجهزة');return}
+ const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=fxget&t='+Date.now())).json();
+ if(!(j&&j.ok))throw 0;if(j.d){const b=ub64(j.d),pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},K,b.slice(12)),R=JSON.parse(new TextDecoder().decode(pt));
+  const del=new Set([...fxDelGet(),...(R.del||[])]);try{localStorage.setItem('itqan_fxdel',JSON.stringify([...del].slice(-500)))}catch(e){}
+  const L=fxList().filter(x=>!del.has(x.room)),have=new Set(L.map(x=>x.room));let add=0;
+  (R.rooms||[]).forEach(x=>{if(!x||!x.room||del.has(x.room)||have.has(x.room)||!/^\d{4,6}$/.test(String(x.pin)))return;L.push({room:x.room,pin:String(x.pin),pub:x.pub,title:x.title,tn:x.tn,sch:x.sch||[],schL:x.schL?1:undefined,fixed:1,dk:0});add++});
+  const tc={...(R.tc||{}),...tcGet()};Object.keys(R.tc||{}).forEach(k=>{tc[k]=R.tc[k]});try{localStorage.setItem('itqan_tcodes',JSON.stringify(tc))}catch(e){}
+  try{localStorage.setItem('itqan_fix',JSON.stringify(L))}catch(e){}if(add){fxRender();fxEnsureTk();toast('☁️','اتضافت '+add+' غرفة من جهاز تاني')}}
+ fxPulled=1;fxCloudPush()}catch(e){fxSyncSt('⚠️ تعذّرت قراءة الغرف من السجل')}}
 /* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
-function sxHome(){$('#sec').classList.add('sxwide');
+function sxHome(){setTimeout(fxCloudPull,800);$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
  '<button class="sxb g" onclick="tPanel()" style="margin-top:8px;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين (كود ولينك لكل معلم)</button>'+
  '<details id="fxd" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:17px;padding:6px 0">📌 الغرف الثابتة <span id="fxn" style="color:#e3c08d"></span> <small style="color:#a9bccd;font-weight:400">— اضغطي للعرض</small></summary><small style="color:#a9bccd">كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small><div id="sxfx"></div></details>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
  /* كود معلم 6 أرقام بيتأكد لوحده، ومفتاح الحصة جاي من الكود — فالمعلم يقدر يدخل بكود الحصة + كوده من أي جهاز (زي الغرف الثابتة) */
@@ -2617,7 +2642,7 @@ function sxCmd(r,a,k,v){const X=SXS[r];if(X&&X.hub)try{X.hub.send({t:'cmd',a,k,v
 /* ===== الغرف الثابتة: كل غرفة ليها كود حصة ثابت + كود معلم ثابت + مفتاح ثابت — السكرتارية بتبعتهم مرة واحدة بس،
    وكل حصة بتضغط «فتح الحصة» بس. اللينكات ثابتة كمان وبتفتح والكود مكتوب لوحده ===== */
 function fxList(){try{const a=JSON.parse(localStorage.getItem('itqan_fix'));return Array.isArray(a)?a:[]}catch(e){return[]}}
-function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}regSync()}
+function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(e){alert('تعذّر الحفظ على الجهاز')}regSync();try{fxCloudPush()}catch(e){}}
 /* السكرتارية بترفع الغرف (بصمة المفتاح + المواعيد) لسجل جوجل كل ما حاجة تتغيّر */
 let regT=0,regMsg='';
 function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
@@ -2655,7 +2680,7 @@ async function fxRenew(r){const a=fxList(),x=a.find(y=>y.room===r);if(!x)return;
 async function fxRenewAll(){const a=fxList().filter(x=>!/^\d{6}$/.test(String(x.pin))&&!SXS[x.room]);if(!a.length)return alert('كل الأكواد جديدة ✓');
  if(!confirm('تجديد كود المعلم لـ '+a.length+' غرفة (اللي أكوادها قديمة)؟ هتبعتي الأكواد الجديدة للمعلمين بعدها.'))return;
  const L=fxList();for(const x of L){if(/^\d{6}$/.test(String(x.pin))||SXS[x.room])continue;x.pin=await pinGen(x.room);const K=await roomKey(x.room,x.pin);x.pub=K.pub;x.jwk=K.jwk;x.tk=await tkMake(x.room,x.pin,K.jwk);x.dk=1}fxPut(L);fxRender();alert('✓ اتجدّدت الأكواد — ابعتي لكل معلم كوده الجديد من «📲 المعلم» أو «📲 ابعتي لكل معلم جدوله».')}
-function fxDel(r){const x=fxGet(r);if(!x)return;if(!confirm('حذف الغرفة الثابتة «'+(x.title||fmtCode(r))+'»؟ الكود بتاعها مش هيشتغل تاني.'))return;fxPut(fxList().filter(y=>y.room!==r));fxRender()}
+function fxDel(r){const x=fxGet(r);if(!x)return;if(!confirm('حذف الغرفة الثابتة «'+(x.title||fmtCode(r))+'»؟ الكود بتاعها مش هيشتغل تاني.'))return;try{const d=fxDelGet();d.push(r);localStorage.setItem('itqan_fxdel',JSON.stringify(d.slice(-500)))}catch(e){}fxPut(fxList().filter(y=>y.room!==r));fxRender()}
 async function fxOpen(r){const x=fxGet(r);if(!x)return;if(SXS[r]){sxOpen(r);return}
  const s={room:x.room,pub:x.pub,jwk:x.jwk,pin:x.pin,title:x.title,tn:x.tn,ts:Date.now(),fixed:1};sxPut(sxList().filter(y=>y.room!==r).concat([s]));
  try{SXV=r;sxStart(s,await crypto.subtle.importKey('jwk',x.jwk,ALG,false,['sign']))}catch(e){alert('تعذّر فتح الغرفة')}}
@@ -2716,7 +2741,7 @@ function schTj(tn){const R=fxList().filter(x=>tn&&x.tn===tn&&(x.sch||[]).length)
  return R.length?'&tj='+b64u(new TextEncoder().encode(JSON.stringify(R))):''}
 /* كود واحد لكل معلم (6 أرقام) — محفوظ في اللوحة، وأكواد غرفه بتتشفّر بيه في لينكه الشخصي */
 function tcGet(){try{return JSON.parse(localStorage.getItem('itqan_tcodes')||'{}')}catch(e){return{}}}
-function tcFor(tn){const a=tcGet();if(!/^\d{6}$/.test(a[tn]||'')){a[tn]=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000);try{localStorage.setItem('itqan_tcodes',JSON.stringify(a))}catch(e){}}return a[tn]}
+function tcFor(tn){const a=tcGet();if(!/^\d{6}$/.test(a[tn]||'')){a[tn]=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000);try{localStorage.setItem('itqan_tcodes',JSON.stringify(a))}catch(e){}try{fxCloudPush()}catch(e){}}return a[tn]}
 const DN7=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
 const t12a=t=>{let[a,b]=String(t).split(':').map(Number);const pm=a>=12;a=a%12||12;return a+':'+String(b||0).padStart(2,'0')+(pm?' م':' ص')};
 /* المواعيد مجمّعة: «الأحد والتلات 2:30 م» */
@@ -2727,7 +2752,7 @@ async function tMsg(tn){const{code,rooms,url}=await tLink(tn);if(!rooms.length)r
  return 'مرحباً أ/ '+tn+' 👋\nدي بيانات حصصك في أكاديمية إتقان — احفظها:\n\n🔑 كود المعلم (واحد لكل حصصك): '+code+'\n📲 لينك حصصك: '+url+'\n\n🗓 حصصك:\n'+rooms.map(x=>'• '+(slotTxt(x.sch)||'—')+' — '+(x.title||'حصة')+' — غرفة '+fmtCode(x.room)).join('\n')+
   '\n\n👈 افتح اللينك مرة واحدة واكتب كود المعلم، وبعد كده هتلاقي حصصك في التطبيق، وكل حصة بتفتح بضغطة «▶ ابدأ» قبل ميعادها بـ 10 دقايق. الطلاب بيستنوا في غرفة الانتظار لحد ما تدخّلهم.'}
 /* لوحة «لينكات المعلمين»: لكل معلم كوده ولينكه الشخصي — نسخ أو واتساب */
-async function tPanel(){const T=[...new Set(fxList().map(x=>x.tn).filter(Boolean))].sort();
+async function tPanel(){try{await Promise.race([fxCloudPull(),new Promise(r=>setTimeout(r,6000))])}catch(e){}const T=[...new Set(fxList().map(x=>x.tn).filter(Boolean))].sort();
  let m=$('#tpn');if(m)m.remove();m=document.createElement('div');m.id='tpn';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
  m.innerHTML='<div class="sxc" style="width:min(560px,100%);max-height:90vh;overflow:auto;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>👩‍🏫 لينكات المعلمين</h3><button class="sxb d" id="tpx">✕</button></div><small style="color:#a9bccd;line-height:1.8">كل معلم ليه كود واحد ولينك واحد لكل حصصه. ابعتيله الرسالة بالواتساب، أو انسخي اللينك.</small><div id="tpl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التجهيز…</small></div></div>';
  document.body.appendChild(m);m.onclick=e=>{if(e.target===m)m.remove()};$('#tpx').onclick=()=>m.remove();
