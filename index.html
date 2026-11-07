@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-d';
+const VER='2026.11.13-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2548,6 +2548,7 @@ async function sxAuth(){const i=$('#sxpw'),b=$('#sxpb');if(!i||!i.value)return;b
 /* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
 function sxHome(){$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
+ '<button class="sxb g" onclick="tPanel()" style="margin-top:8px;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين (كود ولينك لكل معلم)</button>'+
  '<details id="fxd" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:17px;padding:6px 0">📌 الغرف الثابتة <span id="fxn" style="color:#e3c08d"></span> <small style="color:#a9bccd;font-weight:400">— اضغطي للعرض</small></summary><small style="color:#a9bccd">كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small><div id="sxfx"></div></details>'+
  '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ غرفة ثابتة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
@@ -2725,6 +2726,19 @@ async function tLink(tn){const rooms=fxList().filter(x=>x.tn===tn&&/^\d{4,6}$/.t
 async function tMsg(tn){const{code,rooms,url}=await tLink(tn);if(!rooms.length)return'';
  return 'مرحباً أ/ '+tn+' 👋\nدي بيانات حصصك في أكاديمية إتقان — احفظها:\n\n🔑 كود المعلم (واحد لكل حصصك): '+code+'\n📲 لينك حصصك: '+url+'\n\n🗓 حصصك:\n'+rooms.map(x=>'• '+(slotTxt(x.sch)||'—')+' — '+(x.title||'حصة')+' — غرفة '+fmtCode(x.room)).join('\n')+
   '\n\n👈 افتح اللينك مرة واحدة واكتب كود المعلم، وبعد كده هتلاقي حصصك في التطبيق، وكل حصة بتفتح بضغطة «▶ ابدأ» قبل ميعادها بـ 10 دقايق. الطلاب بيستنوا في غرفة الانتظار لحد ما تدخّلهم.'}
+/* لوحة «لينكات المعلمين»: لكل معلم كوده ولينكه الشخصي — نسخ أو واتساب */
+async function tPanel(){const T=[...new Set(fxList().map(x=>x.tn).filter(Boolean))].sort();
+ let m=$('#tpn');if(m)m.remove();m=document.createElement('div');m.id='tpn';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
+ m.innerHTML='<div class="sxc" style="width:min(560px,100%);max-height:90vh;overflow:auto;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>👩‍🏫 لينكات المعلمين</h3><button class="sxb d" id="tpx">✕</button></div><small style="color:#a9bccd;line-height:1.8">كل معلم ليه كود واحد ولينك واحد لكل حصصه. ابعتيله الرسالة بالواتساب، أو انسخي اللينك.</small><div id="tpl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التجهيز…</small></div></div>';
+ document.body.appendChild(m);m.onclick=e=>{if(e.target===m)m.remove()};$('#tpx').onclick=()=>m.remove();
+ const L=$('#tpl');if(!T.length){L.innerHTML='<small style="color:#fca5a5">مفيش معلمين في الغرف — اكتبي اسم المعلم في كل غرفة من ✏️</small>';return}L.innerHTML='';
+ for(const tn of T){const{code,rooms,url}=await tLink(tn);const r=document.createElement('div');r.className='sxr';r.style.cssText='flex-wrap:wrap;gap:8px';
+  r.innerHTML='<span style="flex:1;min-width:180px;line-height:1.7"><b translate="no">'+esc(tn)+'</b><br><small style="color:#e3c08d;direction:ltr">🔑 '+code+'</small> <small style="color:#a9bccd">· '+rooms.length+' حصة</small></span>';
+  const bt=document.createElement('span');bt.className='bt';const mk=(t,c,f)=>{const b=document.createElement('button');b.className='sxb '+c;b.textContent=t;b.onclick=f;bt.append(b)};
+  mk('📲 واتساب','g',async()=>{const msg=await tMsg(tn);window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')});
+  mk('🔗 نسخ اللينك','d',async()=>{try{await navigator.clipboard.writeText(url);toast('✅','اتنسخ لينك '+tn)}catch(e){prompt('انسخ اللينك:',url)}});
+  mk('📋 نسخ الرسالة','d',async()=>{const msg=await tMsg(tn);try{await navigator.clipboard.writeText(msg);toast('✅','اتنسخت رسالة '+tn)}catch(e){prompt('انسخ:',msg)}});
+  r.append(bt);L.append(r)}}
 async function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو مكتوب في الغرف):',[...new Set(fxList().map(x=>x.tn).filter(Boolean))][0]||'');if(!tn)return;
  const w=window.open('','_blank');const m=await tMsg(tn);if(!m){if(w)w.close();return alert('مفيش غرف للمعلم ده على الجهاز ده')}
  const u='https://wa.me/?text='+encodeURIComponent(m);if(w)w.location.href=u;else location.href=u}
