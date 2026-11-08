@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-s';
+const VER='2026.11.13-t';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3042,6 +3042,10 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
  if(!(j.items||[]).length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
  L.innerHTML='';const AR=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
  const nice=d=>{const m2=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d);if(!m2)return d;let h=+m2[4];const pm=h>=12;h=h%12||12;return (+m2[3])+' '+AR[+m2[2]-1]+' '+m2[1]+' — '+h+':'+m2[5]+(pm?' م':' ص')};
+ /* للطالب: الفيديو والسبورة بس (الملخص والتفريغ للإدارة) */
+ const isV=f=>/video\//.test(f.m||''),isB=f=>/السبورة/.test(f.n||'')&&/pdf/.test(f.m||'');
+ j.items=j.items.map(it=>({d:it.d,files:it.files.filter(f=>isV(f)||isB(f))})).filter(it=>it.files.length);
+ if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
  j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px';
   r.innerHTML='<b>🗓 '+esc(nice(it.d))+'</b>';const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
   const mk=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;row.append(b)};

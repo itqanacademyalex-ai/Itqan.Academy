@@ -90,7 +90,7 @@ function doGet(e) {
     const C = CacheService.getScriptCache(), hit = C.get('lib_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
     const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id) return out_({ ok: true, items: [] });
     const out = []; try { const it = DriveApp.getFolderById(id).getFolders();
-      while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); files.push({ n: x.getName(), id: x.getId(), m: x.getMimeType(), s: x.getSize() }); } if (files.length) out.push({ d: f.getName(), files: files }); }
+      while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); const mt = x.getMimeType(), nm = x.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) files.push({ n: nm, id: x.getId(), m: mt, s: x.getSize() }); } if (files.length) out.push({ d: f.getName(), files: files }); }
     } catch (x) { return out_({ ok: false, e: String(x) }); }
     out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lib_' + c, j, 300);
     return out_({ ok: true, items: out });
@@ -189,7 +189,8 @@ function upChunk_(b) {
   if (c == 308) return out_({ ok: true, done: 0 });
   if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s);
     /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
-    if (id) { try { DriveApp.getFileById(id).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
+    /* الفيديو والسبورة بس بيتفتحوا باللينك (الملخص والتفريغ بيفضلوا خاصين بالإدارة) */
+    if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
     if (rc) C.remove('lib_' + rc);
     return out_({ ok: true, done: 1, id: id }); }
   return out_({ ok: false, e: 'chunk ' + c });
