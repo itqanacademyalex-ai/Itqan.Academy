@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-l';
+const VER='2026.11.13-m';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3018,11 +3018,15 @@ function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;const me
  const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;for(let o=0;o<blob.size;o+=REC_CH){const end=Math.min(blob.size,o+REC_CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
  try{hEv('📄 بيترفع على Drive: '+name)}catch(e){}return true}
 /* آخر الحصة: السبورة كلها PDF + الملفات اللي اتشاركت */
-async function boardToDrive(){if(role!='t'||!RC)return;const base=recName(RC.n);
+async function boardToDrive(sum){if(role!='t'||!RC)return;const base=window.RB||(window.RB=recName(RC.n));
+ /* تفريغ الكلام (والملخص لو اتعمل) كملف نص */
+ try{const L=(LOG.tr||[]).slice().sort((a,b)=>a.ts-b.ts),hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+  if(L.length||sum){const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
+   driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
  try{pgSave();const has=WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
  SHF.forEach(f=>{try{driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
- try{recOwner='t';recSelfEng=recStart({name:recName(RC.n)+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
+ try{recOwner='t';recSelfEng=recStart({name:(window.RB||(window.RB=recName(RC.n)))+'_فيديو'+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
 function coMedia(){
  Object.values(cohosts).forEach(c=>{
@@ -3249,11 +3253,12 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();
  showGate('⏳','جارٍ إنهاء الحصة وتجهيز الملخص… لا تغلق الصفحة');
  if(!forced)Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'انتهت الحصة — شكراً لكم'})}catch(e){}});
  const recP=recSelfEng?recSelfEng.stop().catch(()=>{}):Promise.resolve();
- try{$('#gt').textContent='⏳ جارٍ رفع السبورة والملفات على Drive…';await Promise.race([boardToDrive(),new Promise(r=>setTimeout(r,40000))])}catch(e){}
  try{await trFlush()}catch(e){}
  try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
  let sum='',why='';
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
+ /* السبورة PDF + التفريغ + الملفات المشاركة على Drive جنب الفيديو، بنفس الاسم */
+ try{$('#gt').textContent='⏳ جارٍ رفع السبورة والتفريغ على Drive…';await Promise.race([boardToDrive(sum),new Promise(r=>setTimeout(r,40000))])}catch(e){}
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
  try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ إنهاء الحصة… لا تغلق الصفحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
