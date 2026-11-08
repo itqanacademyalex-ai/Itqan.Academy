@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-m';
+const VER='2026.11.13-n';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2958,7 +2958,10 @@ function recUp(meta,onSt){
  U.add=c=>{U.q.push(c);rtx('chunks','readwrite',s=>s.put({key:meta.id+':'+c.idx,id:meta.id,idx:c.idx,blob:c.blob,last:c.last})).catch(()=>{});U.pump()};
  U.pump=async()=>{if(U.busy||U.fin)return;U.busy=1;
   try{
-   if(!meta.sid){const j=await api({a:'start',name:meta.name,mime:meta.mime});meta.sid=j.s;await sv()}
+   /* الرفع بيروح لسكربت السجل الأول (بيعمل فولدر لكل حصة)، ولو مارضيش بيرجع لسكربت التسجيل القديم */
+   if(!meta.sid){if(!meta.fb&&REG_URL&&meta.u!==REG_URL){meta.u0=meta.u;meta.u=REG_URL}
+    let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||''})}catch(e){if(meta.u0&&!meta.fb){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
+    meta.sid=j.s;await sv()}
    while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
     catch(e){let r=-1;try{r=(await api({a:'status',s:meta.sid})).r}catch(x){}if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
@@ -2990,7 +2993,7 @@ function recEngine(src,mime,sink){
  ac&&ac.resume&&ac.resume().catch(()=>{});syncA();tick();rec.start(1000);
  return{stop:()=>new Promise(r=>{if(rec.state=='inactive')return r();fin.then(r);try{rec.stop()}catch(e){r()}})}}
 function recStart(o,src,u,k,onSt){
- const mime=recMime(),meta={id:'r'+Date.now()+Math.random().toString(36).slice(2,6),u,k,name:o.name+(mime.indexOf('mp4')>-1?'.mp4':'.webm'),mime,sid:'',off:0,n:0};
+ const mime=recMime(),meta={id:'r'+Date.now()+Math.random().toString(36).slice(2,6),u,k,name:o.name+(mime.indexOf('mp4')>-1?'.mp4':'.webm'),mime,sid:'',off:0,n:0,f:o.f||''};
  const U=recUp(meta,onSt);let buf=[],bs=0,idx=0;
  const eng=recEngine(src,mime,{
   push:b=>{buf.push(b);bs+=b.size;while(bs>=REC_CH){const all=new Blob(buf,{type:mime});U.add({idx:idx++,blob:all.slice(0,REC_CH,mime),last:0});const rest=all.slice(REC_CH,all.size,mime);buf=[rest];bs=rest.size}},
@@ -3014,7 +3017,7 @@ function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
  /* التسجيل دايماً على جهاز المعلم في ملف واحد (من غير تسليم للسكرتارية وتقسيم الملف لما تدخل أو تخرج) */
  recSelf()}
 /* رفع ملف على نفس فولدر Drive بتاع التسجيل (أجزاء 1.5 ميجا زي التسجيل) */
-function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0};
+function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0,f:window.RB||''};
  const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;for(let o=0;o<blob.size;o+=REC_CH){const end=Math.min(blob.size,o+REC_CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
  try{hEv('📄 بيترفع على Drive: '+name)}catch(e){}return true}
 /* آخر الحصة: السبورة كلها PDF + الملفات اللي اتشاركت */
@@ -3026,7 +3029,7 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=window.RB||
  try{pgSave();const has=WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
  SHF.forEach(f=>{try{driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
- try{recOwner='t';recSelfEng=recStart({name:(window.RB||(window.RB=recName(RC.n)))+'_فيديو'+(suf||'')},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
+ try{recOwner='t';recSelfEng=recStart({name:(window.RB||(window.RB=recName(RC.n)))+'_فيديو'+(suf||''),f:window.RB},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
 function coMedia(){
  Object.values(cohosts).forEach(c=>{
