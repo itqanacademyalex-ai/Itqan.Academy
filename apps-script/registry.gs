@@ -84,6 +84,17 @@ function doGet(e) {
     for (let i = 0; i < n; i++) d += P.getProperty('fxb_' + i) || '';
     return out_({ ok: true, d: d, t: +(P.getProperty('fxb_t') || 0) });
   }
+  /* مكتبة المجموعة: كل حصة (فولدر بالتاريخ) والملفات اللي فيها — الأحدث الأول */
+  if (p.a === 'lib') {
+    const c = String(p.c || '').toLowerCase(); if (!/^[a-z0-9]{4,6}$/.test(c)) return out_({ ok: false });
+    const C = CacheService.getScriptCache(), hit = C.get('lib_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
+    const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id) return out_({ ok: true, items: [] });
+    const out = []; try { const it = DriveApp.getFolderById(id).getFolders();
+      while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); files.push({ n: x.getName(), id: x.getId(), m: x.getMimeType(), s: x.getSize() }); } if (files.length) out.push({ d: f.getName(), files: files }); }
+    } catch (x) { return out_({ ok: false, e: String(x) }); }
+    out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lib_' + c, j, 300);
+    return out_({ ok: true, items: out });
+  }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
 }
@@ -149,20 +160,24 @@ function fillCodes() {
 /* ===== التسجيل والملفات على Drive: فولدر «تسجيلات أكاديمية إتقان»، وجواه فولدر لكل حصة
    (الفيديو + السبورة PDF + التفريغ + الملفات المشاركة). الرفع على أجزاء (Drive resumable upload). ===== */
 const ROOT = 'تسجيلات أكاديمية إتقان';
+/* «المجموعة/التاريخ» ← فولدر المجموعة وجواه فولدر الحصة */
 function folder_(name) {
-  const it = DriveApp.getFoldersByName(ROOT), root = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT);
-  if (!name) return root;
-  const n = String(name).replace(/[\\/:*?"<>|]/g, '_').slice(0, 120), s = root.getFoldersByName(n);
-  return s.hasNext() ? s.next() : root.createFolder(n);
+  const it = DriveApp.getFoldersByName(ROOT); let f = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT);
+  String(name || '').split('/').map(x => x.replace(/[\\:*?"<>|]/g, '_').trim().slice(0, 120)).filter(Boolean).slice(0, 3).forEach(n => {
+    const s = f.getFoldersByName(n); f = s.hasNext() ? s.next() : f.createFolder(n);
+  });
+  return f;
 }
 function upStart_(b) {
-  const f = folder_(b.f), meta = { name: String(b.name || 'ملف').slice(0, 200), mimeType: String(b.mime || 'application/octet-stream').split(';')[0], parents: [f.getId()] };
+  const f = folder_(b.f), c = String(b.c || '').toLowerCase();
+  /* المكتبة: فولدر المجموعة بتاع الغرفة دي */
+  if (/^[a-z0-9]{4,6}$/.test(c) && String(b.f || '').indexOf('/') > 0) { try { const g = f.getParents(); if (g.hasNext()) PropertiesService.getScriptProperties().setProperty('gf_' + c, g.next().getId()); } catch (x) {} } meta = { name: String(b.name || 'ملف').slice(0, 200), mimeType: String(b.mime || 'application/octet-stream').split(';')[0], parents: [f.getId()] };
   const r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
     method: 'post', contentType: 'application/json; charset=UTF-8', payload: JSON.stringify(meta),
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
   const h = r.getHeaders(), loc = h['Location'] || h['location'];
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
-  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600);
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
   return out_({ ok: true, s: s });
 }
 function upChunk_(b) {
@@ -172,7 +187,11 @@ function upChunk_(b) {
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
   if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} CacheService.getScriptCache().remove('up_' + b.s); return out_({ ok: true, done: 1, id: id }); }
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s);
+    /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
+    if (id) { try { DriveApp.getFileById(id).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
+    if (rc) C.remove('lib_' + rc);
+    return out_({ ok: true, done: 1, id: id }); }
   return out_({ ok: false, e: 'chunk ' + c });
 }
 function upStatus_(b) {
