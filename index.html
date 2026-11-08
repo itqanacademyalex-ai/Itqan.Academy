@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-j';
+const VER='2026.11.13-k';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1125,7 +1125,8 @@ async function tData(c,d){
    if(ok){const o=conns[c.peer]={c,name:'👔 المدير',can:0,cp:0,adm:0,sid:'',dir:1};admit(c.peer);sys('👔 المدير دخل الحصة للإشراف');try{hEv('👔 المدير دخل الحصة للإشراف')}catch(e){}return}}
   const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
   if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
-  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){x.rep=1;try{x.c.close()}catch(e){}}});
+  /* نفس الطالب فتح الحصة في تبويب/جهاز تاني: القديم بيتقاله «اتفتحت في مكان تاني» ويقف (بدل ما الاتنين يفضلوا يطردوا بعض) */
+  if(sd)Object.entries(conns).forEach(([k,x])=>{if(x.sid===sd){x.rep=1;try{x.c.send({t:'replaced'})}catch(e){}setTimeout(()=>{try{x.c.close()}catch(e){}},400)}});
   const o=conns[c.peer]={c,name:String(d.n).slice(0,40),can:allMuted?0:1,cp:camBanAll?0:1,adm:0,sid:sd};if(recOn)try{c.send({t:'recon',on:1})}catch(e){}
   if(back){sys('↩️ '+o.name+' عاد للحصة تلقائياً');admit(c.peer)}
   else if(gm==1)admit(c.peer);else{c.send({t:'wait'});chime();sdNote('⏳ '+o.name+' ينتظر الدخول — اضغط ☰ للقبول');sys('⏳ '+o.name+' ينتظر الدخول — افتح تبويب «الطلاب» للقبول');render()}
@@ -1417,6 +1418,7 @@ function sData(d){
  if(!vOk){if(d.t=='proof')vProof(d);return}
  if(d.t=='recon'){$('#recb').hidden=!d.on;return}if(d.t=='hb'){window.T_HB=Date.now();return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
+ else if(d.t=='replaced'){final=1;try{dropCall()}catch(e){}stopMic();showGate('📱','الحصة اتفتحت عندك في تبويب أو جهاز تاني — كمّل من هناك. لو عايز تكمّل هنا اضغط «رجوع».',1);try{$('#gb').onclick=()=>location.reload()}catch(e){}}
  else if(d.t=='denied'||d.t=='kicked'){final=1;lastDel();stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
  else if(d.t=='init'){admitted=1;if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){if(d.img&&!(typeof d.img=='string'&&CIMG.test(d.img)))delete d.img;chat.push(d)}
