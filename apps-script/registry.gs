@@ -91,6 +91,10 @@ function doGet(e) {
 function doPost(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
+  /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
+  if (b.a === 'start') return upStart_(b);
+  if (b.a === 'chunk') return upChunk_(b);
+  if (b.a === 'status') return upStatus_(b);
   if (b.k !== KEY) return out_({ ok: false, e: 'key' });
   if (b.a === 'fxput') {
     const d = String(b.d || ''); if (!/^[A-Za-z0-9_-]{20,400000}$/.test(d)) return out_({ ok: false, e: 'data' });
@@ -141,3 +145,41 @@ function fillCodes() {
   Logger.log(log.length ? log.join('\n') : 'مفيش مجموعات أونلاين محتاجة كود');
   if (free.length) Logger.log('أكواد لسه ما اتوزعتش: ' + free.join(', '));
 }
+
+/* ===== التسجيل والملفات على Drive: فولدر «تسجيلات أكاديمية إتقان»، وجواه فولدر لكل حصة
+   (الفيديو + السبورة PDF + التفريغ + الملفات المشاركة). الرفع على أجزاء (Drive resumable upload). ===== */
+const ROOT = 'تسجيلات أكاديمية إتقان';
+function folder_(name) {
+  const it = DriveApp.getFoldersByName(ROOT), root = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT);
+  if (!name) return root;
+  const n = String(name).replace(/[\\/:*?"<>|]/g, '_').slice(0, 120), s = root.getFoldersByName(n);
+  return s.hasNext() ? s.next() : root.createFolder(n);
+}
+function upStart_(b) {
+  const f = folder_(b.f), meta = { name: String(b.name || 'ملف').slice(0, 200), mimeType: String(b.mime || 'application/octet-stream').split(';')[0], parents: [f.getId()] };
+  const r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+    method: 'post', contentType: 'application/json; charset=UTF-8', payload: JSON.stringify(meta),
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
+  const h = r.getHeaders(), loc = h['Location'] || h['location'];
+  if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600);
+  return out_({ ok: true, s: s });
+}
+function upChunk_(b) {
+  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const bytes = b.d ? Utilities.base64Decode(b.d) : null;
+  const range = bytes && bytes.length ? 'bytes ' + b.st + '-' + b.en + '/' + b.tot : 'bytes */' + b.tot;
+  const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
+  const c = r.getResponseCode();
+  if (c == 308) return out_({ ok: true, done: 0 });
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} CacheService.getScriptCache().remove('up_' + b.s); return out_({ ok: true, done: 1, id: id }); }
+  return out_({ ok: false, e: 'chunk ' + c });
+}
+function upStatus_(b) {
+  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
+  const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
+  return out_({ ok: true, r: m ? +m[1] + 1 : 0 });
+}
+/* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية Drive وبتعمل الفولدر الرئيسي */
+function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
