@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-q';
+const VER='2026.11.13-r';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3231,14 +3231,30 @@ async function trRun(it){let tx;
   TR.last=st?('HTTP '+st):'تعذر الاتصال';return}
  tx=String(tx||'').replace(/^["«]|["»]$/g,'').trim();if(tx.length<2||/^EMPTY\.?$/i.test(tx))return;
  TR.ok++;LOG.tr.push({ts:it.ts,t:tx,n:it.name,api:1});LOG.tr.sort((a,b)=>a.ts-b.ts);if(LOG.tr.length>6000)LOG.tr.shift();TR.dirty=1}
+/* ===== 📝 حالة التفريغ قدام المعلم: بيشتغل ولا لأ، كام مقطع اتفرّغ، وآخر مشكلة — وزرار «اختبر دلوقتي» ===== */
+function trChip(){if(role!='t')return;let c=$('#trchip');if(!c){const a=$('#tmr');if(!a)return;c=document.createElement('button');c.id='trchip';c.style.cssText='font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;border:0;cursor:pointer;font-family:inherit';c.onclick=trDiag;a.after(c)}
+ const on=TR.on,bad=on&&TR.ok==0&&(TR.err>0||!!TR.last),late=on&&TR.ok==0&&LOG.start&&Date.now()-LOG.start>180000;
+ c.style.background=!on?'#7a3b3b':(bad||late)?'#b5473f':'#1f8f5f';c.textContent=!on?'📝 التفريغ مقفول':(bad||late)?'📝 التفريغ فيه مشكلة':'📝 التفريغ ✓ '+TR.ok}
+async function trDiag(){const k=trCfgFrom(aiLoad()),lines=['حالة التفريغ التلقائي:',TR.on?'● شغّال':'○ مقفول'+(k.key?'':' — مفيش مفتاح API متسجّل على الجهاز ده (من «ملخص الحصة» ← التفريغ بالـ API)'),'مقاطع اتفرّغت: '+TR.ok+' · بتستنى: '+TR.q.length+' · أخطاء: '+TR.err+(TR.last?' · آخر مشكلة: '+TR.last:'')];
+ if(!k.key){alert(lines.join('\n'));try{aiOpen()}catch(e){}return}
+ if(!TR.on){if(confirm(lines.join('\n')+'\n\nتشغّل التفريغ دلوقتي؟')){trStart(k,0);trChip()}return}
+ if(!confirm(lines.join('\n')+'\n\n🎤 اختبر دلوقتي؟ اتكلم 4 ثواني بعد ما تضغط OK.'))return;
+ try{const ac=mxAC(),t=micT;if(!ac||!t||t.readyState!='live')return alert('المايك مقفول — شغّل المايك الأول');if(ac.resume)ac.resume();
+  const src=ac.createMediaStreamSource(new MediaStream([t])),sp=ac.createScriptProcessor(4096,1,1),z=ac.createGain();z.gain.value=0;src.connect(sp);sp.connect(z);z.connect(ac.destination);
+  const f=Math.max(1,Math.round(ac.sampleRate/16000)),ch=[];let pk=0;
+  sp.onaudioprocess=e=>{const d=e.inputBuffer.getChannelData(0),n=Math.floor(d.length/f),o=new Int16Array(n);for(let i=0;i<n;i++){let a=0;for(let j=0;j<f;j++)a+=d[i*f+j];a/=f;pk=Math.max(pk,Math.abs(a));o[i]=Math.max(-1,Math.min(1,a))*32767}ch.push(o)};
+  toast('🎤','اتكلم دلوقتي… (4 ثواني)');await new Promise(r=>setTimeout(r,4000));sp.onaudioprocess=null;try{src.disconnect();sp.disconnect();z.disconnect()}catch(e){}
+  if(pk<.01)return alert('❌ المايك مالقطش صوت خالص — المشكلة في المايك مش في التفريغ.');
+  const tx=await trCall({blob:trWav(ch,Math.round(ac.sampleRate/f))});alert(tx&&!/^EMPTY/i.test(tx)?'✅ التفريغ شغّال:\n«'+tx+'»':'⚠️ الصوت وصل بس ماطلعش كلام مفهوم — جرّب تتكلم أعلى.')}
+ catch(e){const st=e&&e.st;alert('❌ التفريغ مش شغّال: '+(st?'HTTP '+st+' — ':'')+String(e&&e.message||e).slice(0,160)+(st==400||st==401||st==403?'\n(غالباً مفتاح الـ API غلط أو مقفول)':st==404?'\n(اسم الموديل مش موجود)':st==429?'\n(الحد المسموح للمفتاح خلص)':''))}}
 function trLines(){const f=t=>new Date(t).toLocaleTimeString('en-GB');return LOG.tr.map(x=>'['+f(x.ts)+'] '+(x.n?x.n+': ':'')+x.t)}
-function trUi(){const b=$('#ai_tgo'),s=$('#ai_trs'),o=$('#ai_script');if(!b)return;
+function trUi(){try{trChip()}catch(e){}const b=$('#ai_tgo'),s=$('#ai_trs'),o=$('#ai_script');if(!b)return;
  b.textContent=TR.on?'⏹ إيقاف التفريغ بالـ API':'▶ بدء التفريغ بالـ API';
  if(s)s.textContent=TR.on?('● يعمل — '+TR.ok+' مقطع • انتظار '+TR.q.length):'';
  if(o&&!$('#aip').hidden){const L=trLines().slice(-300).join('\n'),near=o.scrollTop+o.clientHeight>=o.scrollHeight-30;if(o.value!==L){o.value=L;if(near)o.scrollTop=o.scrollHeight}}}
 function trCopy(){const t=trLines().join('\n');if(!t)return;try{navigator.clipboard.writeText(t)}catch(e){const o=$('#ai_script');o.select();document.execCommand('copy')}aiSt('تم النسخ ✓')}
 function trDl(){const t=trLines().join('\n');if(!t)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}));a.download='transcript-'+room+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-setInterval(()=>{if(role!='t')return;if(TR.on)trUi();if(TR.dirty){TR.dirty=0;try{localStorage.setItem('itqan_tr_'+room,JSON.stringify(LOG.tr.slice(-3000)))}catch(e){}}},2000);
+setInterval(()=>{if(role!='t')return;if(TR.on)trUi();else try{trChip()}catch(e){}if(TR.dirty){TR.dirty=0;try{localStorage.setItem('itqan_tr_'+room,JSON.stringify(LOG.tr.slice(-3000)))}catch(e){}}},2000);
 </script>
 <script>
 /* ===== ملخص نهاية الحصة التلقائي + تقرير الحضور + تنبيه انقطاع المعلم ===== */
