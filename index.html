@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-o';
+const VER='2026.11.13-p';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -743,7 +743,7 @@ const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
 if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;{const n=new URLSearchParams(location.search).get('n');$('#jrole').textContent=n?'📚 '+n.slice(0,60):'📚 الحصة'}if(LK.r=='s'&&!DIRM&&!document.getElementById('dko')){const nv=$('#nm').value.trim();if(nv.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length>=2){showGate('⏳','جارٍ دخول الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('s')}catch(e){}},300)}}
-if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room);if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if($('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
@@ -1788,7 +1788,7 @@ const aiSt=(m,e)=>{const x=$('#ai_st');x.textContent=m;x.style.color=e?'#ff8a8a'
 function aiLoad(){try{return JSON.parse(localStorage.getItem('itqan_ai')||'{}')}catch(e){return{}}}
 function aiSave(){try{localStorage.setItem('itqan_ai',JSON.stringify({provider:$('#ai_prov').value,key:$('#ai_key').value,model:$('#ai_model').value,url:$('#ai_url').value,lang:$('#ai_lang').value,tp:$('#ai_tp').value,tkey:$('#ai_tkey').value,tmodel:$('#ai_tmodel').value,tdial:$('#ai_tdial').value,tauto:$('#ai_tauto').checked?1:0,slang:$('#ai_slang').value,aend:$('#ai_aend').checked?1:0}))}catch(e){}}
 function aiOpen(){const c=aiLoad();if(c.provider)$('#ai_prov').value=c.provider;$('#ai_key').value=c.key||'';$('#ai_model').value=c.model||'';$('#ai_url').value=c.url||'';if(c.lang)$('#ai_lang').value=c.lang;if(c.tp)$('#ai_tp').value=c.tp;$('#ai_tkey').value=c.tkey||'';$('#ai_tmodel').value=c.tmodel||'';if(c.tdial)$('#ai_tdial').value=c.tdial;$('#ai_tauto').checked=c.tauto!==0;if(c.slang)$('#ai_slang').value=c.slang;$('#ai_aend').checked=c.aend!==0;aiProv(1);$('#aip').hidden=false;aiUi();trUi()}
-function aiClose(){aiSave();$('#aip').hidden=true;if(endDone)location.reload()}
+function aiClose(){aiSave();$('#aip').hidden=true;if(endDone)location.href=location.pathname}
 function aiProv(keep){const p=$('#ai_prov').value,m=$('#ai_model'),w=p=='webhook';
  if(!keep&&(!m.value||Object.values(AIDEF).includes(m.value)))m.value=AIDEF[p];if(keep&&!m.value)m.value=AIDEF[p];
  $('#ai_key').hidden=w;m.hidden=w;$('#ai_url').hidden=!w}
@@ -2969,7 +2969,8 @@ function recUp(meta,onSt){
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
-  }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
+  }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
+   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=2){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
 /* ---- المحرك: يرسم الفيديو على canvas ويدمج الأصوات ويسجل ---- */
@@ -3251,7 +3252,7 @@ function attRep(l){const en=l=='en',ev=LOG.att.slice().sort((a,b)=>a.ts-b.ts),en
  const L=Object.values(M);if(!L.length)return en?'Attendance: no students joined.\n':'الحضور: لم يدخل أي طالب.\n';
  return(en?'===== Attendance ('+L.length+' students) =====\n':'===== الحضور ('+L.length+' طالب) =====\n')+L.map(m=>{const open=m.at!=null,mm=Math.round((m.tot+(open?end-m.at:0))/60000);
   return'- '+m.n+': '+(en?'joined ':'دخل ')+f(m.first)+(open?(en?' • stayed until the end':' • فضل لحد النهاية'):(en?' • left ':' • خرج ')+f(m.last))+' • '+mm+(en?' min':' د')+((open?m.drops>=1:m.drops>1)?(en?' • disconnected '+m.drops+'x':' • انقطع/خرج '+(m.drops==1?'مرة':m.drops+' مرات')):'')+(m.kicked?(en?' • removed':' • اتطرد'):'')}).join('\n')+'\n'}
-async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();
+async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}
  try{if(!$('#aip').hidden)aiSave()}catch(e){}
  showGate('⏳','جارٍ إنهاء الحصة وتجهيز الملخص… لا تغلق الصفحة');
  if(!forced)Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'انتهت الحصة — شكراً لكم'})}catch(e){}});
@@ -3259,11 +3260,12 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();
  try{await trFlush()}catch(e){}
  try{if(srOn){srOn=0;sr&&sr.stop()}}catch(e){}
  let sum='',why='';
- if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),70000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
- /* السبورة PDF + التفريغ + الملفات المشاركة على Drive جنب الفيديو، بنفس الاسم */
- try{$('#gt').textContent='⏳ جارٍ رفع السبورة والتفريغ على Drive…';await Promise.race([boardToDrive(sum),new Promise(r=>setTimeout(r,40000))])}catch(e){}
- try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,12000))])}catch(e){}
- try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<60000){$('#gt').textContent='جارٍ إنهاء الحصة… لا تغلق الصفحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ /* الرفع بيبدأ على طول (السبورة + التفريغ + الملفات) والملخص بيتعمل في نفس الوقت — بدل ما كل حاجة تستنى اللي قبلها */
+ const upP=Promise.race([boardToDrive(''),new Promise(r=>setTimeout(r,25000))]).catch(()=>{});
+ if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),35000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
+ await upP;try{if(sum&&RC)driveUp(new Blob(['\ufeff'+sum],{type:'text/plain;charset=utf-8'}),(window.RB||recName(RC.n))+'_الملخص.txt','text/plain')}catch(e){}
+ try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
+ try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<75000){$('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive… سيب الصفحة مفتوحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
  aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'انتهت الحصة وتم إرسال تقرير الحضور على الإيميل. أغلق النافذة (✕) للإنهاء.',0)}
