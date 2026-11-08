@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-k';
+const VER='2026.11.13-l';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1431,7 +1431,7 @@ function sData(d){
  else if(d.t=='sb'){cur=d.s;strokes.push(cur);penSeg(lx,cur,0);redraw()}
  else if(d.t=='sp'&&cur){d.p.forEach(q=>{cur.p.push(q);penSeg(lx,cur,cur.p.length-1)});redrawSoon()}
  else if(d.t=='se'&&cur){tail(lx,cur);redraw()}
- else if(d.t=='sh'){strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}
+ else if(d.t=='sh'){strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}else if(d.t=='lz'&&Array.isArray(d.p)&&isFinite(d.p[0])&&isFinite(d.p[1])){lzAdd([+d.p[0],+d.p[1]],!!d.n)}
  else if(d.t=='undo'){strokes.pop();rebuild()}
  else if(d.t=='wbclear'){strokes=[];rebuild()}
  else if(d.t=='restore'&&Array.isArray(d.s)){strokes=d.s;rebuild()}
@@ -1602,7 +1602,7 @@ let rqF=0;function redrawSoon(){if(rqF)return;rqF=requestAnimationFrame(()=>{rqF
 const bgc=document.createElement('canvas'),bgx=bgc.getContext('2d');let bgK='';
 function bgCache(W,H){const k=[W,H,S,OX,OY,st.bg,st.bt,st.wb,PBG?PBG.src.length:0,PBG&&PBG.complete?1:0].join('|');if(k===bgK)return;bgK=k;
  bgc.width=W;bgc.height=H;bgx.setTransform(1,0,0,1,0,0);bgx.clearRect(0,0,W,H);drawBgT(bgx);if(PBG&&PBG.complete&&PBG.naturalWidth&&st.wb){bgx.setTransform(S,0,0,S,OX,OY);bgx.drawImage(PBG,0,0,LW,LH);bgx.setTransform(1,0,0,1,0,0)}}
-function redraw(){if(rqF){cancelAnimationFrame(rqF);rqF=0}const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);bgCache(W,H);cx.drawImage(bgc,0,0);if(st.wb){cx.setTransform(S,0,0,S,OX,OY);drawNotes(cx,null,role=='t');cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();
+function redraw(){if(rqF){cancelAnimationFrame(rqF);rqF=0}const W=wb.width,H=wb.height;if(!W)return;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);bgCache(W,H);cx.drawImage(bgc,0,0);if(st.wb){cx.setTransform(S,0,0,S,OX,OY);drawNotes(cx,null,role=='t');cx.setTransform(1,0,0,1,0,0)}cx.drawImage(lay,0,0);cx.save();cx.globalAlpha=.4;cx.globalCompositeOperation='multiply';cx.drawImage(lay2,0,0);cx.restore();drawSP();drawLZ(cx);
  cx.setTransform(S,0,0,S,OX,OY);if(pv)drawShape(cx,pv);drawIns(cx);
  if(role=='t'&&(tool=='era'||tool=='se')&&hov){cx.beginPath();cx.arc(hov[0],hov[1],tool=='se'?12:ewd*3,0,7);cx.strokeStyle='#888';cx.lineWidth=2;cx.stroke()}}
 /* التقاط المسطرة والمنقلة */
@@ -1626,7 +1626,17 @@ function wbCancel(){if(role!='t'){sdr=null;sPrev=null;redraw();return}if(!drag)r
  if((drag.w=='pen'||drag.w=='ca')&&cur){flush(true);bc({t:'se'});const i=strokes.lastIndexOf(cur);if(i==strokes.length-1){strokes.pop();bc({t:'undo'})}}
  drag=null;cur=null;pv=null;rebuild()}
 function flush(f){if(pend.length&&(f||Date.now()-lastSend>40)){bc({t:'sp',p:pend});pend=[];lastSend=Date.now()}}
+/* ===== 🪄 القلم السحري (ليزر): الكتابة بتلمع بالأحمر وبتختفي لوحدها بعد ثانيتين — للإشارة والشرح من غير ما توسّخ السبورة ===== */
+const LZ=[],LZH=1100,LZF=900;let lzR=0;
+function lzAdd(p,n){const now=performance.now();if(n||!LZ.length)LZ.push({p:[p],l:now});else{const L=LZ[LZ.length-1];L.p.push(p);L.l=now}if(LZ.length>40)LZ.shift();lzLoop()}
+function lzPrune(){const now=performance.now();for(let i=LZ.length-1;i>=0;i--)if(now-LZ[i].l>LZH+LZF)LZ.splice(i,1)}
+function lzLoop(){if(lzR)return;const f=()=>{lzR=0;lzPrune();redraw();if(LZ.length)lzR=requestAnimationFrame(f)};lzR=requestAnimationFrame(f)}
+function drawLZ(c){if(!LZ.length)return;const now=performance.now();for(let i=LZ.length-1;i>=0;i--){const a=1-Math.max(0,now-LZ[i].l-LZH)/LZF;if(a<=0)LZ.splice(i,1)}
+ c.save();c.setTransform(S,0,0,S,OX,OY);c.lineCap=c.lineJoin='round';
+ LZ.forEach(L=>{const a=Math.min(1,1-Math.max(0,now-L.l-LZH)/LZF);if(a<=0)return;c.globalAlpha=a;c.shadowColor='#ff2d55';c.shadowBlur=14;c.strokeStyle='#ff2d55';c.lineWidth=6;
+  c.beginPath();L.p.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));if(L.p.length==1)c.lineTo(L.p[0][0]+.1,L.p[0][1]);c.stroke();c.shadowBlur=0;c.strokeStyle='#fff';c.lineWidth=2;c.stroke()});c.restore()}
 function down(p){
+ if(tool=='lz'){drag={w:'lz'};lzAdd(p,1);bc({t:'lz',n:1,p:[Math.round(p[0]),Math.round(p[1])]});return}
  if(tool=='se'){drag={w:'se'};ERU.push({L:[],open:1});if(ERU.length>30)ERU.shift();seHit(p);return}
  if(tool!='mv'&&tool!='note'){REDO.length=0;seLast=0}
  if(tool!='se'&&noteGrab(p))return;
@@ -1643,6 +1653,7 @@ function move(p){
  if(!drag){if(tool=='era'||tool=='se')redrawSoon();return}
  const w=drag.w;
  if(w=='se'){seHit(p);redrawSoon();return}
+ if(w=='lz'){const L=LZ[LZ.length-1];if(L&&dist(p,L.p[L.p.length-1])<2)return;lzAdd(p,0);bc({t:'lz',p:[Math.round(p[0]),Math.round(p[1])]});return}
  if(w=='pen'){const q=snap?snapTo(snap,p):p,l=cur.p[cur.p.length-1];if(dist(q,l)<1)return;cur.p.push(q);penSeg(lx,cur,cur.p.length-1);pend.push(q);flush(false);redrawSoon()}
  else if(w=='shape'){pv.b=snap?snapTo(snap,p):p;redrawSoon()}
  else if(w=='cs'){const k=ins.c;k.r=dist(p,[k.x,k.y]);k.a=Math.atan2(p[1]-k.y,p[0]-k.x);sendIns();redraw()}
@@ -1655,6 +1666,7 @@ function move(p){
  else if(w=='rot'){const o=ins[drag.k];o.a=Math.atan2(p[1]-o.y,p[0]-o.x);sendIns();redraw()}}
 function up(){
  if(!drag)return;const w=drag.w;
+ if(w=='lz'){drag=null;return}
  if(w=='pen'||w=='ca'){flush(true);tail(lx,cur);bc({t:'se'});if(w=='ca')sendIns();if(cur&&cur.sm){const sh=smartShape(cur.p,cur.c,cur.w);if(sh){if(cur.nid)sh.nid=cur.nid;const i=strokes.lastIndexOf(cur);if(i>-1)strokes.splice(i,1);bc({t:'undo'});strokes.push(sh);rebuild();bc({t:'sh',s:sh})}}}
  else if(w=='shape'){const s=pv;pv=null;if(dist(s.a,s.b)>3){strokes.push(s);paint(s);bc({t:'sh',s})}}
  else if(w=='cs'){ins.c.armed=ins.c.r>8?1:0;sendIns()}
@@ -1687,6 +1699,7 @@ function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
  /* صفحات السبورة جنب القلم عشان تبان على الموبايل: قبل / رقم الصفحة / بعد / صفحة جديدة / تحميل الكل PDF */
  SP();B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));B('1/1','الصفحات: جديدة / استيراد PDF / حفظ PDF',function(){tbPop(this,'pg')},'pgl dd');B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));
  B('➕','صفحة جديدة فاضية بعد الصفحة دي',()=>pgNew());B('📑','تحميل كل صفحات السبورة في ملف PDF واحد',()=>pgPdf());SP();
+ B('🪄','القلم السحري (ليزر) — الكتابة بتلمع وبتختفي لوحدها بعد ثانيتين',()=>setTool('lz')).dataset.tool='lz';
  B('✨','القلم الذكي — ارسم شكل بإيدك (خط، دائرة، مربع، مثلث…) ويتحوّل لشكل منتظم',()=>setTool('sm')).dataset.tool='sm';
  B('🖊','هايلايتر — اضغط مرتين للون والسُمك',function(){toolTap(this,'hl')}).dataset.tool='hl';
  B('🧽','ممحاة — اضغط مرتين لاختيار: ممحاة جزء / ممحاة الخط كله',function(){toolTap(this,tool=='se'?'se':'era')}).dataset.tool='era';
