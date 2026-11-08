@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-p';
+const VER='2026.11.13-q';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1344,7 +1344,12 @@ function strokeHit(s2,p,r){if(s2.e)return false;const R=r+(s2.w||4)/2;
  const x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]);return p[0]>x0-R&&p[0]<x1+R&&p[1]>y0-R&&p[1]<y1+R&&(Math.min(Math.abs(p[0]-x0),Math.abs(p[0]-x1))<R||Math.min(Math.abs(p[1]-y0),Math.abs(p[1]-y1))<R||s2.k=='e')}
 const ERU=[];let seLast=0;
 function seHit(p){let hit=0;for(let i=strokes.length-1;i>=0;i--){if(strokeHit(strokes[i],p,12/Math.max(.2,S)*.5+6)){const g=ERU[ERU.length-1];if(g&&g.open)g.L.push(strokes[i]);strokes.splice(i,1);hit=1}}if(hit){seDirty=1;seLast=1;rebuild()}}
-function wclr(){const L=NOTES();if(!strokes.length&&!L.length)return;CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];if(L.length){L.length=0;noteSync(1)}rebuild();bc({t:'wbclear'})}
+/* الكتابة فوق الشاشة المشاركة: بنحفظ صورة من الشاشة مع كل صفحة، فالـ PDF بيطلع فيه الشير والمكتوب عليه (مش سبورة بيضا) */
+const SHOTS=[];let shotT=0;
+function shotNow(){try{const v=$('#v');if(!v||!v.videoWidth||!(scrT||stuS))return null;const W=1920,H=1080,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);
+ const k=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*k,h=v.videoHeight*k;g.drawImage(v,(W-w)/2,(H-h)/2,w,h);return c.toDataURL('image/jpeg',.8)}catch(e){return null}}
+function shotKeep(){if(role!='t'||!(scrT||stuS))return;clearTimeout(shotT);shotT=setTimeout(()=>{const u=shotNow();if(!u)return;pgInit();if(!WPG[pi].bg)WPG[pi].shot=u},250)}
+function wclr(){const L=NOTES();if(!strokes.length&&!L.length)return;try{pgInit();const sh=WPG[pi].shot;if(sh&&strokes.length){SHOTS.push({s:strokes.slice(),bg:sh,n:L.slice(),bt:'blank'});if(SHOTS.length>60)SHOTS.shift()}WPG[pi].shot=null}catch(e){}CLR.push(strokes);if(CLR.length>10)CLR.shift();strokes=[];if(L.length){L.length=0;noteSync(1)}rebuild();bc({t:'wbclear'})}
 const REDO=[];
 function undo(){if(seLast&&ERU.length){const g=ERU.pop();strokes.push(...g.L.reverse());seLast=ERU.length>0;rebuild();bc({t:'restore',s:strokes});return}if(strokes.length){REDO.push(strokes.pop());if(REDO.length>60)REDO.shift();rebuild();bc({t:'undo'})}else if(CLR.length){strokes=CLR.pop();rebuild();bc({t:'restore',s:strokes})}}
 /* إعادة (Redo): بيرجّع آخر حاجة اتشالت بالتراجع */
@@ -1667,6 +1672,7 @@ function move(p){
 function up(){
  if(!drag)return;const w=drag.w;
  if(w=='lz'){drag=null;return}
+ if(w=='pen'||w=='ca'||w=='shape')shotKeep();
  if(w=='pen'||w=='ca'){flush(true);tail(lx,cur);bc({t:'se'});if(w=='ca')sendIns();if(cur&&cur.sm){const sh=smartShape(cur.p,cur.c,cur.w);if(sh){if(cur.nid)sh.nid=cur.nid;const i=strokes.lastIndexOf(cur);if(i>-1)strokes.splice(i,1);bc({t:'undo'});strokes.push(sh);rebuild();bc({t:'sh',s:sh})}}}
  else if(w=='shape'){const s=pv;pv=null;if(dist(s.a,s.b)>3){strokes.push(s);paint(s);bc({t:'sh',s})}}
  else if(w=='cs'){ins.c.armed=ins.c.r>8?1:0;sendIns()}
@@ -2438,7 +2444,7 @@ const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PB
 async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
  if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
-async function pgPdf(noSave){let L;if(role=='t'){pgSave();L=WPG.map(p=>({s:p.s,bg:p.bg,n:p.n||[],bt:p.bt}))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
+async function pgPdf(noSave){let L;if(role=='t'){pgSave();L=SHOTS.concat(WPG.map(p=>({s:p.s,bg:p.bg||p.shot,n:p.n||[],bt:p.shot&&!p.bg?'blank':p.bt})))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
  if(!L.length)return;if(!noSave){sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}}
  try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
  const {jsPDF}=window.jspdf;let doc=null;const keep=[strokes,PBG,st.bt];
@@ -3025,9 +3031,9 @@ function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;const me
 async function boardToDrive(sum){if(role!='t'||!RC)return;const base=window.RB||(window.RB=recName(RC.n));
  /* تفريغ الكلام (والملخص لو اتعمل) كملف نص */
  try{const L=(LOG.tr||[]).slice().sort((a,b)=>a.ts-b.ts),hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
-  if(L.length||sum){const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
+  {const why=L.length?'':'لم يتم تفريغ أي كلام في الحصة دي.\n— التفريغ بالـ API: '+(TR.cfg||TR.on?'كان مفعّل':'مش مفعّل')+' · مقاطع اتفرّغت: '+(TR.ok||0)+' · أخطاء: '+(TR.err||0)+(TR.last?' · آخر مشكلة: '+TR.last:'')+'\n— تفريغ المتصفح: '+(typeof srOn!='undefined'&&srOn?'كان شغّال':'مش شغّال')+'\n(فعّل التفريغ من «ملخص الحصة» ← التفريغ التلقائي)\n\n';const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+why+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
    driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
- try{pgSave();const has=WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
+ try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
  SHF.forEach(f=>{try{driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:(window.RB||(window.RB=recName(RC.n)))+'_فيديو'+(suf||''),f:window.RB},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
