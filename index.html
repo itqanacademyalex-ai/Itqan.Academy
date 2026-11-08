@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-n';
+const VER='2026.11.13-o';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -772,7 +772,7 @@ function resolveCode(code){return new Promise(async(ok,no)=>{
  p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss>=2)end(null,'مفيش حصة مفتوحة بالكود ده — اتأكد من الكود، أو اسأل السكرتارية.')})})}
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
 /* كمبيوتر ويندوز من المتصفح + لينك حصة: نفتح برنامج إتقان (لو اختاره قبل كده بيفتح على طول)، أو نكمّل في المتصفح */
-function deskOffer(go){if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent)||sessionStorage.getItem('itqan_web'))return false;
+function deskOffer(go){return false;if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent)||sessionStorage.getItem('itqan_web'))return false;
  const open=()=>{try{localStorage.setItem('itqan_desk','1')}catch(e){}location.href='itqan://open?u='+encodeURIComponent(location.href)};
  const o=document.createElement('div');o.id='dko';o.style.cssText='position:fixed;inset:0;z-index:200;background:#0e1a2bf2;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
  o.innerHTML='<div style="background:#14283f;border:1px solid #35607f;border-radius:18px;padding:22px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center"><b style="font-size:19px;color:#e3c08d">💻 فتح الحصة</b><small id="dkt" style="line-height:1.8;color:#c4d3e0">افتح الحصة في برنامج إتقان للكمبيوتر (صوت أثبت وأدوات أكتر)، أو كمّل هنا في المتصفح.</small></div>';
@@ -947,7 +947,7 @@ function deskDl(){if(TM()||window.itqanApp||PWA||MOB||$('#dsk')||!/Windows/i.tes
  d.append(t,a);
  /* يظهر فوق زراير السكرتارية والمدير عشان يبان من غير ما حد ينزل لتحت */
  const sec=[...c.querySelectorAll('button')].find(b=>/دخول السكرتارية/.test(b.textContent));if(sec&&sec.parentNode){d.style.marginTop='0';sec.parentNode.insertBefore(d,sec)}else{const jl=$('#jlink');jl&&!jl.hidden?jl.append(d):c.append(d)}}
-function appHelp(){if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent))return;
+function appHelp(){return;if(window.itqanApp||PWA||MOB||!/Windows/i.test(navigator.userAgent))return;
  const b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-bottom:10px';b.textContent='💻 افتح في تطبيق إتقان (لو متثبّت على الكمبيوتر)';
  b.onclick=()=>{location.href='itqan://open?u='+encodeURIComponent(location.href)};$('#jlink').prepend(b);deskDl()}
 function inAppHelp(){if(!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
