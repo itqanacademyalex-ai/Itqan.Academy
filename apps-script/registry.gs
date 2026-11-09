@@ -56,7 +56,10 @@ function sheet_() {
   return R;
 }
 
-function doGet(e) {
+/* أي غلط جوه السكربت بيرجع رسالة واضحة (JSON) بدل صفحة جوجل «unable to open the file» */
+function doGet(e) { try { return doGet_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
+function doPost(e) { try { return doPost_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
+function doGet_(e) {
   const p = (e && e.parameter) || {};
   if (p.a === 'chk') {
     const c = String(p.c || '').toLowerCase(), r = load_()[c] || {};
@@ -99,7 +102,7 @@ function doGet(e) {
   return out_({ ok: false });
 }
 
-function doPost(e) {
+function doPost_(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
