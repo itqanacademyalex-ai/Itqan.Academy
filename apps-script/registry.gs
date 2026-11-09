@@ -272,7 +272,7 @@ const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g,
 const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
 
 /* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
-   وتريجر hwJob_ بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
+   وتريجر hwJob بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
 function hwGen_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!GEM_()) return out_({ ok: false, e: 'nokey' });
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
@@ -285,20 +285,22 @@ function hwGen_(b) {
   } finally { L.releaseLock(); }
   hwKick_(); return out_({ ok: true, pending: 1 });
 }
-function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob_')) ScriptApp.newTrigger('hwJob_').timeBased().after(1000).create(); }
-function hwJob_() {
+function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
+function hwJob() {
   const P = PropertiesService.getScriptProperties(), t0 = Date.now(), L = LockService.getScriptLock(); if (!L.tryLock(1000)) return;
   try {
-    ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwJob_') ScriptApp.deleteTrigger(t); });
+    ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwJob') ScriptApp.deleteTrigger(t); });
     while (Date.now() - t0 < 240000) {
       let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {} if (!q.length) break;
       const j = q.shift(); P.setProperty('hwq', JSON.stringify(q)); let r;
       try { r = hwMake_(j.c, j.d, j.re); } catch (x) { r = { ok: false, e: String(x && x.message || x) }; }
       if (r.ok) P.deleteProperty('hws_' + j.c + '|' + j.d); else P.setProperty('hws_' + j.c + '|' + j.d, JSON.stringify({ s: 'err', e: String(r.e).slice(0, 300), t: Date.now() }));
     }
-    if (JSON.parse(P.getProperty('hwq') || '[]').length) ScriptApp.newTrigger('hwJob_').timeBased().after(1000).create();
+    if (JSON.parse(P.getProperty('hwq') || '[]').length) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create();
   } finally { L.releaseLock(); }
 }
+/* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية «يشتغل في الخلفية» (عشان الواجب يتعمل من غير ما المتصفح يستنى) */
+function authHw() { ScriptApp.getProjectTriggers(); Logger.log('تمام — الواجبات هتشتغل في الخلفية'); }
 function hwMake_(c, d, re) {
   const f = cls_(c, d); if (!f) return { ok: false, e: 'class' };
   const old = jget_(f, 'hw.json'); if (old && !re) return { ok: true, hw: old };
