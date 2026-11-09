@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-c';
+const VER='2026.11.14-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -742,7 +742,7 @@ function tCertOk(rm){try{const o=JSON.parse(localStorage.getItem('itqan_tc_'+rm)
 const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
-if(LK){try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;{const n=new URLSearchParams(location.search).get('n');$('#jrole').textContent=n?'📚 '+n.slice(0,60):'📚 الحصة'}if(LK.r=='s'&&!DIRM&&regUrl()){const n=new URLSearchParams(location.search).get('n')||'',b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-top:8px';b.textContent='📚 الحصص اللي فاتت (فيديو وسبورة)';b.onclick=()=>libOpen(LK.room,n);$('#jlink').append(b)}
+if(LK){if(LK.r=='s')setTimeout(()=>libBtn(LK.room),300);try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;{const n=new URLSearchParams(location.search).get('n');$('#jrole').textContent=n?'📚 '+n.slice(0,60):'📚 الحصة'}if(LK.r=='s'&&!DIRM&&regUrl()){const n=new URLSearchParams(location.search).get('n')||'',b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-top:8px';b.textContent='📚 الحصص اللي فاتت (فيديو وسبورة)';b.onclick=()=>libOpen(LK.room,n);$('#jlink').append(b)}
 if(LK.r=='s'&&!DIRM&&!document.getElementById('dko')){const nv=$('#nm').value.trim();if(nv.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length>=2){showGate('⏳','جارٍ دخول الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('s')}catch(e){}},300)}}
 if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
@@ -786,8 +786,15 @@ function deskOffer(go){return false;if(window.itqanApp||PWA||MOB||!/Windows/i.te
 function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search),c=parseCode(q.get('c')),r=q.get('r');if(!c||!/^(t|s)$/.test(r||''))return;
  if(deskOffer(()=>codeLanding0(c,r)))return;codeLanding0(c,r)}
 /* زرار «📚 الحصص اللي فاتت» للطالب (لينك المجموعة) */
-function libBtn(c){if(!regUrl()||$('#libb'))return;const g=$('#gate .card')||$('#gate');if(!g)return;const n=new URLSearchParams(location.search).get('n')||'';
- const b=document.createElement('button');b.id='libb';b.className='w';b.style.cssText='background:#27496b;margin-top:8px;font-weight:700';b.textContent='📚 الحصص اللي فاتت (فيديو وسبورة)';b.onclick=()=>libOpen(c,n);g.append(b)}
+/* تابات الطالب (لينك المجموعة): 🎥 الحصة · 📄 السبورات · ▶ الفيديوهات · 📝 الواجبات — بتظهر طول ما هو برا الحصة */
+function libBtn(c){if(!regUrl()||$('#stabs'))return;const n=new URLSearchParams(location.search).get('n')||'';
+ const bar=document.createElement('div');bar.id='stabs';bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:255;display:flex;gap:6px;justify-content:center;padding:8px;background:#0e1a2bf2;border-bottom:1px solid #27496b;direction:rtl;flex-wrap:nowrap;max-width:100%';
+ const T=[['c','🎥 الحصة'],['b','📄 السبورات'],['v','▶ الفيديوهات'],['h','📝 الواجبات']],B={};
+ const pick=k=>{Object.entries(B).forEach(([x,b])=>{b.style.background=x==k?'#1a9486':'#1d3652';b.style.color='#fff'});const m=$('#libm');if(k=='c'){if(m)m.remove()}else libOpen(c,n,k)};
+ T.forEach(([k,t])=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='flex:1 1 0;min-width:0;max-width:150px;white-space:nowrap;border:0;border-radius:999px;padding:9px 4px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;color:#fff;background:#1d3652';b.onclick=()=>pick(k);B[k]=b;bar.append(b)});
+ document.body.appendChild(bar);window.stPick=pick;pick('c');
+ /* أول ما الطالب يدخل الحصة التابات بتختفي */
+ const iv=setInterval(()=>{const g=$('#gate');if(g&&g.hidden&&!$('#join:not([hidden])')&&!$('#libm')){bar.remove();clearInterval(iv)}},1000)}
 function tOpenCode(c){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));$('#join').hidden=true;showGate('⏳','جارٍ فتح الحصة '+fmtCode(c)+'…');
  tPinFor(c).then(pin=>{if(!pin||!/^\d{4,6}$/.test(pin)){$('#gate').hidden=true;$('#join').hidden=false;return}showGate('⏳','جارٍ التحقق من الكود والميعاد…');
   tCodeOpen(c,pin).then(u=>location.replace(u),e=>showGate('⛔',e&&e.g||'تعذّر فتح الحصة — حاول تاني.',1))})}
@@ -795,7 +802,7 @@ function codeLanding0(c,r){
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
  /* لينك المعلم: الكود المحفوظ (أو كود المعلم مرة واحدة) ← الحصة على طول. لينك الطالب: على طول لغرفة الانتظار — من غير اختيار دور ولا أرقام */
  if(r=='t')return tOpenCode(c);
- $('#join').hidden=true;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
+ $('#join').hidden=true;libBtn(c);const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');nextFor(c).then(n=>{if(n&&!$('#gate').hidden)$('#gt').textContent='🗓 الحصة الجاية '+n+'\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.'});libBtn(c);setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
 function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
  if(u.origin!==location.origin||u.pathname!==location.pathname||!q.get('s')||!q.get('k')||!/^(t|s)$/.test(q.get('r')||''))return null;return u}catch(e){return null}}
@@ -3040,10 +3047,11 @@ function grpTitle(){try{const x=tsGet().find(y=>y.c===room);if(x&&x.t)return x.t
 function recBase(){if(!window.RB){const d=new Date(),p=n=>String(n).padStart(2,'0'),dl=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'_'+p(d.getHours())+'-'+p(d.getMinutes()),t=grpTitle();
  window.RB=(t||'حصة')+'_'+dl;window.RF=(t?t+' ':'')+'('+fmtCode(room)+')/'+dl}return window.RB}
 /* ===== 📚 مكتبة المجموعة: كل الحصص اللي فاتت (فيديو + سبورة + ملخص) لأي حد معاه لينك المجموعة ===== */
-async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');if(m)m.remove();m=document.createElement('div');m.id='libm';
- m.style.cssText='position:fixed;inset:0;z-index:250;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
- m.innerHTML='<div class="card" style="width:min(560px,100%);max-height:92vh;overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:19px">📚 الحصص اللي فاتت'+(title?' — <span translate="no">'+esc(title)+'</span>':'')+'</h2><button class="w" id="libx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div id="libl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
- document.body.appendChild(m);$('#libx').onclick=()=>m.remove();const L=$('#libl');
+async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#libm');if(m)m.remove();m=document.createElement('div');m.id='libm';
+ const MT={b:'📄 السبورات',v:'▶ الفيديوهات',h:'📝 الواجبات'}[mode]||'📚 الحصص اللي فاتت',tb=mode&&$('#stabs')?$('#stabs').offsetHeight:0;
+ m.style.cssText='position:fixed;inset:0;top:'+tb+'px;z-index:250;background:rgba(10,20,34,.97);display:flex;align-items:'+(tb?'flex-start':'center')+';justify-content:center;padding:12px;direction:rtl';
+ m.innerHTML='<div class="card" style="width:min(560px,100%);max-height:'+(tb?'calc(100vh - '+(tb+24)+'px)':'92vh')+';overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:19px">'+MT+(title?' — <span translate="no">'+esc(title)+'</span>':'')+'</h2><button class="w" id="libx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div id="libl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
+ document.body.appendChild(m);$('#libx').onclick=()=>{m.remove();if(mode&&window.stPick)stPick('c')};const L=$('#libl');
  let j=null,net=0;const u=regUrl();
  /* POST الأول (أضمن)، ولو السكربت المنشور لسه مايعرفهوش نجرّب GET */
  try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lib',c})});net=1;j=JSON.parse(await r.text());if(j&&!j.ok&&(!j.e||j.e=='key'))j=null}catch(e){}
@@ -3055,12 +3063,14 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
  const nice=d=>{const m2=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d);if(!m2)return d;let h=+m2[4];const pm=h>=12;h=h%12||12;return (+m2[3])+' '+AR[+m2[2]-1]+' '+m2[1]+' — '+h+':'+m2[5]+(pm?' م':' ص')};
  /* للطالب: الفيديو والسبورة بس (الملخص والتفريغ للإدارة) */
  const isV=f=>/video\//.test(f.m||''),isB=f=>/السبورة/.test(f.n||'')&&/pdf/.test(f.m||'');
- j.items=j.items.map(it=>({d:it.d,hw:it.hw,files:it.files.filter(f=>isV(f)||isB(f))})).filter(it=>it.files.length||it.hw);
- if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
+ /* التاب بيحدد إيه اللي يظهر: سبورات بس، فيديوهات بس، أو الواجبات المنشورة بس */
+ const keep=f=>mode=='b'?isB(f):mode=='v'?isV(f):mode=='h'?false:(isV(f)||isB(f));
+ j.items=j.items.map(it=>({d:it.d,hw:mode&&mode!='h'?null:it.hw,files:it.files.filter(keep)})).filter(it=>it.files.length||(it.hw&&(it.hw.qs||[]).length));
+ if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">'+(mode=='h'?'لسه مفيش واجبات منشورة للمجموعة دي — أول ما المعلم ينشر واجب هيظهر هنا.':mode=='b'?'لسه مفيش سبورات متسجّلة للمجموعة دي.':mode=='v'?'لسه مفيش فيديوهات متسجّلة للمجموعة دي.':'لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.')+'</small>';return}
  j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px';
   r.innerHTML='<b>🗓 '+esc(nice(it.d))+'</b>';const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
   const mk=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;row.append(b)};
-  const kind=f=>/فيديو|^video\//.test(f.n+' '+f.m)&&/video/.test(f.m)?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
+  const kind=f=>/^video\//.test(f.m||'')?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
   const order={v:0,b:1,s:2,t:3,o:4};it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]).forEach(f=>{const k=kind(f);
    const label=k=='v'?'▶ الفيديو':k=='b'?'📄 السبورة':k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
    mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label,c))});
@@ -3097,7 +3107,12 @@ function hwModal(id,title){let m=$('#'+id);if(m)m.remove();m=document.createElem
  document.body.appendChild(m);m.querySelector('.hwx').onclick=()=>m.remove();return m.querySelector('.hwb')}
 const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;return b};
 /* المعلم: «📝 الواجبات» — كل حصة: اعمل الواجب / راجع / منشور + النتايج */
-async function hwPanel(){const B=hwModal('hwp','📝 الواجبات'),rooms=tsGet().filter(x=>tpGet(x.c));if(!rooms.length){B.innerHTML='<small>اكتب كود المعلم الأول.</small>';return}B.innerHTML='';
+async function hwPanel(){const B=hwModal('hwp','📝 الواجبات'),rooms=tsGet().filter(x=>tpGet(x.c));
+ /* لسه كود المعلم مااتكتبش على الجهاز ده: نطلبه هنا على طول بدل ما نقول «اكتب الكود الأول» */
+ if(!rooms.length){if(!tbGet()){B.innerHTML='<small style="line-height:1.8">افتح لينك المعلم بتاعك (اللي السكرتارية بعتته) واكتب كود المعلم مرة واحدة، وبعدين ارجع هنا.</small>';return}
+  B.innerHTML='<small style="line-height:1.8">اكتب كود المعلم (6 أرقام) — مرة واحدة بس على الجهاز ده:</small><input id="hwpc" inputmode="numeric" maxlength="6" style="background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:4px"><small id="hwpe" style="color:#fca5a5"></small>';
+  B.append(hwBtn('فتح الواجبات','#1a9486',async function(){this.disabled=true;const n=await tbUnlock($('#hwpc').value).catch(()=>0);this.disabled=false;if(n){toast('✅','اتحفظ — '+n+' حصة');hwPanel()}else $('#hwpe').textContent='الكود غلط — راجع رسالة السكرتارية.'}));return}
+ B.innerHTML='';
  for(const x of rooms){const h=await hwH(x.c,tpGet(x.c));const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#e3c08d">📚 '+esc(x.t||fmtCode(x.c))+'</b><small>⏳</small>';B.append(sec);
   let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}sec.lastChild.remove();
   if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+hwErr(j)}));continue}
