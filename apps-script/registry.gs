@@ -233,18 +233,29 @@ function gemPick_() {
   if (!L.length) throw new Error('مفيش موديل Gemini flash متاح للمفتاح ده');
   /* الثابت قبل التجريبي (preview/exp)، وبعدين الأحدث، والعادي قبل lite */
   L.sort((a, b) => (/(preview|exp)/.test(a) - /(preview|exp)/.test(b)) || (ver(b) - ver(a)) || (/lite/.test(a) - /lite/.test(b)) || (a.length - b.length));
-  PropertiesService.getScriptProperties().setProperty('gem_model', L[0]); return L[0];
+  PropertiesService.getScriptProperties().setProperties({ gem_model: L[0], gem_models: JSON.stringify(L.slice(0, 6)) }); return L[0];
 }
 function gem_(parts, temp, again) {
-  const model = gemModel_();
-  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(GEM_()), {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } }) });
-  const code = r.getResponseCode();
-  if ((code == 404 || code == 400 && /model/i.test(r.getContentText())) && !again && !PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL')) {
-    PropertiesService.getScriptProperties().deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
-  if (code != 200) throw new Error('Gemini (' + model + ') ' + code + ': ' + r.getContentText().slice(0, 200));
-  const j = JSON.parse(r.getContentText()); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join(''));
+  const P = PropertiesService.getScriptProperties(), fixed = P.getProperty('GEMINI_MODEL');
+  const first = gemModel_(); let more = []; try { more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {}
+  if (!more.length && !fixed) { try { gemPick_(); more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {} }
+  /* الموديل الأساسي، ولو عليه ضغط (503/429/500) بنستنى ونعيد، وبعدين نجرّب الموديلات اللي بعده */
+  const models = [first].concat(fixed ? [] : more.filter(m => m != first)).slice(0, 3);
+  const body = JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } });
+  let last = '';
+  for (let i = 0; i < models.length; i++) {
+    for (let t = 0; t < 3; t++) {
+      const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + encodeURIComponent(GEM_()), { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: body });
+      const code = r.getResponseCode(), txt = r.getContentText();
+      if (code == 200) { const j = JSON.parse(txt); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join('')); }
+      last = 'Gemini (' + models[i] + ') ' + code + ': ' + txt.slice(0, 200);
+      /* الموديل اتقفل: نختار من جديد مرة واحدة */
+      if ((code == 404 || code == 400 && /model/i.test(txt)) && !fixed && !again) { P.deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
+      if (code == 503 || code == 429 || code == 500) { Utilities.sleep([2000, 5000, 0][t]); continue; }
+      throw new Error(last);
+    }
+  }
+  throw new Error(last + ' — جوجل عليها ضغط دلوقتي، جرّب كمان شوية');
 }
 function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
