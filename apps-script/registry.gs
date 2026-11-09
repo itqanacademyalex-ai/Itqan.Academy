@@ -106,6 +106,8 @@ function doPost_(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
+  /* المكتبة كمان بـ POST — بعض المتصفحات/الشبكات طلب GET بتاعها مابيوصلش للسكربت */
+  if (b.a === 'lib') return doGet_({ parameter: { a: 'lib', c: b.c } });
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
   if (b.a === 'hwsub') return hwSub_(b);
