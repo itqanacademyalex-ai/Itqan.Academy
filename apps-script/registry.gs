@@ -288,3 +288,45 @@ function hwList_(b) {
     if (has || hw) out.push({ d: f.getName(), st: hw ? hw.st : '', hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
 }
+
+/* ===== 📚 ربط الحصص القديمة بالمكتبة =====
+   linkOld(): تجربة بس — بتكتب في الـ log هتعمل إيه من غير ما تغيّر حاجة.
+   linkOldRun(): بتنفّذ فعلًا: (1) أي فولدر اسمه «… (الكود)» بيتربط بالمجموعة،
+   (2) الفيديوهات والسبورات القديمة المتسابة لوحدها (اسمها «اسم المجموعة_التاريخ_الساعة») بتتنقل لفولدر مجموعتها وجواه فولدر بتاريخ الحصة.
+   ممكن تشغّلها كذا مرة — اللي اتربط قبل كده مابيتكررش. */
+function linkOld() { linkOld_(false); }
+function linkOldRun() { linkOld_(true); }
+function linkOld_(go) {
+  const P = PropertiesService.getScriptProperties(), rooms = load_(), t0 = Date.now(), log = [];
+  let S = {}; try { S = sheet_(); } catch (x) {}
+  const known = c => !!(rooms[c] || S[c]), nt = s => norm_(s).replace(/\s+/g, ' ').toLowerCase();
+  /* (1) فولدرات المجموعات «الاسم (الكود)» */
+  const byTitle = {}, fit = DriveApp.searchFolders("title contains '(' and trashed = false");
+  while (fit.hasNext()) {
+    const f = fit.next(), m = /^(.*?)\s*\(([A-Za-z0-9]{4,6})\)\s*$/.exec(f.getName()); if (!m) continue;
+    const c = m[2].toLowerCase(); if (!known(c)) continue;
+    if (m[1]) byTitle[nt(m[1])] = c;
+    const cur = P.getProperty('gf_' + c);
+    if (!cur) { log.push('🔗 ' + f.getName() + ' ← المجموعة ' + c); if (go) P.setProperty('gf_' + c, f.getId()); }
+    else if (cur != f.getId()) log.push('⚠️ فيه أكتر من فولدر للمجموعة ' + c + ': «' + f.getName() + '» (سبته زي ما هو)');
+  }
+  Object.keys(rooms).forEach(c => { const n = rooms[c] && rooms[c].n; if (n && n != 'حصة' && !byTitle[nt(n)]) byTitle[nt(n)] = c; });
+  /* (2) الملفات القديمة المتسابة لوحدها */
+  const it = DriveApp.searchFiles("trashed = false and (mimeType contains 'video/' or mimeType = 'application/pdf') and title contains '_20'");
+  let moved = 0, skip = 0;
+  while (it.hasNext() && Date.now() - t0 < 300000) {
+    const x = it.next(), nm = x.getName(), m = /^(.+?)_(\d{4}-\d\d-\d\d_\d\d-\d\d)/.exec(nm); if (!m) continue;
+    const c = byTitle[nt(m[1])]; if (!c) { skip++; continue; }
+    const par = x.getParents(), p = par.hasNext() ? par.next() : null;
+    if (p && p.getName() == m[2]) continue; // متنقّل قبل كده
+    const gid = P.getProperty('gf_' + c);
+    log.push('📦 ' + nm + ' ← ' + c + '/' + m[2]); moved++;
+    if (!go) continue;
+    let g = gid ? DriveApp.getFolderById(gid) : folder_(m[1] + ' (' + c.toUpperCase() + ')');
+    if (!gid) P.setProperty('gf_' + c, g.getId());
+    const s = g.getFoldersByName(m[2]), d = s.hasNext() ? s.next() : g.createFolder(m[2]);
+    x.moveTo(d); if (/^video\//.test(x.getMimeType()) || /السبورة/.test(nm)) try { x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  }
+  Object.keys(rooms).concat(Object.keys(S)).forEach(c => CacheService.getScriptCache().remove('lib_' + c));
+  Logger.log((go ? '✅ اتنفّذ' : '🔎 تجربة بس (مفيش حاجة اتغيّرت)') + ' — ملفات: ' + moved + ' · ملفات مالقيتلهاش مجموعة: ' + skip + (it.hasNext() ? ' · الوقت خلص، شغّلها تاني تكمّل' : '') + '\n' + log.slice(0, 300).join('\n'));
+}
