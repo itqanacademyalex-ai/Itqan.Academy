@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-w';
+const VER='2026.11.13-x';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2596,7 +2596,7 @@ function fxSyncSt(t){fxSyncMsg=t;const e=$('#fxsy');if(e)e.textContent=t}
 /* رفع: الغرف من غير المفاتيح التقيلة (بتتحسب تاني من الكود على أي جهاز) */
 function fxCloudPush(){if(!fxPulled)return;clearTimeout(fxUpT);fxUpT=setTimeout(async()=>{try{const K=await syk(),c=regCfg(),u=regUrl();if(!K||!u||!c.k||!fxPulled)return;
  const rooms=fxList().map(x=>({room:x.room,pin:String(x.pin),pub:x.pub,title:x.title||'',tn:x.tn||'',sch:x.sch||[],schL:x.schL?1:0}));
- const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K,new TextEncoder().encode(JSON.stringify({v:1,rooms,tc:tcGet(),del:fxDelGet(),at:Date.now()})))),o=new Uint8Array(12+ct.length);o.set(iv);o.set(ct,12);
+ const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K,new TextEncoder().encode(JSON.stringify({v:1,rooms,tc:tcGet(),del:fxDelGet(),rk:c.k,at:Date.now()})))),o=new Uint8Array(12+ct.length);o.set(iv);o.set(ct,12);
  const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'fxput',k:c.k,d:b64u(o)})});const j=await r.json();
  fxSyncSt(j&&j.ok?'☁️ الغرف متزامنة بين الأجهزة ('+rooms.length+' غرفة)':'⚠️ تعذّرت مزامنة الغرف'+(j&&j.e=='key'?' — مفتاح السجل غلط':''))}catch(e){fxSyncSt('⚠️ تعذّرت مزامنة الغرف — هنحاول تاني')}},1500)}
 /* تنزيل ودمج: أي غرفة أو كود معلم موجود على جهاز تاني بيظهر هنا */
@@ -2607,7 +2607,10 @@ async function fxCloudPull(){try{const K=await syk(),u=regUrl();if(!u)return;if(
   const L=fxList().filter(x=>!del.has(x.room)),have=new Set(L.map(x=>x.room));let add=0;
   (R.rooms||[]).forEach(x=>{if(!x||!x.room||del.has(x.room)||have.has(x.room)||!/^\d{4,6}$/.test(String(x.pin)))return;L.push({room:x.room,pin:String(x.pin),pub:x.pub,title:x.title,tn:x.tn,sch:x.sch||[],schL:x.schL?1:undefined,fixed:1,dk:0});add++});
   const tc={...(R.tc||{}),...tcGet()};Object.keys(R.tc||{}).forEach(k=>{tc[k]=R.tc[k]});try{localStorage.setItem('itqan_tcodes',JSON.stringify(tc))}catch(e){}
-  try{localStorage.setItem('itqan_fix',JSON.stringify(L))}catch(e){}if(add){fxRender();fxEnsureTk();toast('☁️','اتضافت '+add+' غرفة من جهاز تاني')}}
+  try{localStorage.setItem('itqan_fix',JSON.stringify(L))}catch(e){}
+  /* مفتاح سجل جوجل بيتحفظ متشفّر مع الغرف — أي جهاز سكرتارية يدخل بكلمة السر بياخده لوحده */
+  if(R.rk&&!regCfg().k){try{localStorage.setItem('itqan_reg',JSON.stringify({u:regCfg().u||'',k:String(R.rk)}))}catch(e){}regSync(1)}
+  if(add){fxRender();fxEnsureTk();toast('☁️','اتضافت '+add+' غرفة من جهاز تاني')}}
  fxPulled=1;fxCloudPush()}catch(e){fxSyncSt('⚠️ تعذّرت قراءة الغرف من السجل')}}
 /* بعد الدخول: كل الحصص المحفوظة بتشتغل مع بعض في نفس الصفحة */
 function sxHome(){setTimeout(fxCloudPull,800);$('#sec').classList.add('sxwide');
