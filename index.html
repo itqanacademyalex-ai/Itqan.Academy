@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-e';
+const VER='2026.11.14-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -792,7 +792,7 @@ function libBtn(c){if(!regUrl()||$('#stabs'))return;const n=new URLSearchParams(
  const T=[['c','🎥 الحصة'],['b','📄 السبورات'],['v','▶ الفيديوهات'],['h','📝 الواجبات']],B={};
  const pick=k=>{Object.entries(B).forEach(([x,b])=>{b.style.background=x==k?'#1a9486':'#1d3652';b.style.color='#fff'});const m=$('#libm');if(k=='c'){if(m)m.remove()}else libOpen(c,n,k)};
  T.forEach(([k,t])=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='flex:1 1 0;min-width:0;max-width:150px;white-space:nowrap;border:0;border-radius:999px;padding:9px 4px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;color:#fff;background:#1d3652';b.onclick=()=>pick(k);B[k]=b;bar.append(b)});
- document.body.appendChild(bar);window.stPick=pick;pick('c');
+ document.body.appendChild(bar);window.stPick=pick;pick('c');{const pf=()=>{try{libFetch(String(c).toLowerCase())}catch(e){}};document.readyState=='complete'?pf():addEventListener('load',pf)}
  /* أول ما الطالب يدخل الحصة التابات بتختفي */
  const iv=setInterval(()=>{const g=$('#gate');if(g&&g.hidden&&!$('#join:not([hidden])')&&!$('#libm')){bar.remove();clearInterval(iv)}},1000)}
 function tOpenCode(c){const T=tkGet(c);if(T)return location.replace(linkOf(c,T.k,'t'));$('#join').hidden=true;showGate('⏳','جارٍ فتح الحصة '+fmtCode(c)+'…');
@@ -3052,12 +3052,8 @@ async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#lib
  m.style.cssText='position:fixed;inset:0;top:'+tb+'px;z-index:250;background:rgba(10,20,34,.97);display:flex;align-items:'+(tb?'flex-start':'center')+';justify-content:center;padding:12px;direction:rtl';
  m.innerHTML='<div class="card" style="width:min(560px,100%);max-height:'+(tb?'calc(100vh - '+(tb+24)+'px)':'92vh')+';overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:19px">'+MT+(title?' — <span translate="no">'+esc(title)+'</span>':'')+'</h2><button class="w" id="libx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div id="libl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
  document.body.appendChild(m);$('#libx').onclick=()=>{m.remove();if(mode&&window.stPick)stPick('c')};const L=$('#libl');
- let j=null,net=0;const u=regUrl();
- /* POST الأول (أضمن)، ولو السكربت المنشور لسه مايعرفهوش نجرّب GET */
- try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lib',c})});net=1;j=JSON.parse(await r.text());if(j&&!j.ok&&(!j.e||j.e=='key'))j=null}catch(e){}
- if(!j)try{const r=await fetch(u+(u.includes('?')?'&':'?')+'a=lib&c='+encodeURIComponent(c)+'&t='+Date.now());net=1;j=JSON.parse(await r.text())}catch(e){}
- /* لو السكربت رد بصفحة جوجل بدل JSON يبقى غلط في السكربت المنشور (غالبًا نسخة قديمة) مش في النت */
- if(!j||!j.ok){L.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(!j?(net?'تعذّر تحميل الحصص — سجل الحصص رد بصفحة غلط بدل البيانات (غالبًا محتاج New version للنشر في جوجل سكربت).':'تعذّر تحميل الحصص — اتأكد من النت وحاول تاني.'):j.e?'تعذّر تحميل الحصص ('+esc(String(j.e).slice(0,120))+')':'المكتبة لسه مش شغّالة على سجل الحصص — محتاج النسخة الأحدث من السكربت (New version).')+'</small>';return}
+ /* بنعرض آخر نسخة محفوظة على الجهاز على طول، وبنجيب الجديد من السجل في الخلفية (مرة واحدة لكل التابات) */
+ let j=libCache(c);const show=j0=>{const j=JSON.parse(JSON.stringify(j0));
  if(!(j.items||[]).length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
  L.innerHTML='';const AR=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
  const nice=d=>{const m2=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d);if(!m2)return d;let h=+m2[4];const pm=h>=12;h=h%12||12;return (+m2[3])+' '+AR[+m2[2]-1]+' '+m2[1]+' — '+h+':'+m2[5]+(pm?' م':' ص')};
@@ -3075,7 +3071,24 @@ async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#lib
    const label=k=='v'?'▶ الفيديو':k=='b'?'📄 السبورة':k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
    mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label,c))});
   if(it.hw&&(it.hw.qs||[]).length)row.append(hwBtn('📝 الواجب','#8a6d1d',()=>hwSolve(c,it.d,it.hw)));
-  r.append(row);L.append(r)})}
+  r.append(row);L.append(r)})};
+ if(j)show(j);else L.innerHTML='<small>⏳ جارٍ التحميل… (أول مرة بتاخد كام ثانية)</small>';
+ const R=await libFetch(c);if(!m.isConnected)return;
+ if(R.j&&R.j.ok){if(!j||JSON.stringify(R.j)!==JSON.stringify(j))show(R.j);return}
+ if(j)return;const jj=R.j,net=R.net;
+ L.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(R.slow?'السجل اتأخر في الرد — جرّب تاني.':!jj?(net?'تعذّر تحميل الحصص — سجل الحصص رد بصفحة غلط بدل البيانات (غالبًا محتاج New version للنشر في جوجل سكربت).':'تعذّر تحميل الحصص — اتأكد من النت وحاول تاني.'):jj.e?'تعذّر تحميل الحصص ('+esc(String(jj.e).slice(0,120))+')':'المكتبة لسه مش شغّالة على سجل الحصص — محتاج النسخة الأحدث من السكربت (New version).')+'</small>';
+ L.append(hwBtn('🔄 حاول تاني','#27496b',()=>{delete LIBP[c];libOpen(c,title,mode)}))}
+/* مكتبة المجموعة: طلب واحد للسجل بيتشارك بين كل التابات، ونسخة على الجهاز للعرض الفوري */
+const LIBP={};
+function libCache(c){try{const o=JSON.parse(localStorage.getItem('itqan_lib_'+c));return o&&o.ok?o:null}catch(e){return null}}
+function libFetch(c){if(LIBP[c]&&Date.now()-LIBP[c].t<120000)return LIBP[c].p;
+ const p=(async()=>{const u=regUrl();let j=null,net=0,slow=0;const go=async(url,o)=>{const ac=new AbortController(),t=setTimeout(()=>{slow=1;ac.abort()},30000);try{const r=await fetch(url,{...o,signal:ac.signal});net=1;return JSON.parse(await r.text())}finally{clearTimeout(t)}};
+  /* POST الأول (أضمن)، ولو السكربت المنشور لسه مايعرفهوش نجرّب GET */
+  try{j=await go(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lib',c})});if(j&&!j.ok&&(!j.e||j.e=='key'))j=null}catch(e){}
+  if(!j&&!slow)try{j=await go(u+(u.includes('?')?'&':'?')+'a=lib&c='+encodeURIComponent(c)+'&t='+Date.now(),{})}catch(e){}
+  if(j&&j.ok)try{localStorage.setItem('itqan_lib_'+c,JSON.stringify(j))}catch(e){}else delete LIBP[c];
+  return{j,net,slow:slow&&!j}})();
+ LIBP[c]={p,t:Date.now()};return p}
 function libView(f,label,c){let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.style.cssText='position:fixed;inset:0;z-index:260;background:#000;display:flex;flex-direction:column';
  const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0e1a2b;color:#fff;gap:8px;direction:rtl';
  bar.innerHTML='<b style="font-size:14px">'+esc(label)+'</b>';const x=document.createElement('button');x.className='w';x.style.cssText='flex:none;width:auto;padding:6px 14px;background:#27496b';x.textContent='✕ رجوع';x.onclick=()=>m.remove();
