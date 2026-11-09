@@ -433,7 +433,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-n';
+const VER='2026.11.14-o';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2442,7 +2442,15 @@ const PGID=new Map();let pgN=0;function pgId(bg){let h=PGID.get(bg);if(!h){h='p'
 function pbgTo(x,bg){try{if(!bg){x.c.send({t:'pbg',img:''});return}const h=pgId(bg);x.pgs=x.pgs||new Set();if(x.pgs.has(h))x.c.send({t:'pbg',h});else{x.c.send({t:'pbg',h,img:bg});x.pgs.add(h)}}catch(e){}}
 let pfT=0;function pbgPre(){clearTimeout(pfT);pfT=setTimeout(()=>{if(!WPG)return;[pi+1,pi-1].forEach(k=>{const bg=WPG[k]&&WPG[k].bg;if(!bg)return;const h=pgId(bg);
  Object.values(conns).filter(x=>x.adm).forEach(x=>{x.pgs=x.pgs||new Set();if(!x.pgs.has(h)){try{x.c.send({t:'pbgc',h,img:bg});x.pgs.add(h)}catch(e){}}})})},1500)}
-function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
+/* 📄⇄✏️ زرار واضح للتنقل بين صفحات الملف والسبورة العادية (أسهم التقليب العايمة اتشالت) */
+let LPDF=-1,LPLAIN=-1;
+function pdfSw(){let b=$('#pdfsw');if(role!='t'||!WPG){if(b)b.hidden=true;return}const any=WPG.some(p=>p.bg);
+ if(!b){const st0=$('#stage');if(!st0)return;b=document.createElement('button');b.id='pdfsw';b.style.cssText='position:absolute;top:10px;left:10px;z-index:30;border:0;border-radius:999px;padding:9px 16px;font:inherit;font-weight:800;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)';b.onclick=pdfSwGo;st0.append(b)}
+ b.hidden=!any;if(!any)return;const onPdf=!!WPG[pi].bg;b.textContent=onPdf?'✏️ رجوع للسبورة':'📄 رجوع للملف';b.style.background=onPdf?'linear-gradient(135deg,#1a9486,#2a7fa6)':'linear-gradient(135deg,#c79a4b,#e3c08d)';b.style.color=onPdf?'#fff':'#1b2533'}
+function pdfSwGo(){if(!WPG)return;if(WPG[pi].bg){let t=LPLAIN>=0&&WPG[LPLAIN]&&!WPG[LPLAIN].bg?LPLAIN:-1;if(t<0){for(let d=1;d<WPG.length&&t<0;d++){if(WPG[pi-d]&&!WPG[pi-d].bg)t=pi-d;else if(WPG[pi+d]&&!WPG[pi+d].bg)t=pi+d}}
+  if(t<0){pgSave();WPG.push({s:[]});t=WPG.length-1}pgGo(t)}
+ else{let t=LPDF>=0&&WPG[LPDF]&&WPG[LPDF].bg?LPDF:WPG.findIndex(p=>p.bg);if(t>=0)pgGo(t)}}
+function pgSync(){if(WPG&&WPG[pi]){if(WPG[pi].bg)LPDF=pi;else LPLAIN=pi}try{pdfSw()}catch(e){}st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
 /* كل صفحة ليها الخلفية بتاعتها (سطور/مربعات/محاور) — الصفحة الجديدة بتاخد خلفية الصفحة اللي قبلها */
 function pgShow(){strokes=WPG[pi].s;if(WPG[pi].bt)st.bt=WPG[pi].bt;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
 function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
@@ -3517,7 +3525,11 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localS
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),35000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
  await upP;try{if(sum&&RC)driveUp(new Blob(['\ufeff'+sum],{type:'text/plain;charset=utf-8'}),recBase()+'_الملخص.txt','text/plain')}catch(e){}
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
- try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<75000){$('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive… سيب الصفحة مفتوحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ /* بنستنى الرفع يخلص ونبيّن الباقي بالميجا. لو المعلم قفل بدري: الأجزاء الباقية محفوظة على الجهاز وبتكمل لوحدها أول ما الموقع/البرنامج يتفتح تاني */
+ try{await recP;const t0=Date.now();let skip=0,sb=null;while(RUPS.length&&!skip&&Date.now()-t0<180000){const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,c)=>x+(c.blob?c.blob.size:0),0),0);
+   $('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive'+(left?' — فاضل '+(left/1048576).toFixed(1)+' ميجا':'')+'… سيب الصفحة مفتوحة';
+   if(!sb&&Date.now()-t0>8000){sb=document.createElement('button');sb.className='w';sb.style.cssText='margin-top:10px;background:#27496b;font-weight:700';sb.textContent='🚪 اقفل دلوقتي — والرفع يكمل أول ما أفتح الموقع تاني';sb.onclick=()=>{skip=1};const g=$('#gate .card')||$('#gate');g&&g.append(sb)}
+   await new Promise(r=>setTimeout(r,700))}if(sb)sb.remove()}catch(e){}
  /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}

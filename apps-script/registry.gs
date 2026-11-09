@@ -187,17 +187,18 @@ function upStart_(b) {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
   const h = r.getHeaders(), loc = h['Location'] || h['location'];
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
-  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); PropertiesService.getScriptProperties().setProperty('up_' + s, loc); // بيفضل محفوظ لو المعلم قفل والرفع كمّل بعد ساعات if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
   return out_({ ok: true, s: s });
 }
+function upLoc_(s) { return CacheService.getScriptCache().get('up_' + s) || PropertiesService.getScriptProperties().getProperty('up_' + s); }
 function upChunk_(b) {
-  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const bytes = b.d ? Utilities.base64Decode(b.d) : null;
   const range = bytes && bytes.length ? 'bytes ' + b.st + '-' + b.en + '/' + b.tot : 'bytes */' + b.tot;
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
   if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s);
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s); PropertiesService.getScriptProperties().deleteProperty('up_' + b.s);
     /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
     /* الفيديو والسبورة بس بيتفتحوا باللينك (الملخص والتفريغ بيفضلوا خاصين بالإدارة) */
     if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
@@ -206,7 +207,7 @@ function upChunk_(b) {
   return out_({ ok: false, e: 'chunk ' + c });
 }
 function upStatus_(b) {
-  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
   const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
   return out_({ ok: true, r: m ? +m[1] + 1 : 0 });
