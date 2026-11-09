@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-u';
+const VER='2026.11.13-v';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3039,7 +3039,7 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
  m.innerHTML='<div class="card" style="width:min(560px,100%);max-height:92vh;overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:19px">📚 الحصص اللي فاتت'+(title?' — <span translate="no">'+esc(title)+'</span>':'')+'</h2><button class="w" id="libx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div id="libl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
  document.body.appendChild(m);$('#libx').onclick=()=>m.remove();const L=$('#libl');
  let j=null;try{const u=regUrl();j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=lib&c='+encodeURIComponent(c)+'&t='+Date.now())).json()}catch(e){}
- if(!j||!j.ok){L.innerHTML='<small style="color:#fca5a5">تعذّر تحميل الحصص — اتأكد من النت وحاول تاني.</small>';return}
+ if(!j||!j.ok){L.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(!j?'تعذّر تحميل الحصص — اتأكد من النت وحاول تاني.':j.e?'تعذّر تحميل الحصص ('+esc(String(j.e).slice(0,120))+')':'المكتبة لسه مش شغّالة على سجل الحصص — محتاج النسخة الأحدث من السكربت (New version).')+'</small>';return}
  if(!(j.items||[]).length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
  L.innerHTML='';const AR=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
  const nice=d=>{const m2=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d);if(!m2)return d;let h=+m2[4];const pm=h>=12;h=h%12||12;return (+m2[3])+' '+AR[+m2[2]-1]+' '+m2[1]+' — '+h+':'+m2[5]+(pm?' م':' ص')};
