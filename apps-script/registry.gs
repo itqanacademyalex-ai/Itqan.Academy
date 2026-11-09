@@ -241,7 +241,10 @@ function gem_(parts, temp, again) {
   if (!more.length && !fixed) { try { gemPick_(); more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {} }
   /* الموديل الأساسي، ولو عليه ضغط (503/429/500) بنستنى ونعيد، وبعدين نجرّب الموديلات اللي بعده */
   const models = [first].concat(fixed ? [] : more.filter(m => m != first)).slice(0, 3);
-  const body = JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } });
+  /* «تفكير» قليل = رد أسرع بكتير (الواجب مش محتاج تفكير طويل). لو الموديل مابيدعمهوش بنشيله ونعيد */
+  let think = P.getProperty('gem_nothink') ? null : { thinkingLevel: 'low' };
+  const bodyOf = () => JSON.stringify({ contents: [{ parts: parts }], generationConfig: Object.assign({ temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' }, think ? { thinkingConfig: think } : {}) });
+  let body = bodyOf();
   let last = '';
   for (let i = 0; i < models.length; i++) {
     for (let t = 0; t < 3; t++) {
@@ -251,6 +254,7 @@ function gem_(parts, temp, again) {
       last = 'Gemini (' + models[i] + ') ' + code + ': ' + txt.slice(0, 200);
       /* الموديل اتقفل: نختار من جديد مرة واحدة */
       if ((code == 404 || code == 400 && /model/i.test(txt)) && !fixed && !again) { P.deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
+      if (code == 400 && think && /think/i.test(txt)) { think = null; P.setProperty('gem_nothink', '1'); body = bodyOf(); t--; continue; }
       if (code == 503 || code == 429 || code == 500) { Utilities.sleep([2000, 5000, 0][t]); continue; }
       throw new Error(last);
     }
