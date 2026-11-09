@@ -220,20 +220,39 @@ function testLib() { Logger.log(doGet({ parameter: { a: 'lib', c: 'hhe8' } }).ge
 /* ===== 📝 الواجب التلقائي من السبورة (Gemini) — المفتاح في Script Properties باسم GEMINI_KEY، مابيوصلش لأي جهاز =====
    hwgen: مسودة 10 أسئلة من سبورة الحصة وتفريغها ← المعلم يراجع ← hwpub: ينشر (والإجابات النموذجية ملف للمعلم بس)
    hwsub: الطالب يحل ← تصحيح تلقائي (الاختيارات بالمقارنة، والكتابي بالذكاء الاصطناعي) ← hwres: النتايج للمعلم */
-const GMODEL = 'gemini-2.5-flash';
+/* الموديل: GEMINI_MODEL في Script Properties لو حابب تحدده بنفسك، وإلا السكربت بيختار لوحده أحدث موديل «flash» متاح لمفتاحك
+   (جوجل بتقفل الموديلات القديمة للحسابات الجديدة — زي gemini-2.5-flash — فلو الموديل رجّع 404 بنختار غيره ونحفظه) */
 const GEM_ = () => PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || '';
+function gemModel_() { const P = PropertiesService.getScriptProperties(); return P.getProperty('GEMINI_MODEL') || P.getProperty('gem_model') || gemPick_(); }
+function gemPick_() {
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(GEM_()), { muteHttpExceptions: true });
+  if (r.getResponseCode() != 200) throw new Error('Gemini models ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160));
+  const ver = n => { const m = /gemini-(\d+(?:\.\d+)?)/.exec(n); return m ? +m[1] : 0; };
+  const L = (JSON.parse(r.getContentText()).models || []).filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') > -1)
+    .map(m => String(m.name || '').replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|thinking|embedding|8b)/.test(n));
+  if (!L.length) throw new Error('مفيش موديل Gemini flash متاح للمفتاح ده');
+  /* الثابت قبل التجريبي (preview/exp)، وبعدين الأحدث، والعادي قبل lite */
+  L.sort((a, b) => (/(preview|exp)/.test(a) - /(preview|exp)/.test(b)) || (ver(b) - ver(a)) || (/lite/.test(a) - /lite/.test(b)) || (a.length - b.length));
+  PropertiesService.getScriptProperties().setProperty('gem_model', L[0]); return L[0];
+}
+function gem_(parts, temp, again) {
+  const model = gemModel_();
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(GEM_()), {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } }) });
+  const code = r.getResponseCode();
+  if ((code == 404 || code == 400 && /model/i.test(r.getContentText())) && !again && !PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL')) {
+    PropertiesService.getScriptProperties().deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
+  if (code != 200) throw new Error('Gemini (' + model + ') ' + code + ': ' + r.getContentText().slice(0, 200));
+  const j = JSON.parse(r.getContentText()); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join(''));
+}
 function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
 function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
 function jget_(f, name) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')); try { return x ? JSON.parse(x.getBlob().getDataAsString()) : null; } catch (e) { return null; } }
 function jput_(f, name, o) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')), t = JSON.stringify(o); if (x) x.setContent(t); else f.createFile(name, t, MimeType.PLAIN_TEXT); }
-function gem_(parts, temp) {
-  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GMODEL + ':generateContent?key=' + encodeURIComponent(GEM_()), {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } }) });
-  if (r.getResponseCode() != 200) throw new Error('Gemini ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160));
-  const j = JSON.parse(r.getContentText()); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join(''));
-}
+/* ▶ Run من المحرر: بيختار الموديل ويجرّبه — النتيجة في Execution log */
+function testGemini() { PropertiesService.getScriptProperties().deleteProperty('gem_model'); const m = gemPick_(); Logger.log('الموديل: ' + m + '\n' + JSON.stringify(gem_([{ text: 'رجّع JSON: {"ok":true}' }], 0))); }
 const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
 const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
 
