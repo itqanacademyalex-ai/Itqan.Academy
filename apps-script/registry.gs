@@ -187,17 +187,18 @@ function upStart_(b) {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
   const h = r.getHeaders(), loc = h['Location'] || h['location'];
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
-  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); PropertiesService.getScriptProperties().setProperty('up_' + s, loc); // بيفضل محفوظ لو المعلم قفل والرفع كمّل بعد ساعات if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
   return out_({ ok: true, s: s });
 }
+function upLoc_(s) { return CacheService.getScriptCache().get('up_' + s) || PropertiesService.getScriptProperties().getProperty('up_' + s); }
 function upChunk_(b) {
-  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const bytes = b.d ? Utilities.base64Decode(b.d) : null;
   const range = bytes && bytes.length ? 'bytes ' + b.st + '-' + b.en + '/' + b.tot : 'bytes */' + b.tot;
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
   if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s);
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s); PropertiesService.getScriptProperties().deleteProperty('up_' + b.s);
     /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
     /* الفيديو والسبورة بس بيتفتحوا باللينك (الملخص والتفريغ بيفضلوا خاصين بالإدارة) */
     if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
@@ -206,7 +207,7 @@ function upChunk_(b) {
   return out_({ ok: false, e: 'chunk ' + c });
 }
 function upStatus_(b) {
-  const loc = CacheService.getScriptCache().get('up_' + b.s); if (!loc) return out_({ ok: false, e: 'session' });
+  const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
   const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
   return out_({ ok: true, r: m ? +m[1] + 1 : 0 });
@@ -220,39 +221,103 @@ function testLib() { Logger.log(doGet({ parameter: { a: 'lib', c: 'hhe8' } }).ge
 /* ===== 📝 الواجب التلقائي من السبورة (Gemini) — المفتاح في Script Properties باسم GEMINI_KEY، مابيوصلش لأي جهاز =====
    hwgen: مسودة 10 أسئلة من سبورة الحصة وتفريغها ← المعلم يراجع ← hwpub: ينشر (والإجابات النموذجية ملف للمعلم بس)
    hwsub: الطالب يحل ← تصحيح تلقائي (الاختيارات بالمقارنة، والكتابي بالذكاء الاصطناعي) ← hwres: النتايج للمعلم */
-const GMODEL = 'gemini-2.5-flash';
+/* الموديل: GEMINI_MODEL في Script Properties لو حابب تحدده بنفسك، وإلا السكربت بيختار لوحده أحدث موديل «flash» متاح لمفتاحك
+   (جوجل بتقفل الموديلات القديمة للحسابات الجديدة — زي gemini-2.5-flash — فلو الموديل رجّع 404 بنختار غيره ونحفظه) */
 const GEM_ = () => PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || '';
+function gemModel_() { const P = PropertiesService.getScriptProperties(); return P.getProperty('GEMINI_MODEL') || P.getProperty('gem_model') || gemPick_(); }
+function gemPick_() {
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(GEM_()), { muteHttpExceptions: true });
+  if (r.getResponseCode() != 200) throw new Error('Gemini models ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160));
+  const ver = n => { const m = /gemini-(\d+(?:\.\d+)?)/.exec(n); return m ? +m[1] : 0; };
+  const L = (JSON.parse(r.getContentText()).models || []).filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') > -1)
+    .map(m => String(m.name || '').replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|thinking|embedding|8b)/.test(n));
+  if (!L.length) throw new Error('مفيش موديل Gemini flash متاح للمفتاح ده');
+  /* الثابت قبل التجريبي (preview/exp)، وبعدين الأحدث، والعادي قبل lite */
+  L.sort((a, b) => (/(preview|exp)/.test(a) - /(preview|exp)/.test(b)) || (ver(b) - ver(a)) || (/lite/.test(a) - /lite/.test(b)) || (a.length - b.length));
+  PropertiesService.getScriptProperties().setProperties({ gem_model: L[0], gem_models: JSON.stringify(L.slice(0, 6)) }); return L[0];
+}
+function gem_(parts, temp, again) {
+  const P = PropertiesService.getScriptProperties(), fixed = P.getProperty('GEMINI_MODEL');
+  const first = gemModel_(); let more = []; try { more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {}
+  if (!more.length && !fixed) { try { gemPick_(); more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {} }
+  /* الموديل الأساسي، ولو عليه ضغط (503/429/500) بنستنى ونعيد، وبعدين نجرّب الموديلات اللي بعده */
+  const models = [first].concat(fixed ? [] : more.filter(m => m != first)).slice(0, 3);
+  /* «تفكير» قليل = رد أسرع بكتير (الواجب مش محتاج تفكير طويل). لو الموديل مابيدعمهوش بنشيله ونعيد */
+  let think = P.getProperty('gem_nothink') ? null : { thinkingLevel: 'low' };
+  const bodyOf = () => JSON.stringify({ contents: [{ parts: parts }], generationConfig: Object.assign({ temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' }, think ? { thinkingConfig: think } : {}) });
+  let body = bodyOf();
+  let last = '';
+  for (let i = 0; i < models.length; i++) {
+    for (let t = 0; t < 3; t++) {
+      const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + encodeURIComponent(GEM_()), { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: body });
+      const code = r.getResponseCode(), txt = r.getContentText();
+      if (code == 200) { const j = JSON.parse(txt); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join('')); }
+      last = 'Gemini (' + models[i] + ') ' + code + ': ' + txt.slice(0, 200);
+      /* الموديل اتقفل: نختار من جديد مرة واحدة */
+      if ((code == 404 || code == 400 && /model/i.test(txt)) && !fixed && !again) { P.deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
+      if (code == 400 && think && /think/i.test(txt)) { think = null; P.setProperty('gem_nothink', '1'); body = bodyOf(); t--; continue; }
+      if (code == 503 || code == 429 || code == 500) { Utilities.sleep([2000, 5000, 0][t]); continue; }
+      throw new Error(last);
+    }
+  }
+  throw new Error(last + ' — جوجل عليها ضغط دلوقتي، جرّب كمان شوية');
+}
 function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
 function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
 function jget_(f, name) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')); try { return x ? JSON.parse(x.getBlob().getDataAsString()) : null; } catch (e) { return null; } }
 function jput_(f, name, o) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')), t = JSON.stringify(o); if (x) x.setContent(t); else f.createFile(name, t, MimeType.PLAIN_TEXT); }
-function gem_(parts, temp) {
-  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GMODEL + ':generateContent?key=' + encodeURIComponent(GEM_()), {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } }) });
-  if (r.getResponseCode() != 200) throw new Error('Gemini ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160));
-  const j = JSON.parse(r.getContentText()); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join(''));
-}
+/* ▶ Run من المحرر: بيختار الموديل ويجرّبه — النتيجة في Execution log */
+function testGemini() { PropertiesService.getScriptProperties().deleteProperty('gem_model'); const m = gemPick_(); Logger.log('الموديل: ' + m + '\n' + JSON.stringify(gem_([{ text: 'رجّع JSON: {"ok":true}' }], 0))); }
 const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
 const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
 
+/* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
+   وتريجر hwJob بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
 function hwGen_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!GEM_()) return out_({ ok: false, e: 'nokey' });
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
-  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return out_({ ok: false, e: 'empty' });
+  if (!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
+  const P = PropertiesService.getScriptProperties(), L = LockService.getScriptLock(); L.waitLock(15000);
+  try { let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {}
+    if (!q.some(j => j.c == b.c && j.d == b.d)) q.push({ c: b.c, d: String(b.d), re: b.re ? 1 : 0 });
+    P.setProperties({ hwq: JSON.stringify(q.slice(-30)), ['hws_' + b.c + '|' + b.d]: JSON.stringify({ s: 'run', t: Date.now() }) });
+  } finally { L.releaseLock(); }
+  hwKick_(); return out_({ ok: true, pending: 1 });
+}
+function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
+function hwJob() {
+  const P = PropertiesService.getScriptProperties(), t0 = Date.now(), L = LockService.getScriptLock(); if (!L.tryLock(1000)) return;
+  try {
+    ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwJob') ScriptApp.deleteTrigger(t); });
+    while (Date.now() - t0 < 240000) {
+      let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {} if (!q.length) break;
+      const j = q.shift(); P.setProperty('hwq', JSON.stringify(q)); let r;
+      try { r = hwMake_(j.c, j.d, j.re); } catch (x) { r = { ok: false, e: String(x && x.message || x) }; }
+      if (r.ok) P.deleteProperty('hws_' + j.c + '|' + j.d); else P.setProperty('hws_' + j.c + '|' + j.d, JSON.stringify({ s: 'err', e: String(r.e).slice(0, 300), t: Date.now() }));
+    }
+    if (JSON.parse(P.getProperty('hwq') || '[]').length) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create();
+  } finally { L.releaseLock(); }
+}
+/* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية «يشتغل في الخلفية» (عشان الواجب يتعمل من غير ما المتصفح يستنى) */
+function authHw() { ScriptApp.getProjectTriggers(); Logger.log('تمام — الواجبات هتشتغل في الخلفية'); }
+function hwMake_(c, d, re) {
+  const f = cls_(c, d); if (!f) return { ok: false, e: 'class' };
+  const old = jget_(f, 'hw.json'); if (old && !re) return { ok: true, hw: old };
+  const b = { c: c, d: d };
+  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return ({ ok: false, e: 'empty' });
   const room = load_()[b.c] || {};
   const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
     'بالظبط 10 أسئلة متنوعة ومتدرجة من السهل للصعب: 4 اختيار من متعدد (4 اختيارات)، 2 صح وغلط، 2 أكمل، 2 سؤال مقالي/مسألة قصيرة.\n' +
     'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة"}]}' }];
   if (pdf && pdf.getSize() < 18e6) parts.push({ inline_data: { mime_type: 'application/pdf', data: Utilities.base64Encode(pdf.getBlob().getBytes()) } });
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
-  let o; try { o = gem_(parts); } catch (e) { return out_({ ok: false, e: String(e.message || e) }); }
+  let o; try { o = gem_(parts); } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
   const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
-  if (!qs.length) return out_({ ok: false, e: 'gen' });
+  if (!qs.length) return ({ ok: false, e: 'gen' });
   const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
-  return out_({ ok: true, hw: hw });
+  return ({ ok: true, hw: hw });
 }
 function hwPub_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
@@ -288,7 +353,10 @@ function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: !!GEM_() });
   const out = [], it = DriveApp.getFolderById(id).getFolders();
   while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
-    if (has || hw) out.push({ d: f.getName(), st: hw ? hw.st : '', hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
+    let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
+    /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
+    const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
+    if (has || hw) out.push({ d: f.getName(), st: run ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
 }
 

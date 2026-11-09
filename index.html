@@ -433,7 +433,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-l';
+const VER='2026.11.14-o';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2442,7 +2442,15 @@ const PGID=new Map();let pgN=0;function pgId(bg){let h=PGID.get(bg);if(!h){h='p'
 function pbgTo(x,bg){try{if(!bg){x.c.send({t:'pbg',img:''});return}const h=pgId(bg);x.pgs=x.pgs||new Set();if(x.pgs.has(h))x.c.send({t:'pbg',h});else{x.c.send({t:'pbg',h,img:bg});x.pgs.add(h)}}catch(e){}}
 let pfT=0;function pbgPre(){clearTimeout(pfT);pfT=setTimeout(()=>{if(!WPG)return;[pi+1,pi-1].forEach(k=>{const bg=WPG[k]&&WPG[k].bg;if(!bg)return;const h=pgId(bg);
  Object.values(conns).filter(x=>x.adm).forEach(x=>{x.pgs=x.pgs||new Set();if(!x.pgs.has(h)){try{x.c.send({t:'pbgc',h,img:bg});x.pgs.add(h)}catch(e){}}})})},1500)}
-function pgSync(){st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
+/* 📄⇄✏️ زرار واضح للتنقل بين صفحات الملف والسبورة العادية (أسهم التقليب العايمة اتشالت) */
+let LPDF=-1,LPLAIN=-1;
+function pdfSw(){let b=$('#pdfsw');if(role!='t'||!WPG){if(b)b.hidden=true;return}const any=WPG.some(p=>p.bg);
+ if(!b){const st0=$('#stage');if(!st0)return;b=document.createElement('button');b.id='pdfsw';b.style.cssText='position:absolute;top:10px;left:10px;z-index:30;border:0;border-radius:999px;padding:9px 16px;font:inherit;font-weight:800;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)';b.onclick=pdfSwGo;st0.append(b)}
+ b.hidden=!any;if(!any)return;const onPdf=!!WPG[pi].bg;b.textContent=onPdf?'✏️ رجوع للسبورة':'📄 رجوع للملف';b.style.background=onPdf?'linear-gradient(135deg,#1a9486,#2a7fa6)':'linear-gradient(135deg,#c79a4b,#e3c08d)';b.style.color=onPdf?'#fff':'#1b2533'}
+function pdfSwGo(){if(!WPG)return;if(WPG[pi].bg){let t=LPLAIN>=0&&WPG[LPLAIN]&&!WPG[LPLAIN].bg?LPLAIN:-1;if(t<0){for(let d=1;d<WPG.length&&t<0;d++){if(WPG[pi-d]&&!WPG[pi-d].bg)t=pi-d;else if(WPG[pi+d]&&!WPG[pi+d].bg)t=pi+d}}
+  if(t<0){pgSave();WPG.push({s:[]});t=WPG.length-1}pgGo(t)}
+ else{let t=LPDF>=0&&WPG[LPDF]&&WPG[LPDF].bg?LPDF:WPG.findIndex(p=>p.bg);if(t>=0)pgGo(t)}}
+function pgSync(){if(WPG&&WPG[pi]){if(WPG[pi].bg)LPDF=pi;else LPLAIN=pi}try{pdfSw()}catch(e){}st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
 /* كل صفحة ليها الخلفية بتاعتها (سطور/مربعات/محاور) — الصفحة الجديدة بتاخد خلفية الصفحة اللي قبلها */
 function pgShow(){strokes=WPG[pi].s;if(WPG[pi].bt)st.bt=WPG[pi].bt;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
 function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
@@ -3186,6 +3194,11 @@ function hwModal(id,title){let m=$('#'+id);if(m)m.remove();m=document.createElem
  document.body.appendChild(m);m.querySelector('.hwx').onclick=()=>m.remove();return m.querySelector('.hwb')}
 const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;return b};
 /* المعلم: «📝 الواجبات» — كل حصة: اعمل الواجب / راجع / منشور + النتايج */
+/* الواجب بيتعمل في الخلفية على السيرفر: بنسأل كل كام ثانية لحد ما المسودة تظهر (أو يرجع سبب الفشل) */
+async function hwWait(x,d,h,tick){const t0=Date.now();while(Date.now()-t0<480000){await new Promise(r=>setTimeout(r,6000));tick&&tick();
+  let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){continue}const it=j&&j.ok&&(j.items||[]).find(y=>y.d==d);if(!it)continue;
+  if(it.st=='err')return{ok:false,e:it.e};if(it.hw&&it.st!='run')return{ok:true,hw:it.hw}}return{ok:false,e:'الذكاء الاصطناعي اتأخر — جرّب تاني'}}
+async function hwGenRun(x,d,h,re,tick){const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0}).catch(()=>({ok:false}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
 /* السكرتارية: الواجبات لكل الغرف (أكواد المعلمين عندها) */
 function hwSx(){hwPanel(fxList().map(x=>({c:x.room,t:x.title||'',p:String(x.pin||'')})))}
 async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
@@ -3205,10 +3218,15 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
   if(j.key===false){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+HWE.nokey}))}
   if(!j.items.length){sec.append(Object.assign(document.createElement('small'),{textContent:'لسه مفيش حصص متسجّلة.'}));continue}
   j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center';
-   const st=it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة — محتاج مراجعة':'—';r.innerHTML='<span style="flex:1;min-width:150px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#a9bccd">'+st+(it.subs.length?' · '+it.subs.length+' حلّ':'')+'</small></span>';
-   if(!it.st)r.append(hwBtn('✨ اعمل الواجب','#1a9486',async function(){this.disabled=true;this.textContent='⏳ بيتعمل… (دقيقة تقريباً)';const g=await hwApi({a:'hwgen',c:x.c,d:it.d,h}).catch(()=>({ok:false}));if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
+   const st=it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة — محتاج مراجعة':it.st=='run'?'⏳ بيتعمل في الخلفية…':it.st=='err'?'⚠️ '+esc(it.e||'فشل'):'—';r.innerHTML='<span style="flex:1;min-width:150px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#a9bccd">'+st+(it.subs.length?' · '+it.subs.length+' حلّ':'')+'</small></span>';
+   if(!it.st||it.st=='err'||it.st=='run')r.append(hwBtn('✨ اعمل الواجب','#1a9486',async function(){this.disabled=true;const btn=this,t0=Date.now(),tk=()=>{const q=Math.round((Date.now()-t0)/1000);btn.textContent='⏳ بيتعمل… '+Math.floor(q/60)+':'+String(q%60).padStart(2,'0')};tk();const iv=setInterval(tk,1000);
+    /* الواجب بيكمل على السيرفر حتى لو النافذة اتقفلت — بيظهر «مسودة» لما تفتحها تاني */
+    if(!r.querySelector('.hwnote'))r.append(Object.assign(document.createElement('small'),{className:'hwnote',textContent:'بياخد من نص دقيقة لدقيقتين. تقدر تقفل النافذة — الواجب هيكمل لوحده ويظهر «مسودة» لما ترجع.',style:'flex-basis:100%;color:#a9bccd'}));
+    const g=await hwGenRun(x,it.d,h,0);clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
    else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#27496b':'#1a9486',()=>hwEdit(x,it.d,h,it.hw)));
    if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>{const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(it.d)));R.innerHTML=it.subs.slice().sort((a,b)=>b.score-a.score).map(s=>'<div class="sxr" style="background:#1d3652;border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between"><b translate="no">'+esc(s.n)+'</b><span>'+(+s.score).toFixed(1).replace('.0','')+' / '+s.total+'</span></div>').join('')}));
+   /* لو الواجب بيتعمل في الخلفية: نكمّل المتابعة لوحدنا */
+   if(it.st=='run'){const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));gb&&setTimeout(()=>gb.click(),50)}
    sec.append(r)})}}
 /* مراجعة الواجب: كل سؤال يتعدّل (السؤال، الاختيارات، الإجابة) ← ✅ انشر / 💾 احفظ / 🔄 اعمل تاني */
 function hwEdit(x,d,h,hw){const B=hwModal('hwe','✏️ واجب '+esc(x.t||'')+' — '+esc(hwNice(d)));B.innerHTML='';
@@ -3223,7 +3241,7 @@ function hwEdit(x,d,h,hw){const B=hwModal('hwe','✏️ واجب '+esc(x.t||'')+
  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:0;background:#14283f;padding-top:8px';
  const save=async(pub,btn)=>{btn.disabled=true;const j=await hwApi({a:'hwpub',c:x.c,d,h,hw:collect(),pub:pub?1:0}).catch(()=>({ok:false}));btn.disabled=false;if(!j.ok)return alert('❌ '+hwErr(j));toast('✅',pub?'الواجب اتنشر للطلاب':'اتحفظ');$('#hwe')&&$('#hwe').remove();try{$('#hwp')&&hwPanel()}catch(e){}};
  bar.append(hwBtn('✅ انشر للطلاب','#1a9486',function(){save(1,this)}),hwBtn('💾 احفظ مسودة','#27496b',function(){save(0,this)}),
-  hwBtn('🔄 اعمل أسئلة جديدة','#8a6d1d',async function(){if(!confirm('تمسح الأسئلة دي وتعمل جديدة؟'))return;this.disabled=true;this.textContent='⏳…';const g=await hwApi({a:'hwgen',c:x.c,d,h,re:1}).catch(()=>({ok:false}));if(!g.ok){this.disabled=false;this.textContent='🔄 اعمل أسئلة جديدة';return alert('❌ '+hwErr(g))}hwEdit(x,d,h,g.hw)}));
+  hwBtn('🔄 اعمل أسئلة جديدة','#8a6d1d',async function(){if(!confirm('تمسح الأسئلة دي وتعمل جديدة؟'))return;this.disabled=true;this.textContent='⏳…';const btn=this,t0=Date.now(),iv=setInterval(()=>{const q=Math.round((Date.now()-t0)/1000);btn.textContent='⏳ '+Math.floor(q/60)+':'+String(q%60).padStart(2,'0')},1000);const g=await hwGenRun(x,d,h,1);clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='🔄 اعمل أسئلة جديدة';return alert('❌ '+hwErr(g))}hwEdit(x,d,h,g.hw)}));
  B.append(bar)}
 /* الطالب: حل الواجب ← تصحيح تلقائي فوري */
 function hwSolve(c,d,hw){const B=hwModal('hws','📝 '+esc(hw.title||'الواجب'));B.innerHTML='';const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:9px;color:#fff;font:inherit;width:100%;text-align:start';
@@ -3507,7 +3525,11 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localS
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),35000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
  await upP;try{if(sum&&RC)driveUp(new Blob(['\ufeff'+sum],{type:'text/plain;charset=utf-8'}),recBase()+'_الملخص.txt','text/plain')}catch(e){}
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
- try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<75000){$('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive… سيب الصفحة مفتوحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ /* بنستنى الرفع يخلص ونبيّن الباقي بالميجا. لو المعلم قفل بدري: الأجزاء الباقية محفوظة على الجهاز وبتكمل لوحدها أول ما الموقع/البرنامج يتفتح تاني */
+ try{await recP;const t0=Date.now();let skip=0,sb=null;while(RUPS.length&&!skip&&Date.now()-t0<180000){const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,c)=>x+(c.blob?c.blob.size:0),0),0);
+   $('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive'+(left?' — فاضل '+(left/1048576).toFixed(1)+' ميجا':'')+'… سيب الصفحة مفتوحة';
+   if(!sb&&Date.now()-t0>8000){sb=document.createElement('button');sb.className='w';sb.style.cssText='margin-top:10px;background:#27496b;font-weight:700';sb.textContent='🚪 اقفل دلوقتي — والرفع يكمل أول ما أفتح الموقع تاني';sb.onclick=()=>{skip=1};const g=$('#gate .card')||$('#gate');g&&g.append(sb)}
+   await new Promise(r=>setTimeout(r,700))}if(sb)sb.remove()}catch(e){}
  /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
