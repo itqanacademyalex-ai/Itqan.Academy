@@ -433,7 +433,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-q';
+const VER='2026.11.14-s';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2457,8 +2457,10 @@ function pdfSwGo(){if(!WPG)return;if(WPG[pi].bg){let t=LPLAIN>=0&&WPG[LPLAIN]&&!
  else{let t=LPDF>=0&&WPG[LPDF]&&WPG[LPDF].bg?LPDF:WPG.findIndex(p=>p.bg);if(t>=0)pgGo(t)}}
 function pgSync(){if(WPG&&WPG[pi]){if(WPG[pi].bg)LPDF=pi;else LPLAIN=pi}try{pdfSw()}catch(e){}st.pg=pi;st.pn=WPG.length;bst();bc({t:'restore',s:strokes});{const bg=WPG[pi].bg||'';Object.values(conns).filter(x=>x.adm).forEach(x=>pbgTo(x,bg));pbgPre()}noteSync(1);refTb();ui();try{qChip()}catch(e){}}
 /* كل صفحة ليها الخلفية بتاعتها (سطور/مربعات/محاور) — الصفحة الجديدة بتاخد خلفية الصفحة اللي قبلها */
-function pgShow(){strokes=WPG[pi].s;if(WPG[pi].bt)st.bt=WPG[pi].bt;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
-function pgGo(i){if(role!='t')return;pgSave();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
+/* الوقت اللي المعلم قعده على كل صفحة (عشان PDF السبورة ياخد الصفحات اللي اشتغل عليها بس) */
+function pgDwell(){const P=WPG&&WPG[pi];if(P&&P.ts){P.tv=(P.tv||0)+(Date.now()-P.ts);P.ts=Date.now()}}
+function pgShow(){if(WPG[pi])WPG[pi].ts=Date.now();strokes=WPG[pi].s;if(WPG[pi].bt)st.bt=WPG[pi].bt;PBG=pgImg(WPG[pi].bg);if(WPG[pi].bg&&!st.bg){st.bg=1}CLR.length=0;rebuild();pgSync()}
+function pgGo(i){if(role!='t')return;pgSave();pgDwell();i=Math.max(0,Math.min(WPG.length-1,i));if(i===pi)return;pi=i;pgShow()}
 function pgNew(bg){if(role!='t')return;pgSave();WPG.splice(pi+1,0,{s:[],bg:bg||null});pi++;pgShow()}
 function pgDel(){if(role!='t')return;pgSave();if(WPG.length<2)return alert('دي الصفحة الوحيدة — استخدم 🗑 لمسح الرسم');if(!confirm('تمسح الصفحة '+(pi+1)+' كلها؟'))return;WPG.splice(pi,1);pi=Math.min(pi,WPG.length-1);pgShow()}
 const ldJs=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
@@ -2472,16 +2474,29 @@ let PDFL=null;function pdfLib(){if(window.pdfjsLib)return Promise.resolve(window
 function filePick(acc,multi,fn){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(i);
  i.onchange=()=>{const f=[...i.files];setTimeout(()=>i.remove(),1000);if(f.length)fn(f)};i.click()}
 /* الملفات اللي المعلم شاركها (PDF/صور) بتتحفظ عشان تترفع على Drive مع السبورة في آخر الحصة */
-const SHF=[];
+const SHF=[],SHU=new WeakSet();
+/* الملفات اللي المعلم بيشاركها بتترفع على Drive أول ما تتشارك (في الخلفية) بدل ما تستنى آخر الحصة */
+function shfUp(f){if(role!='t'||!RC||SHU.has(f))return;SHU.add(f);try{driveUp(f,recBase()+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}}
+function pgRange(fn,N){return new Promise(res=>{const m=document.createElement('div');m.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(10,20,34,.88);display:flex;align-items:center;justify-content:center;padding:14px;direction:rtl';
+ const ip='width:90px;background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;font-size:18px;text-align:center';
+ m.innerHTML='<div class="card" style="width:min(400px,100%);gap:12px;text-align:center"><h3 style="margin:0">📄 تختار أنهي صفحات؟</h3><small style="color:#a9bccd" translate="no">'+esc(String(fn||'').slice(0,60))+' — '+N+' صفحة</small>'+
+  '<div style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap"><span>من صفحة</span><input id="pra" type="number" min="1" max="'+N+'" value="1" style="'+ip+'"><span>لصفحة</span><input id="prb" type="number" min="1" max="'+N+'" value="'+Math.min(N,40)+'" style="'+ip+'"></div>'+
+  '<small id="pre" style="color:#fca5a5"></small><div style="display:flex;gap:8px"><button class="w" id="pro" style="background:#1a9486;font-weight:800">✓ اعرض الصفحات دي</button><button class="w" id="prx" style="background:#27496b;flex:none;width:auto;padding:10px 16px">إلغاء</button></div></div>';
+ document.body.appendChild(m);const A=m.querySelector('#pra'),B=m.querySelector('#prb');A.select();
+ const done=v=>{m.remove();res(v)};m.querySelector('#prx').onclick=()=>done(null);
+ m.querySelector('#pro').onclick=()=>{const a=Math.round(+A.value),b=Math.round(+B.value);if(!(a>=1&&b>=a&&b<=N))return m.querySelector('#pre').textContent='اختار من 1 لـ '+N+' (والبداية قبل النهاية)';if(b-a+1>80)return m.querySelector('#pre').textContent='أقصى حاجة 80 صفحة مرة واحدة';done([a,b])};
+ [A,B].forEach(x=>x.onkeydown=e=>{if(e.key=='Enter')m.querySelector('#pro').click()})})}
 function pgImport(){if(role!='t')return;const inp={click(){filePick('application/pdf,image/*',1,F=>inp.onchange(F))}};
- inp.onchange=async F=>{if(!F.length)return;try{F.forEach(f=>{if(SHF.reduce((a,x)=>a+x.size,0)+f.size<60e6&&!SHF.some(x=>x.name===f.name&&x.size===f.size))SHF.push(f)})}catch(e){}pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
+ inp.onchange=async F=>{if(!F.length)return;try{F.forEach(f=>{if(SHF.reduce((a,x)=>a+x.size,0)+f.size<60e6&&!SHF.some(x=>x.name===f.name&&x.size===f.size)){SHF.push(f);shfUp(f)}})}catch(e){}pgSave();const out=[];sys('⏳ جارٍ تجهيز الصفحات…');
   try{for(const f of F){
    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){
     await pdfLib();
-    const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,n=Math.min(doc.numPages,40);
-    for(let i=1;i<=n;i++){try{toast('⏳','جارٍ تجهيز صفحة '+i+' من '+n+'…')}catch(e){}const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(2400/v0.width,1350/v0.height)*(MOB?1:1.2),v=pg.getViewport({scale:sc}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);
+    const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,N=doc.numPages;
+    /* المعلم بيختار الصفحات: من كذا لكذا (لحد 80 صفحة مرة واحدة) */
+    const rg=N>1?await pgRange(f.name,N):[1,1];if(!rg)continue;const a0=rg[0],n=rg[1];
+    for(let i=a0;i<=n;i++){try{toast('⏳','جارٍ تجهيز صفحة '+i+' ('+(i-a0+1)+' من '+(n-a0+1)+')…')}catch(e){}const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(2400/v0.width,1350/v0.height)*(MOB?1:1.2),v=pg.getViewport({scale:sc}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);
      await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;out.push(pgFit(c))}
-    if(doc.numPages>40)alert('اتضاف أول 40 صفحة بس من الملف')}
+    }
    else if(/^image\//.test(f.type)){const u=URL.createObjectURL(f),im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src=u});out.push(pgFit(im));URL.revokeObjectURL(u)}}}
   catch(e){return alert('تعذّر فتح الملف — جرّب ملف PDF أو صورة تانية')}
   if(!out.length)return;
@@ -2498,7 +2513,10 @@ const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PB
 async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
  if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
-async function pgPdf(noSave){let L;if(role=='t'){pgSave();L=SHOTS.concat(WPG.map(p=>({s:p.s,bg:p.bg||p.shot,n:p.n||[],bt:p.shot&&!p.bg?'blank':p.bt})))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
+async function pgPdf(noSave){let L;if(role=='t'){pgSave();pgDwell();
+  /* بس الصفحات اللي المعلم اشتغل عليها: فيها كتابة أو ورقة، أو صفحة ملف وقف عندها 20 ثانية أو أكتر (بيشرح من غير ما يكتب) */
+  const W=WPG.filter(p=>(p.s&&p.s.length)||(p.n&&p.n.length)||(p.bg&&(p.tv||0)>=20000)||(p.shot&&!p.bg));
+  L=SHOTS.concat((W.length?W:WPG.slice(pi,pi+1)).map(p=>({s:p.s,bg:p.bg||p.shot,n:p.n||[],bt:p.shot&&!p.bg?'blank':p.bt})))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
  if(!L.length)return;if(!noSave){sys('⏳ جارٍ تجهيز ملف PDF…');try{toast('⏳','جارٍ تجهيز ملف PDF…')}catch(e){}}
  try{if(!window.jspdf)await ldJs('libs/jspdf.umd.min.js')}catch(e){try{await ldJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(x){return alert('تعذّر تجهيز ملف PDF — حاول تاني')}}
  const {jsPDF}=window.jspdf;let doc=null;const keep=[strokes,PBG,st.bt];
@@ -3284,7 +3302,7 @@ function hwSolve(c,d,hw){const B=hwModal('hws','📝 '+esc(hw.title||'الواج
   this.remove();const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:22px;font-weight:800;color:#e3c08d;padding:8px';sc.textContent='🎯 درجتك: '+(+j.score).toFixed(1).replace('.0','')+' / '+j.total;B.prepend(sc);B.parentNode.scrollTop=0});
  B.append(go)}
 function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;recBase();const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0,f:window.RF||'',c:room};
- const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;for(let o=0;o<blob.size;o+=REC_CH){const end=Math.min(blob.size,o+REC_CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
+ const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;const CH=REC_CH*3;/* الملفات: أجزاء أكبر (4.5 ميجا) = طلبات أقل للسكربت = رفع أسرع */for(let o=0;o<blob.size;o+=CH){const end=Math.min(blob.size,o+CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
  try{hEv('📄 بيترفع على Drive: '+name)}catch(e){}return true}
 /* آخر الحصة: السبورة كلها PDF + الملفات اللي اتشاركت */
 async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
@@ -3293,7 +3311,7 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
   {const why=L.length?'':'لم يتم تفريغ أي كلام في الحصة دي.\n— التفريغ بالـ API: '+(TR.cfg||TR.on?'كان مفعّل':'مش مفعّل')+' · مقاطع اتفرّغت: '+(TR.ok||0)+' · أخطاء: '+(TR.err||0)+(TR.last?' · آخر مشكلة: '+TR.last:'')+'\n— تفريغ المتصفح: '+(typeof srOn!='undefined'&&srOn?'كان شغّال':'مش شغّال')+'\n(فعّل التفريغ من «ملخص الحصة» ← التفريغ التلقائي)\n\n';const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+why+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
    driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
  try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
- SHF.forEach(f=>{try{driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
+ SHF.filter(f=>!SHU.has(f)).forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recBase()+'_فيديو'+(suf||''),f:window.RF,c:room},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
@@ -3556,8 +3574,8 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localS
  /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
- $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
- aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'انتهت الحصة وتم إرسال تقرير الحضور على الإيميل. أغلق النافذة (✕) للإنهاء.',0)}
+ /* من غير نافذة الملخص: رسالة قصيرة وبعدين الرئيسية */
+ endDone=1;showGate('✅','انتهت الحصة — التقرير اتبعت والملفات اترفعت على Drive');setTimeout(()=>{location.href=location.pathname},1800)}
 function sxDropWatch(X){clearTimeout(X.dropT);if(X.bye||!X.had||!mlOn())return;
  X.dropT=setTimeout(()=>{if(!sxLive(X)||X.hub||X.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(X.title||X.room),'انقطع اتصال المعلم'+(X.tn?' ('+X.tn+')':'')+' عن الحصة ('+(X.title||X.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
