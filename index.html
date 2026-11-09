@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-h';
+const VER='2026.11.14-i';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3256,6 +3256,8 @@ recRecover(recRefresh);
 /* ===== مُركّب فيديو التسجيل: السبورة أولاً، والكاميرا دائرة صغيرة بجانبها ===== */
 function camVis(){return Object.values(boxes).some(b=>b&&!b.hide&&!b.lg)}
 function progDraw(g,W,H){
+ /* وقت تجهيز PDF السبورة (آخر الحصة) السبورة بتترسم بمقاس تاني مؤقتًا — بنسيب آخر صورة في الفيديو بدل ما يطلع مقصوص/ملخبط */
+ if(window._xN)return;
  g.fillStyle='#0a1422';g.fillRect(0,0,W,H);
  const v=$('#v'),cm=hubCamEl(),camOn=!!(camT&&cm&&cm.videoWidth),wbOn=!!(st.wb&&wb.width&&S),scrOn=!!((scrT||stuS)&&v&&v.videoWidth);
  const fitV=(e,x,y,w,h)=>{const r=Math.min(w/e.videoWidth,h/e.videoHeight),dw=e.videoWidth*r,dh=e.videoHeight*r;g.drawImage(e,x+(w-dw)/2,y+(h-dh)/2,dw,dh)};
