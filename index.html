@@ -433,7 +433,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-p';
+const VER='2026.11.14-q';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -769,7 +769,9 @@ const AUTO=new URLSearchParams(location.search).get('auto')=='1';
 const RS=(()=>{const o=LK&&lastGet();return!!(o&&o.room==LK.room&&o.r==LK.r)||!!(LK&&LK.r=='t'&&tkGet(LK.room))})();
 pwaHome();pwaInstall();setTimeout(andTab,0);setTimeout(deskDl,0);setTimeout(codeLanding,0);
 if(LK){if(LK.r=='s')setTimeout(()=>libBtn(LK.room),300);try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}inAppHelp();appHelp();deskOffer(()=>{});$('#room').value=LK.room;$('#jlink').hidden=false;$('#jnone').hidden=true;{const n=new URLSearchParams(location.search).get('n');$('#jrole').textContent=n?'📚 '+n.slice(0,60):'📚 الحصة'}if(LK.r=='s'&&!DIRM&&regUrl()){const n=new URLSearchParams(location.search).get('n')||'',b=document.createElement('button');b.className='w';b.style.cssText='background:#27496b;margin-top:8px';b.textContent='📚 الحصص اللي فاتت (فيديو وسبورة)';b.onclick=()=>libOpen(LK.room,n);$('#jlink').append(b)}
-if(LK.r=='s'&&!DIRM&&!document.getElementById('dko')){const nv=$('#nm').value.trim();if(nv.split(' ').filter(w=>w.replace(/[^\p{L}]/gu,'').length>=2).length>=2){showGate('⏳','جارٍ دخول الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('s')}catch(e){}},300)}}
+/* الطالب: مفيش دخول تلقائي — بيشوف اسمه (محفوظ من المرة اللي فاتت) ويقدر يغيّره، وبعدين يدوس «دخول» */
+if(LK.r=='s'&&!DIRM){try{if(sessionStorage.getItem('itqan_left')){sessionStorage.removeItem('itqan_left');setTimeout(()=>toast('👋','خرجت من الحصة — لو عايز ترجع اكتب اسمك ودوس دخول'),400)}}catch(e){}
+ setTimeout(()=>{try{$('#jgo').textContent='▶ دخول الحصة';const n=$('#nm');if(n&&!n.value.trim())n.focus()}catch(e){}},50)}
 if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
  if(DIRM&&LK.r=='s'){$('#nm').value='👔 المدير';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='👔 دخول المدير للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
@@ -1172,7 +1174,7 @@ async function tData(c,d){
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'&&o.dir){pmGot(c.peer,{m:d.m,ts:Date.now()});return}
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m||'').slice(0,500),ts:Date.now()};if(typeof d.img=='string'&&d.img.length<700000&&CIMG.test(d.img))m.img=d.img;if(!m.m&&!m.img)return;chat.push(m);bc({t:'chat',...m});render()}
- else if(d.t=='ws'){if(st.sw&&o.adm)wsStroke(o,d.s)}else if(d.t=='wp'){if(st.sw&&o.adm)wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
  else if(d.t=='pbg?'&&o.adm&&WPG){const bg=WPG[pi]&&WPG[pi].bg;if(bg){o.pgs&&o.pgs.delete(pgId(bg));pbgTo(o,bg)}}
@@ -1476,6 +1478,7 @@ function sData(d){
  else if(d.t=='se'&&cur){tail(lx,cur);redraw()}
  else if(d.t=='sh'){if(d.s&&d.s.id){const i=SWP.findIndex(x=>x.s.id===d.s.id);if(i>-1)SWP.splice(i,1)}strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}else if(d.t=='lz'&&Array.isArray(d.p)&&isFinite(d.p[0])&&isFinite(d.p[1])){lzAdd([+d.p[0],+d.p[1]],!!d.n)}
  else if(d.t=='undo'){strokes.pop();rebuild()}
+ else if(d.t=='sdel'&&typeof d.id=='string'){strokes=strokes.filter(x=>x.id!==d.id);rebuild()}
  else if(d.t=='wbclear'){strokes=[];rebuild()}
  else if(d.t=='restore'&&Array.isArray(d.s)){strokes=d.s;rebuild()}
  else if(d.t=='notes'&&Array.isArray(d.n)){SNOTES=d.n.slice(0,60).filter(n=>n&&isFinite(n.x)&&isFinite(n.y)).map(n=>({x:+n.x,y:+n.y,w:Math.min(1600,Math.max(120,+n.w||NW)),h:Math.min(900,Math.max(90,+n.h||NH)),t:typeof n.t=='string'?n.t.slice(0,400):'',c:/^#[0-9a-f]{6}$/i.test(n.c)?n.c:'#fffbe6'}));redraw()}
@@ -1504,7 +1507,7 @@ function endCall(){
  /* المعلم دايمًا بيقفل بالمسار الكامل: رفع السبورة والتفريغ والملفات ويستنى الفيديو يخلص رفع — وإلا الفولدر بيفضل فاضي */
  if(role=='t'){if(confirm('إنهاء الحصة للجميع؟'))endFlowT(0);return}
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
- if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;lastDel();
+ if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;lastDel();if(role=='s')try{sessionStorage.setItem('itqan_left','1')}catch(e){}
  /* المعلم: علامة «الحصة خلصت» (عشان ماتفتحش لوحدها تاني) والرجوع للرئيسية بدل إعادة تحميل لينك الحصة */
  if(role=='t'){endDone=1;try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}}
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
@@ -1553,6 +1556,7 @@ function render(){
   ib(x.can?'#e3c08d':'#d4605a',x.can?'🔇':'🎙️',x.can?'كتم':'إلغاء الكتم','allow(\''+k+'\')')+
   ib(x.cp?'#35607f':'#d4605a',x.cp?'📷':'📵','كاميرا الطالب','camAllow(\''+k+'\')')+
   ib(x.sp?'#1a9486':'#35607f','🖥️','مشاركة الشاشة','ssp(\''+k+'\')')+
+  ib(st.sw&&st.swp===k?'#1a9486':'#35607f','✍️',st.sw&&st.swp===k?'قفل الكتابة':'هو بس اللي يكتب على السبورة','swOne(\''+k+'\')')+
   ib('#35607f','💬'+(pmU[k]?'<b class="bd">'+pmU[k]+'</b>':''),T('pm'),'pmOpen(\''+k+'\')')+
   ib('#e3c08d','🔔','تنبيه','nudge(\''+k+'\')')+
   ib('#1a9486','⭐','استيكر','stkPick(\''+k+'\')')+
@@ -1778,7 +1782,7 @@ function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=
   r=R('الهايلايتر');HCOLS.forEach(c=>{const b=I(r,'','هايلايتر',()=>{hcol=c;tool='hl';tbPopX();refTb()},tool=='hl'&&c==hcol,'sw sq');b.style.background=c});
   r=R('السُمك');[[2,'رفيع'],[5,'متوسط'],[10,'سميك']].forEach(([w,ti])=>I(r,'<i style="display:block;border-radius:9px;background:#fff;width:22px;height:'+Math.max(2,w*.8)+'px"></i>',ti,()=>{wd=w;tbPopX();refTb()},wd==w))}
  else if(k=='pg'){const r=R('الصفحات ('+(pi+1)+' من '+(WPG?WPG.length:1)+')');W(r,'➕ صفحة جديدة',()=>pgNew());W(r,'📄 استيراد PDF أو صور',pgImport);W(r,'📑 حفظ كل الصفحات PDF',pgPdf);W(r,'🗑 مسح الصفحة دي',pgDel,1)}
- else if(k=='more'){const r=R();W(r,(st.sw?'✅ ':'')+'✍️ السماح للطلاب بالكتابة',tSw);W(r,(st.bg?'✅ ':'')+'◐ خلفية بيضاء',tBg);W(r,'📖 المصحف — ضيف آيات للسبورة',qOpen);W(r,'📑 حفظ السبورة كلها PDF',pgPdf);W(r,'🖼 حفظ الصفحة دي صورة',wbSave);
+ else if(k=='more'){const r=R();W(r,(st.sw&&!st.swp?'✅ ':'')+'✍️ السماح للطلاب بالكتابة',tSw);W(r,(st.lock?'✅ ':'')+'🔇 قفل رسايل الطلاب',tLock);W(r,(st.bg?'✅ ':'')+'◐ خلفية بيضاء',tBg);W(r,'📖 المصحف — ضيف آيات للسبورة',qOpen);W(r,'📑 حفظ السبورة كلها PDF',pgPdf);W(r,'🖼 حفظ الصفحة دي صورة',wbSave);
   {const r2=R('شكل الورقة');[['blank','⬜','فاضية'],['lines','☰','سطور'],['sq','▦','مربعات صغيرة'],['grid','▩','شبكة'],['xy','✚','إحداثيات X-Y']].forEach(([k2,ic,ti])=>I(r2,ic,ti,()=>{setBgT(k2);tbPopX();refTb()},(st.bt||'blank')==k2&&!!st.bg))}
   W(r,'🧮 الحاسبة',()=>calcT());if(DESMOS_KEY)W(r,'📈 Desmos',()=>dsmT());W(r,'🗑 مسح السبورة كلها',()=>{if(confirm('تمسح كل الرسم في الصفحة دي؟'))wclr()},1)}
  const b=btn.getBoundingClientRect();m.hidden=false;const w=m.offsetWidth,h=m.offsetHeight;
@@ -2566,35 +2570,47 @@ function wbSave(){const w=Math.max(lay.width,1),h=Math.max(lay.height,1),c=docum
  c.toBlob(b=>{if(!b)return alert(T('fail'));const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='itqan-board-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)},'image/png')}
 /* ===== كتابة وإشارة الطلاب (بإذن المعلم فقط، والمعلم هو من يتحقق ويعيد البث) ===== */
 const lps={};let sPrev=null,swTool='pen',swCol='#d4605a',swW=4,sdr=null,sLast=0,lastSw=false;
-function tSw(){if(role!='t')return;st.sw=st.sw?0:1;bst();ui();refTb();sys(T(st.sw?'swOnMsg':'swOffMsg'))}
+function tSw(){if(role!='t')return;st.sw=st.sw&&!st.swp?0:1;st.swp='';bst();ui();refTb();render();sys(T(st.sw?'swOnMsg':'swOffMsg'))}
+/* طالب واحد بس هو اللي يكتب (الباقي يشوف) — اضغط تاني على ✍️ عنده عشان تقفلها */
+function swOne(k){if(role!='t')return;const o=conns[k];if(!o)return;if(st.sw&&st.swp===k){st.sw=0;st.swp=''}else{st.sw=1;st.swp=k}bst();ui();refTb();render();sys(st.sw?'✍️ '+o.name+' بس اللي يقدر يكتب على السبورة دلوقتي':'✍️ اتقفلت الكتابة للطلاب')}
+function tLock(){if(role!='t')return;st.lock=st.lock?0:1;bst();ui();render();sys(st.lock?'🔇 قفلت رسايل الطلاب':'💬 فتحت رسايل الطلاب')}
 function buildTbS(){const t=$('#tb');t.innerHTML='';
  const B=(h,ti,f,c)=>{const b=document.createElement('button');b.innerHTML=h;b.title=ti;if(c)b.className=c;b.onclick=f;t.appendChild(b);return b},SP=()=>{const i=document.createElement('i');i.className='sp';t.appendChild(i)};
  const gr=B('⠿','اسحب لتحريك الشريط (يمكن وضعه خارج السبورة)',()=>{},'grip');mkDrag(t,'tb',gr);
- B('✏️',T('swPen')+' — اضغط مرتين للون والسُمك',function(){const n=Date.now(),dbl=swTool=='pen'||n-(this._t||0)<450;this._t=n;swTool='pen';sbRef();if(dbl)tbPop(this,'spen')}).dataset.st='pen';B('👆',T('swPt'),()=>{swTool='pt';sbRef()}).dataset.st='pt';SP();
+ B('✏️',T('swPen')+' — اضغط مرتين للون والسُمك',function(){const n=Date.now(),dbl=swTool=='pen'||n-(this._t||0)<450;this._t=n;swTool='pen';sbRef();if(dbl)tbPop(this,'spen')}).dataset.st='pen';B('👆',T('swPt'),()=>{swTool='pt';sbRef()}).dataset.st='pt';B('🧽','ممحاة — بتمسح خطوطك انت بس',()=>{swTool='er';sbRef()}).dataset.st='er';B('↩','رجّع آخر خط كتبته',()=>swUndo()).dataset.st='un';SP();
  B('🧮',T('calc'),()=>calcT());if(DESMOS_KEY)B('📈',T('desmos'),()=>dsmT());sbRef()}
-function sbRef(){if(role!='s')return;const ok=!!(st.sw&&admitted);document.body.classList.toggle('sw',ok&&!!st.wb);
+const swMe=()=>!st.swp||!!(peer&&st.swp===peer.id);
+function sbRef(){if(role!='s')return;const ok=!!(st.sw&&admitted&&swMe());document.body.classList.toggle('sw',ok&&!!st.wb);
  if(ok!==lastSw){lastSw=ok;if(ok)toast('✍️',T('swNow'));else{sdr=null;sPrev=null}}
  document.querySelectorAll('#tb [data-st]').forEach(b=>{b.classList.toggle('on',b.dataset.st==swTool);b.style.opacity=ok?1:.35});
  document.querySelectorAll('#tb [data-sc]').forEach(b=>b.classList.toggle('on',b.dataset.sc==swCol))}
-const swOk=()=>role=='s'&&admitted&&st.wb&&st.sw&&conn&&conn.open;
+const swOk=()=>role=='s'&&admitted&&st.wb&&st.sw&&swMe()&&conn&&conn.open;
 function sDown(e){if(!swOk())return;e.preventDefault();try{wb.setPointerCapture(e.pointerId)}catch(x){};const p=lp(e);
- if(swTool=='pt'){sdr={pt:1};sendPt(p,1);return}sdr={c:swCol,w:swW,p:[p]};sPrev=sdr;redraw()}
-function sMove(e){if(!sdr)return;const p=lp(e);if(sdr.pt){sendPt(p);return}const l=sdr.p[sdr.p.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])<2)return;if(sdr.p.length<2500)sdr.p.push(p);redraw()}
+ if(swTool=='pt'){sdr={pt:1};sendPt(p,1);return}if(swTool=='er'){sdr={er:1};swErase(p);return}sdr={c:swCol,w:swW,p:[p]};sPrev=sdr;redraw()}
+function sMove(e){if(!sdr)return;const p=lp(e);if(sdr.pt){sendPt(p);return}if(sdr.er){swErase(p);return}const l=sdr.p[sdr.p.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])<2)return;if(sdr.p.length<2500)sdr.p.push(p);redraw()}
 function sUp(e){if(!sdr)return;const d=sdr;sdr=null;sPrev=null;
  if(d.pt){try{conn.send({t:'wp',off:1})}catch(x){}redraw();return}
+ if(d.er)return;
  if(d.p.length<2)d.p.push([d.p[0][0]+.1,d.p[0][1]]);
  /* الخط بيفضل ظاهر عند الطالب لحد ما يرجع من المعلم (بدل ما يختفي ثانيتين) */
  const id=Math.random().toString(36).slice(2,9),s0={k:'p',c:d.c,w:d.w,e:0,p:d.p.map(q=>[Math.round(q[0]*10)/10,Math.round(q[1]*10)/10]),id};
  if(swOk())try{conn.send({t:'ws',s:s0});SWP.push({s:s0,t:Date.now()})}catch(x){}
  redraw()}
 const SWP=[];
+/* ممحاة الطالب و↩: بتمسح خطوطه هو بس (المعلم بيتأكد إن الخط بتاعه قبل ما يمسحه عند الكل) */
+const swMine=x=>!!(x&&x.id&&peer&&x.o===peer.id);
+function swDelId(id){strokes=strokes.filter(x=>x.id!==id);rebuild();try{conn.send({t:'wd',id})}catch(e){}}
+function swErase(p){if(!swOk())return;const r=14;for(let i=strokes.length-1;i>=0;i--){const x=strokes[i];if(!swMine(x))continue;if((x.p||[]).some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<r+(x.w||3)/2)){swDelId(x.id);return}}}
+function swUndo(){if(!swOk())return toast('✍️','الكتابة مقفولة دلوقتي');for(let i=strokes.length-1;i>=0;i--)if(swMine(strokes[i]))return swDelId(strokes[i].id);toast('↩','مفيش خطوط ليك تترجع')}
 function sendPt(p,f){const n=Date.now();if(!f&&n-sLast<50)return;sLast=n;try{conn.send({t:'wp',x:p[0],y:p[1]})}catch(x){}}
-function wsStroke(o,s){if(!s||s.k!='p'||!Array.isArray(s.p)||s.p.length<2||s.p.length>2600)return;
+function wsStroke(o,s,k){if(!s||s.k!='p'||!Array.isArray(s.p)||s.p.length<2||s.p.length>2600)return;
  if(typeof s.c!='string'||!/^#[0-9a-fA-F]{3,8}$/.test(s.c))return;const w=Math.min(14,Math.max(1,+s.w||3)),pts=[];
  for(const q of s.p){if(!Array.isArray(q)||!isFinite(q[0])||!isFinite(q[1]))return;pts.push([Math.min(LW,Math.max(0,+q[0])),Math.min(LH,Math.max(0,+q[1]))])}
  /* حد معقول (مش بيرمي الحروف السريعة): لحد 12 خط في الثانية لكل طالب */
  const t=Date.now();o.lwq=(o.lwq||[]).filter(x=>t-x<1000);if(o.lwq.length>=12)return;o.lwq.push(t);
- const n={k:'p',c:s.c,w,e:0,p:pts};if(typeof s.id=='string'&&/^[a-z0-9]{1,12}$/.test(s.id))n.id=s.id;strokes.push(n);paint(n);redraw();bc({t:'sh',s:n})}
+ const n={k:'p',c:s.c,w,e:0,p:pts};if(typeof s.id=='string'&&/^[a-z0-9]{1,12}$/.test(s.id))n.id=s.id;if(k)n.o=k;strokes.push(n);paint(n);redraw();bc({t:'sh',s:n})}
+/* الطالب بيمسح خط من خطوطه هو بس (بالممحاة أو ↩) */
+function wsDel(k,id){if(typeof id!='string')return;const i=strokes.findIndex(x=>x.id===id&&x.o===k);if(i<0)return;strokes.splice(i,1);rebuild();bc({t:'sdel',id})}
 function wsPoint(k,o,d){if(d.off){bc({t:'lp',id:k,off:1});lpSet(k,null);return}const x=+d.x,y=+d.y;if(!isFinite(x)||!isFinite(y))return;
  const m={t:'lp',id:k,n:o.name,x:Math.min(LW,Math.max(0,x)),y:Math.min(LH,Math.max(0,y))};bc(m);lpSet(k,m)}
 function lpSet(k,m){if(m)lps[k]={x:m.x,y:m.y,n:String(m.n||'').slice(0,24),ts:Date.now()};else delete lps[k];redraw();setTimeout(redraw,1700)}
