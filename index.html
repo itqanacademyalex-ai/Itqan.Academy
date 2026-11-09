@@ -432,7 +432,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-j';
+const VER='2026.11.14-k';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2652,7 +2652,7 @@ function sxHome(){setTimeout(fxCloudPull,800);$('#sec').classList.add('sxwide');
  $('#sxA').innerHTML='<h3>➕ حصة جديدة</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sxn" style="flex:1;min-width:170px" placeholder="اسم الحصة / المادة (اختياري)"><input id="sxt" style="flex:1;min-width:170px" placeholder="اسم المعلم (اختياري)"><button class="sxb g" onclick="sxNew()">إنشاء الحصة وتوليد الروابط</button></div>'+
  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="sxb g" onclick="tPanel()" style="flex:1;font-size:15px;padding:11px">👩‍🏫 لينكات المعلمين</button><button class="sxb g" onclick="sPanel()" style="flex:1;font-size:15px;padding:11px;background:#27496b">🎓 لينكات الطلاب</button></div><button class="sxb g" onclick="fxAdd()" style="margin-top:8px;font-size:15px;padding:11px;width:100%;background:#8a6d1d">➕ مجموعة جديدة (الاسم والمعلم والمواعيد)</button>'+
  '<details id="fxd" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:17px;padding:6px 0">📌 الغرف الثابتة <span id="fxn" style="color:#e3c08d"></span> <small style="color:#a9bccd;font-weight:400">— اضغطي للعرض</small></summary><small style="color:#a9bccd">كود ثابت لكل معلم أو مجموعة، بيتبعت مرة واحدة ويفضل هو هو كل حصة</small><div id="sxfx"></div></details>'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ مجموعة جديدة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
+ '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sxb d" onclick="fxAdd()">➕ مجموعة جديدة</button><button class="sxb d" onclick="fxBulk()">➕ إنشاء مجموعة غرف</button><button class="sxb d" onclick="fxCopyAll()">📋 نسخ جدول الأكواد</button><button class="sxb d" onclick="fxRenewAll()">🔄 تجديد الأكواد القديمة</button><button class="sxb d" onclick="hwSx()">📝 الواجبات</button><button class="sxb d" onclick="regSetup()">🔗 سجل الحصص (جوجل)</button><button class="sxb d" onclick="regSync(1)">⬆️ رفع الجدول الآن</button><button class="sxb d" onclick="siteExport()">📤 ملف الجدول للموقع</button></div><small id="regst" style="color:#a9bccd"></small><small id="fxsy" style="color:#a9bccd"></small><div><button class="sxb d" onclick="fxExport()">⬇️ نسخة احتياطية</button><button class="sxb d" onclick="fxImport()">⬆️ استرجاع</button></div>';
  rcDraw();sxList().forEach(s=>{if(!SXS[s.room])sxResume(s.room)});sxRender();fxEnsureTk();setTimeout(()=>{const el=$('#regst');if(el)el.textContent=regCfg().k?(regMsg||'⏳ …'):'✅ مواعيد الحصص شغالة من جدول الموقع.';if(regCfg().k)regSync(1)},500)}
 async function sxNew(){
  /* كود معلم 6 أرقام بيتأكد لوحده، ومفتاح الحصة جاي من الكود — فالمعلم يقدر يدخل بكود الحصة + كوده من أي جهاز (زي الغرف الثابتة) */
@@ -3156,13 +3156,20 @@ function hwModal(id,title){let m=$('#'+id);if(m)m.remove();m=document.createElem
  document.body.appendChild(m);m.querySelector('.hwx').onclick=()=>m.remove();return m.querySelector('.hwb')}
 const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;return b};
 /* المعلم: «📝 الواجبات» — كل حصة: اعمل الواجب / راجع / منشور + النتايج */
-async function hwPanel(){const B=hwModal('hwp','📝 الواجبات'),rooms=tsGet().filter(x=>tpGet(x.c));
+/* السكرتارية: الواجبات لكل الغرف (أكواد المعلمين عندها) */
+function hwSx(){hwPanel(fxList().map(x=>({c:x.room,t:x.title||'',p:String(x.pin||'')})))}
+async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
+ /* الحصص: من لوحة السكرتارية (كل الغرف بأكوادها)، أو حصص المعلم + أي حصة كودها محفوظ على الجهاز */
+ let rooms=Array.isArray(src)?src.filter(x=>x.c&&x.p):(()=>{const L=tsGet().filter(x=>tpGet(x.c)).map(x=>({c:x.c,t:x.t,p:tpGet(x.c)})),seen=new Set(L.map(x=>x.c));
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),m=/^itqan_tp_([a-z0-9]{4,6})$/.exec(k||'');if(m&&!seen.has(m[1])&&localStorage.getItem(k)){seen.add(m[1]);L.push({c:m[1],t:'',p:localStorage.getItem(k)})}}}catch(e){}return L})();
  /* لسه كود المعلم مااتكتبش على الجهاز ده: نطلبه هنا على طول بدل ما نقول «اكتب الكود الأول» */
- if(!rooms.length){if(!tbGet()){B.innerHTML='<small style="line-height:1.8">افتح لينك المعلم بتاعك (اللي السكرتارية بعتته) واكتب كود المعلم مرة واحدة، وبعدين ارجع هنا.</small>';return}
+ const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:3px';
+ if(!rooms.length){if(!tbGet()){B.innerHTML='<small style="line-height:1.8">اكتب كود الحصة وكود المعلم بتاعها (من رسالة السكرتارية) — مرة واحدة بس على الجهاز ده:</small><input id="hwrc" placeholder="كود الحصة (زي NF6W)" maxlength="6" style="'+ip+'"><input id="hwrp" placeholder="كود المعلم" inputmode="numeric" maxlength="6" style="'+ip+'"><small id="hwpe" style="color:#fca5a5"></small>';
+   B.append(hwBtn('فتح الواجبات','#1a9486',()=>{const c=String($('#hwrc').value||'').trim().toLowerCase(),p=String($('#hwrp').value||'').trim();if(!/^[a-z0-9]{4,6}$/.test(c)||!/^\d{4,6}$/.test(p))return $('#hwpe').textContent='اكتب الكودين صح';tpSet(c,p);hwPanel()}));return}
   B.innerHTML='<small style="line-height:1.8">اكتب كود المعلم (6 أرقام) — مرة واحدة بس على الجهاز ده:</small><input id="hwpc" inputmode="numeric" maxlength="6" style="background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:4px"><small id="hwpe" style="color:#fca5a5"></small>';
   B.append(hwBtn('فتح الواجبات','#1a9486',async function(){this.disabled=true;const n=await tbUnlock($('#hwpc').value).catch(()=>0);this.disabled=false;if(n){toast('✅','اتحفظ — '+n+' حصة');hwPanel()}else $('#hwpe').textContent='الكود غلط — راجع رسالة السكرتارية.'}));return}
  B.innerHTML='';
- for(const x of rooms){const h=await hwH(x.c,tpGet(x.c));const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#e3c08d">📚 '+esc(x.t||fmtCode(x.c))+'</b><small>⏳</small>';B.append(sec);
+ for(const x of rooms){const h=await hwH(x.c,x.p||tpGet(x.c));const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#e3c08d">📚 '+esc(x.t||fmtCode(x.c))+'</b><small>⏳</small>';B.append(sec);
   let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}sec.lastChild.remove();
   if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+hwErr(j)}));continue}
   if(j.key===false){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+HWE.nokey}))}
