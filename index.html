@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-x';
+const VER='2026.11.13-z';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1468,11 +1468,14 @@ function sync(){
  clearTimeout(rt);dropCall();stopCam();canTalk=1;canCam=1;try{peer.destroy()}catch(e){}initS();sys('جارٍ إعادة الاتصال...');
 }
 function endCall(){
- if(role=='t'&&aiAutoOn()){if(confirm('إنهاء الحصة للجميع؟'))endFlowT(0);return}
+ /* المعلم دايمًا بيقفل بالمسار الكامل: رفع السبورة والتفريغ والملفات ويستنى الفيديو يخلص رفع — وإلا الفولدر بيفضل فاضي */
+ if(role=='t'){if(confirm('إنهاء الحصة للجميع؟'))endFlowT(0);return}
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;lastDel();
+ /* المعلم: علامة «الحصة خلصت» (عشان ماتفتحش لوحدها تاني) والرجوع للرئيسية بدل إعادة تحميل لينك الحصة */
+ if(role=='t'){endDone=1;try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}}
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
- const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}location.reload()};
+ const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}if(role=='t')location.href=location.pathname;else location.reload()};
  /* نستنى إيميل تقرير الحصة يتبعت (لحد 15 ثانية) قبل إعادة التحميل — وإلا الطلب بيتقطع ومايوصلش */
  const ml=role=='t'?mailEnd(1):null;if(ml)showGate('⏳','جارٍ إنهاء الحصة وإرسال التقرير على الإيميل…');
  Promise.race([Promise.resolve(ml).catch(()=>{}),new Promise(r=>setTimeout(r,15000))]).then(()=>recSelfEng?recSelfEng.stop().then(fin,fin):fin());
