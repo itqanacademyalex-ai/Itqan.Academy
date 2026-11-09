@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-b';
+const VER='2026.11.14-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3063,16 +3063,28 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
   const kind=f=>/فيديو|^video\//.test(f.n+' '+f.m)&&/video/.test(f.m)?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
   const order={v:0,b:1,s:2,t:3,o:4};it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]).forEach(f=>{const k=kind(f);
    const label=k=='v'?'▶ الفيديو':k=='b'?'📄 السبورة':k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
-   mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label))});
+   mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label,c))});
   if(it.hw&&(it.hw.qs||[]).length)row.append(hwBtn('📝 الواجب','#8a6d1d',()=>hwSolve(c,it.d,it.hw)));
   r.append(row);L.append(r)})}
-function libView(f,label){let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.style.cssText='position:fixed;inset:0;z-index:260;background:#000;display:flex;flex-direction:column';
+function libView(f,label,c){let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.style.cssText='position:fixed;inset:0;z-index:260;background:#000;display:flex;flex-direction:column';
  const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0e1a2b;color:#fff;gap:8px;direction:rtl';
  bar.innerHTML='<b style="font-size:14px">'+esc(label)+'</b>';const x=document.createElement('button');x.className='w';x.style.cssText='flex:none;width:auto;padding:6px 14px;background:#27496b';x.textContent='✕ رجوع';x.onclick=()=>m.remove();
  const o=document.createElement('a');o.href='https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/view';o.target='_blank';o.rel='noopener';o.textContent='↗ فتح في Drive';o.style.cssText='color:#e3c08d;font-size:13px';
  const sp=document.createElement('span');sp.style.cssText='display:flex;gap:10px;align-items:center';sp.append(o,x);bar.append(sp);
+ const isPdf=/pdf/.test(f.m||'')||/السبورة/.test(f.n||'');
+ /* السبورة: بنجيب الـ PDF من السجل ونعرضه بـ pdf.js (معاينة Drive جوه الصفحة بتطلع سودا على الآيفون) */
+ if(isPdf&&c){const box=document.createElement('div');box.style.cssText='flex:1;overflow:auto;background:#3a4656;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;-webkit-overflow-scrolling:touch';
+  const st=document.createElement('small');st.style.cssText='color:#e8eef5;padding:20px';st.textContent='⏳ جارٍ تحميل السبورة…';box.append(st);m.append(bar,box);document.body.appendChild(m);
+  (async()=>{try{const u=regUrl(),j=JSON.parse(await (await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'pdf',c,id:f.id})})).text());
+   if(!j||!j.ok||!j.d)throw new Error(j&&j.e||'');const L=await pdfLib(),doc=await L.getDocument({data:ub64(j.d)}).promise;st.remove();
+   const W=Math.min(box.clientWidth-16,1100);for(let i=1;i<=doc.numPages;i++){if(!m.isConnected)return;const pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=W/v0.width,dp=Math.min(2,window.devicePixelRatio||1),vp=pg.getViewport({scale:sc*dp}),cv=document.createElement('canvas');
+    cv.width=vp.width;cv.height=vp.height;cv.style.cssText='width:'+W+'px;max-width:100%;height:auto;background:#fff;border-radius:6px;box-shadow:0 2px 10px #0006';box.append(cv);await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise}}
+   catch(e){st.textContent='تعذّر عرض السبورة هنا'+(e&&e.message?' ('+e.message+')':'')+' — اضغط «↗ فتح في Drive».'}})();return}
  const fr=document.createElement('iframe');fr.src='https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/preview';fr.allow='autoplay; fullscreen';fr.allowFullscreen=true;fr.style.cssText='flex:1;border:0;width:100%;background:#000';
- m.append(bar,fr);document.body.appendChild(m)}
+ /* الفيديو: جوجل بيجهّزه بعد الرفع (ممكن ياخد لحد ساعة)، وعلى الآيفون المعاينة جوه الصفحة ساعات بتفضل سودا */
+ const nt=document.createElement('small');nt.style.cssText='color:#a9bccd;padding:6px 10px;background:#0e1a2b;direction:rtl;line-height:1.7';nt.textContent='لو الشاشة فضلت سودا: الفيديو ممكن يكون لسه بيتجهّز على Drive (لحد ساعة بعد الحصة)، أو اضغط «↗ فتح في Drive».';
+ m.append(bar,fr,nt);document.body.appendChild(m);
+ if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1)){o.textContent='▶ تشغيل في Drive';o.style.cssText='color:#0e1a2b;background:#e3c08d;font-weight:700;font-size:13px;padding:6px 12px;border-radius:10px;text-decoration:none'}}
 /* ===== 📝 الواجب التلقائي: بصمة المعلم للغرفة (من كوده) — السجل بيقارنها بالبصمة اللي السكرتارية رفعتها ===== */
 async function hwH(r,p){if(!r||!p)return'';const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-hw|'+r+'|'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function hwApi(o){const u=regUrl();if(!u)throw new Error('مفيش سجل حصص');const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});return r.json()}

@@ -108,6 +108,7 @@ function doPost_(e) {
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
   /* المكتبة كمان بـ POST — بعض المتصفحات/الشبكات طلب GET بتاعها مابيوصلش للسكربت */
   if (b.a === 'lib') return doGet_({ parameter: { a: 'lib', c: b.c } });
+  if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
   if (b.a === 'hwsub') return hwSub_(b);
@@ -331,4 +332,17 @@ function linkOld_(go) {
   }
   Object.keys(rooms).concat(Object.keys(S)).forEach(c => CacheService.getScriptCache().remove('lib_' + c));
   Logger.log((go ? '✅ اتنفّذ' : '🔎 تجربة بس (مفيش حاجة اتغيّرت)') + ' — ملفات: ' + moved + ' · ملفات مالقيتلهاش مجموعة: ' + skip + (it.hasNext() ? ' · الوقت خلص، شغّلها تاني تكمّل' : '') + '\n' + log.slice(0, 300).join('\n'));
+}
+
+/* 📄 سبورة الحصة للمكتبة: بنبعت الـ PDF نفسه للموقع يعرضه بنفسه (معاينة Drive جوه الصفحة بتطلع سودا على الآيفون)
+   بس لو الملف سبورة PDF جوه فولدر حصة تبع المجموعة دي */
+function pdf_(b) {
+  const c = String(b.c || '').toLowerCase(), gid = PropertiesService.getScriptProperties().getProperty('gf_' + c);
+  if (!/^[a-z0-9]{4,6}$/.test(c) || !gid || !/^[A-Za-z0-9_-]{10,100}$/.test(String(b.id || ''))) return out_({ ok: false, e: 'bad' });
+  let x; try { x = DriveApp.getFileById(b.id); } catch (e) { return out_({ ok: false, e: 'nofile' }); }
+  if (!/السبورة/.test(x.getName()) || !/pdf/.test(x.getMimeType())) return out_({ ok: false, e: 'type' });
+  let ok = false; const ps = x.getParents(); while (ps.hasNext() && !ok) { const g = ps.next().getParents(); while (g.hasNext()) if (g.next().getId() == gid) ok = true; }
+  if (!ok) return out_({ ok: false, e: 'group' });
+  if (x.getSize() > 35e6) return out_({ ok: false, e: 'big' });
+  return out_({ ok: true, d: Utilities.base64Encode(x.getBlob().getBytes()) });
 }
