@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.13-t';
+const VER='2026.11.13-u';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -818,7 +818,8 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
     const i=document.createElement('input');i.inputMode='numeric';i.maxLength=6;i.placeholder='• • • • • •';i.dir='ltr';const ok=document.createElement('button');ok.textContent='حفظ';const er=document.createElement('small');er.style.color='#fca5a5';
     ok.onclick=async()=>{ok.disabled=true;ok.textContent='⏳';const n=await tbUnlock(i.value);ok.disabled=false;ok.textContent='حفظ';if(n){tbok=1;toast('✅','اتحفظ — '+n+' حصة جاهزة على الجهاز ده');draw()}else er.textContent='الكود غلط — راجع رسالة السكرتارية'};
     i.onkeydown=e=>{if(e.key=='Enter')ok.click()};u.append(i,ok,er);w.append(u)}
-   const hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center';{let nm='';try{nm=localStorage.getItem('itqan_tname')||''}catch(e){}hd.innerHTML='<b style="color:#e3c08d;font-size:16px">🗓 حصصي'+(nm?' — <span translate="no">'+esc(nm)+'</span>':'')+'</b>'};
+   const hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:6px';{let nm='';try{nm=localStorage.getItem('itqan_tname')||''}catch(e){}hd.innerHTML='<b style="color:#e3c08d;font-size:16px">🗓 حصصي'+(nm?' — <span translate="no">'+esc(nm)+'</span>':'')+'</b>'};
+   if(tbok||tsGet().some(x=>tpGet(x.c))){const hb=document.createElement('button');hb.className='w';hb.style.cssText='flex:none;width:auto;padding:5px 10px;font-size:13px;background:#27496b';hb.textContent='📝 الواجبات';hb.onclick=()=>hwPanel();hd.append(hb)}
    w.append(hd);
    /* كل حصة كارت واحد — اضغط على اسمها: لو وقتها (من قبلها بـ 10 دقايق لحد ما تخلص) بتفتح على طول، غير كده بيقولك إمتى */
    const D=now.getDay(),G={};all.forEach(x=>{const a=hm2(x.h),b=a+x.m,live=(x.d===D&&n>=a-10&&n<b)||!!xpGet(x.c);let k=((x.d-D+7)%7)*1440+a-n;if(k<0&&!live)k+=7*1440;
@@ -2684,8 +2685,8 @@ function fxPut(a){try{localStorage.setItem('itqan_fix',JSON.stringify(a))}catch(
 /* السكرتارية بترفع الغرف (بصمة المفتاح + المواعيد) لسجل جوجل كل ما حاجة تتغيّر */
 let regT=0,regMsg='';
 function regCfg(){try{return JSON.parse(localStorage.getItem('itqan_reg')||'{}')}catch(e){return{}}}
-function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;
- try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
+function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;const HH={};for(const x of fxList()){try{if(/^\d{4,6}$/.test(String(x.pin)))HH[x.room]=await hwH(x.room,String(x.pin))}catch(e){}}
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:fxList().map(x=>({c:x.room,v:fpOf(x.pub),h:HH[x.room]||'',t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
 /* ملف الجدول للموقع: السكرتارية تحمّله وترفعه على GitHub باسم schedule.json (أو تبعته) */
@@ -3044,7 +3045,7 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
  const nice=d=>{const m2=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d);if(!m2)return d;let h=+m2[4];const pm=h>=12;h=h%12||12;return (+m2[3])+' '+AR[+m2[2]-1]+' '+m2[1]+' — '+h+':'+m2[5]+(pm?' م':' ص')};
  /* للطالب: الفيديو والسبورة بس (الملخص والتفريغ للإدارة) */
  const isV=f=>/video\//.test(f.m||''),isB=f=>/السبورة/.test(f.n||'')&&/pdf/.test(f.m||'');
- j.items=j.items.map(it=>({d:it.d,files:it.files.filter(f=>isV(f)||isB(f))})).filter(it=>it.files.length);
+ j.items=j.items.map(it=>({d:it.d,hw:it.hw,files:it.files.filter(f=>isV(f)||isB(f))})).filter(it=>it.files.length||it.hw);
  if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.</small>';return}
  j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px';
   r.innerHTML='<b>🗓 '+esc(nice(it.d))+'</b>';const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
@@ -3053,6 +3054,7 @@ async function libOpen(c,title){c=String(c||'').toLowerCase();let m=$('#libm');i
   const order={v:0,b:1,s:2,t:3,o:4};it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]).forEach(f=>{const k=kind(f);
    const label=k=='v'?'▶ الفيديو':k=='b'?'📄 السبورة':k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
    mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label))});
+  if(it.hw&&(it.hw.qs||[]).length)row.append(hwBtn('📝 الواجب','#8a6d1d',()=>hwSolve(c,it.d,it.hw)));
   r.append(row);L.append(r)})}
 function libView(f,label){let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.style.cssText='position:fixed;inset:0;z-index:260;background:#000;display:flex;flex-direction:column';
  const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0e1a2b;color:#fff;gap:8px;direction:rtl';
@@ -3061,6 +3063,62 @@ function libView(f,label){let m=$('#libv');if(m)m.remove();m=document.createElem
  const sp=document.createElement('span');sp.style.cssText='display:flex;gap:10px;align-items:center';sp.append(o,x);bar.append(sp);
  const fr=document.createElement('iframe');fr.src='https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/preview';fr.allow='autoplay; fullscreen';fr.allowFullscreen=true;fr.style.cssText='flex:1;border:0;width:100%;background:#000';
  m.append(bar,fr);document.body.appendChild(m)}
+/* ===== 📝 الواجب التلقائي: بصمة المعلم للغرفة (من كوده) — السجل بيقارنها بالبصمة اللي السكرتارية رفعتها ===== */
+async function hwH(r,p){if(!r||!p)return'';const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-hw|'+r+'|'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function hwApi(o){const u=regUrl();if(!u)throw new Error('مفيش سجل حصص');const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});return r.json()}
+const HWE={auth:'كود المعلم مش متسجّل في السجل لسه — السكرتارية تفتح اللوحة مرة عشان يترفع',nokey:'مفتاح Gemini مش متحط في السكربت (Script Properties ← GEMINI_KEY)',class:'الحصة دي مش لاقيها على Drive',empty:'الحصة دي مفيهاش سبورة ولا تفريغ',gen:'الذكاء الاصطناعي مارجّعش أسئلة — جرّب تاني',nohw:'الواجب لسه مااتنشرش'};
+const hwErr=j=>HWE[j&&j.e]||String(j&&j.e||'تعذّر الاتصال');
+const hwTy={mcq:'اختيار من متعدد',tf:'صح وغلط',fill:'أكمل',short:'سؤال مقالي'};
+const hwNice=d=>{const m=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d||'');if(!m)return d;let h=+m[4];const pm=h>=12;h=h%12||12;return(+m[3])+'/'+(+m[2])+' — '+h+':'+m[5]+(pm?' م':' ص')};
+function hwModal(id,title){let m=$('#'+id);if(m)m.remove();m=document.createElement('div');m.id=id;m.style.cssText='position:fixed;inset:0;z-index:270;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
+ m.innerHTML='<div class="card" style="width:min(620px,100%);max-height:94vh;overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:18px">'+title+'</h2><button class="w hwx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div class="hwb" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
+ document.body.appendChild(m);m.querySelector('.hwx').onclick=()=>m.remove();return m.querySelector('.hwb')}
+const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;return b};
+/* المعلم: «📝 الواجبات» — كل حصة: اعمل الواجب / راجع / منشور + النتايج */
+async function hwPanel(){const B=hwModal('hwp','📝 الواجبات'),rooms=tsGet().filter(x=>tpGet(x.c));if(!rooms.length){B.innerHTML='<small>اكتب كود المعلم الأول.</small>';return}B.innerHTML='';
+ for(const x of rooms){const h=await hwH(x.c,tpGet(x.c));const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#e3c08d">📚 '+esc(x.t||fmtCode(x.c))+'</b><small>⏳</small>';B.append(sec);
+  let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}sec.lastChild.remove();
+  if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+hwErr(j)}));continue}
+  if(j.key===false){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+HWE.nokey}))}
+  if(!j.items.length){sec.append(Object.assign(document.createElement('small'),{textContent:'لسه مفيش حصص متسجّلة.'}));continue}
+  j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center';
+   const st=it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة — محتاج مراجعة':'—';r.innerHTML='<span style="flex:1;min-width:150px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#a9bccd">'+st+(it.subs.length?' · '+it.subs.length+' حلّ':'')+'</small></span>';
+   if(!it.st)r.append(hwBtn('✨ اعمل الواجب','#1a9486',async function(){this.disabled=true;this.textContent='⏳ بيتعمل… (دقيقة تقريباً)';const g=await hwApi({a:'hwgen',c:x.c,d:it.d,h}).catch(()=>({ok:false}));if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
+   else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#27496b':'#1a9486',()=>hwEdit(x,it.d,h,it.hw)));
+   if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>{const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(it.d)));R.innerHTML=it.subs.slice().sort((a,b)=>b.score-a.score).map(s=>'<div class="sxr" style="background:#1d3652;border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between"><b translate="no">'+esc(s.n)+'</b><span>'+(+s.score).toFixed(1).replace('.0','')+' / '+s.total+'</span></div>').join('')}));
+   sec.append(r)})}}
+/* مراجعة الواجب: كل سؤال يتعدّل (السؤال، الاختيارات، الإجابة) ← ✅ انشر / 💾 احفظ / 🔄 اعمل تاني */
+function hwEdit(x,d,h,hw){const B=hwModal('hwe','✏️ واجب '+esc(x.t||'')+' — '+esc(hwNice(d)));B.innerHTML='';
+ const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:8px;color:#fff;font:inherit;width:100%;text-align:start';
+ const ti=document.createElement('input');ti.style.cssText=ip;ti.value=hw.title||'';ti.placeholder='عنوان الواجب';B.append(ti);
+ const rows=(hw.qs||[]).map((q,i)=>{const c=document.createElement('div');c.style.cssText='background:#1d3652;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px';
+  c.innerHTML='<small style="color:#e3c08d">'+(i+1)+') '+(hwTy[q.type]||'')+'</small>';const qa=document.createElement('textarea');qa.style.cssText=ip+';min-height:54px';qa.value=q.q;c.append(qa);
+  let op=null;if(q.type=='mcq'){op=document.createElement('input');op.style.cssText=ip;op.value=(q.options||[]).join(' | ');op.placeholder='الاختيارات مفصولة بـ |';c.append(op)}
+  const an=document.createElement('input');an.style.cssText=ip+';border-color:#1a9486';an.value=q.answer;an.placeholder='✅ الإجابة الصح';c.append(an);
+  const del=hwBtn('🗑 شيل السؤال','#7a3b3b',()=>{c.remove();c._del=1});c.append(del);B.append(c);return{c,q,qa,op,an}});
+ const collect=()=>({title:ti.value.trim(),qs:rows.filter(r=>!r.c._del).map(r=>({type:r.q.type,q:r.qa.value.trim(),options:r.op?r.op.value.split('|').map(s=>s.trim()).filter(Boolean):null,answer:r.an.value.trim(),explain:r.q.explain||''})).filter(q=>q.q)});
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:0;background:#14283f;padding-top:8px';
+ const save=async(pub,btn)=>{btn.disabled=true;const j=await hwApi({a:'hwpub',c:x.c,d,h,hw:collect(),pub:pub?1:0}).catch(()=>({ok:false}));btn.disabled=false;if(!j.ok)return alert('❌ '+hwErr(j));toast('✅',pub?'الواجب اتنشر للطلاب':'اتحفظ');$('#hwe')&&$('#hwe').remove();try{$('#hwp')&&hwPanel()}catch(e){}};
+ bar.append(hwBtn('✅ انشر للطلاب','#1a9486',function(){save(1,this)}),hwBtn('💾 احفظ مسودة','#27496b',function(){save(0,this)}),
+  hwBtn('🔄 اعمل أسئلة جديدة','#8a6d1d',async function(){if(!confirm('تمسح الأسئلة دي وتعمل جديدة؟'))return;this.disabled=true;this.textContent='⏳…';const g=await hwApi({a:'hwgen',c:x.c,d,h,re:1}).catch(()=>({ok:false}));if(!g.ok){this.disabled=false;this.textContent='🔄 اعمل أسئلة جديدة';return alert('❌ '+hwErr(g))}hwEdit(x,d,h,g.hw)}));
+ B.append(bar)}
+/* الطالب: حل الواجب ← تصحيح تلقائي فوري */
+function hwSolve(c,d,hw){const B=hwModal('hws','📝 '+esc(hw.title||'الواجب'));B.innerHTML='';const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:9px;color:#fff;font:inherit;width:100%;text-align:start';
+ let nm='';try{nm=localStorage.getItem('itqan_nm')||''}catch(e){}const ni=document.createElement('input');ni.style.cssText=ip;ni.placeholder='اسمك';ni.value=nm;B.append(ni);
+ const get=hw.qs.map((q,i)=>{const c=document.createElement('div');c.style.cssText='background:#1d3652;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px';
+  const qt=document.createElement('b');qt.style.cssText='line-height:1.7;white-space:pre-wrap';qt.textContent=(i+1)+') '+q.q;c.append(qt);let fn;
+  if(q.type=='mcq'||q.type=='tf'){const ops=q.type=='tf'?(/[a-z]/i.test(q.q)&&!/[؀-ۿ]/.test(q.q)?['True','False']:['صح','خطأ']):(q.options||[]);const nmR='hq'+i;
+   ops.forEach(o=>{const l=document.createElement('label');l.style.cssText='display:flex;gap:8px;align-items:center;background:#0f2236;border-radius:10px;padding:8px;cursor:pointer';const r=document.createElement('input');r.type='radio';r.name=nmR;r.value=o;r.style.width='auto';l.append(r,document.createTextNode(o));c.append(l)});
+   fn=()=>{const s=c.querySelector('input:checked');return s?s.value:''}}
+  else{const t=document.createElement(q.type=='short'?'textarea':'input');t.style.cssText=ip+(q.type=='short'?';min-height:60px':'');t.placeholder='إجابتك';c.append(t);fn=()=>t.value}
+  const fb=document.createElement('small');c.append(fb);B.append(c);return{fn,fb,c}});
+ const go=hwBtn('📤 سلّم الواجب','#1a9486',async function(){const n=ni.value.trim();if(!n)return alert('اكتب اسمك');const ans=get.map(g=>g.fn());if(ans.filter(a=>String(a).trim()).length<ans.length&&!confirm('فيه أسئلة ماحلّيتهاش — تسلّم كده؟'))return;
+  this.disabled=true;this.textContent='⏳ بيتصحح…';try{localStorage.setItem('itqan_nm',n)}catch(e){}
+  const j=await hwApi({a:'hwsub',c,d,n,ans}).catch(()=>({ok:false}));if(!j.ok){this.disabled=false;this.textContent='📤 سلّم الواجب';return alert('❌ '+hwErr(j))}
+  get.forEach((g,i)=>{const r=j.res[i]||{s:0},k=j.key[i]||{};g.c.style.borderRight='4px solid '+(r.s>=1?'#1f8f5f':r.s>0?'#e3c08d':'#b5473f');g.fb.style.color=r.s>=1?'#9ee6c4':r.s>0?'#e3c08d':'#fca5a5';
+   g.fb.textContent=(r.s>=1?'✔ صح':r.s>0?'◐ نص الدرجة':'✖ ')+(r.fb&&r.fb!=='✔'?' — '+r.fb:'')+(r.s<1&&k.answer?' · الإجابة: '+k.answer:'')+(k.explain&&r.s<1?' · '+k.explain:'')});
+  this.remove();const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:22px;font-weight:800;color:#e3c08d;padding:8px';sc.textContent='🎯 درجتك: '+(+j.score).toFixed(1).replace('.0','')+' / '+j.total;B.prepend(sc);B.parentNode.scrollTop=0});
+ B.append(go)}
 function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;recBase();const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0,f:window.RF||'',c:room};
  const U=recUp(meta,()=>{try{recRefresh()}catch(e){}});RUPS.push(U);let i=0;for(let o=0;o<blob.size;o+=REC_CH){const end=Math.min(blob.size,o+REC_CH);U.add({idx:i++,blob:blob.slice(o,end,mime),last:end>=blob.size?1:0})}
  try{hEv('📄 بيترفع على Drive: '+name)}catch(e){}return true}
@@ -3325,6 +3383,8 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localS
  await upP;try{if(sum&&RC)driveUp(new Blob(['\ufeff'+sum],{type:'text/plain;charset=utf-8'}),recBase()+'_الملخص.txt','text/plain')}catch(e){}
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
  try{await recP;const t0=Date.now();while(RUPS.length&&Date.now()-t0<75000){$('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive… سيب الصفحة مفتوحة';await new Promise(r=>setTimeout(r,700))}}catch(e){}
+ /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
+ try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  $('#gate').hidden=true;endDone=1;aiOpen();$('#ai_out').value=sum;
  aiSt(sum?'✓ تم إرسال الملخص وتقرير الحضور على الإيميل. انسخه أو نزّله ثم أغلق النافذة (✕).':'انتهت الحصة وتم إرسال تقرير الحضور على الإيميل. أغلق النافذة (✕) للإنهاء.',0)}
