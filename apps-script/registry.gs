@@ -56,7 +56,10 @@ function sheet_() {
   return R;
 }
 
-function doGet(e) {
+/* أي غلط جوه السكربت بيرجع رسالة واضحة (JSON) بدل صفحة جوجل «unable to open the file» */
+function doGet(e) { try { return doGet_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
+function doPost(e) { try { return doPost_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
+function doGet_(e) {
   const p = (e && e.parameter) || {};
   if (p.a === 'chk') {
     const c = String(p.c || '').toLowerCase(), r = load_()[c] || {};
@@ -99,7 +102,7 @@ function doGet(e) {
   return out_({ ok: false });
 }
 
-function doPost(e) {
+function doPost_(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
@@ -208,6 +211,9 @@ function upStatus_(b) {
 /* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية Drive وبتعمل الفولدر الرئيسي */
 function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
 
+/* اختبار المكتبة من المحرر: شغّلها وشوف النتيجة في Execution log */
+function testLib() { Logger.log(doGet({ parameter: { a: 'lib', c: 'hhe8' } }).getContent()); }
+
 /* ===== 📝 الواجب التلقائي من السبورة (Gemini) — المفتاح في Script Properties باسم GEMINI_KEY، مابيوصلش لأي جهاز =====
    hwgen: مسودة 10 أسئلة من سبورة الحصة وتفريغها ← المعلم يراجع ← hwpub: ينشر (والإجابات النموذجية ملف للمعلم بس)
    hwsub: الطالب يحل ← تصحيح تلقائي (الاختيارات بالمقارنة، والكتابي بالذكاء الاصطناعي) ← hwres: النتايج للمعلم */
@@ -281,4 +287,46 @@ function hwList_(b) {
   while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
     if (has || hw) out.push({ d: f.getName(), st: hw ? hw.st : '', hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
+}
+
+/* ===== 📚 ربط الحصص القديمة بالمكتبة =====
+   linkOld(): تجربة بس — بتكتب في الـ log هتعمل إيه من غير ما تغيّر حاجة.
+   linkOldRun(): بتنفّذ فعلًا: (1) أي فولدر اسمه «… (الكود)» بيتربط بالمجموعة،
+   (2) الفيديوهات والسبورات القديمة المتسابة لوحدها (اسمها «اسم المجموعة_التاريخ_الساعة») بتتنقل لفولدر مجموعتها وجواه فولدر بتاريخ الحصة.
+   ممكن تشغّلها كذا مرة — اللي اتربط قبل كده مابيتكررش. */
+function linkOld() { linkOld_(false); }
+function linkOldRun() { linkOld_(true); }
+function linkOld_(go) {
+  const P = PropertiesService.getScriptProperties(), rooms = load_(), t0 = Date.now(), log = [];
+  let S = {}; try { S = sheet_(); } catch (x) {}
+  const known = c => !!(rooms[c] || S[c]), nt = s => norm_(s).replace(/\s+/g, ' ').toLowerCase();
+  /* (1) فولدرات المجموعات «الاسم (الكود)» */
+  const byTitle = {}, fit = DriveApp.searchFolders("title contains '(' and trashed = false");
+  while (fit.hasNext()) {
+    const f = fit.next(), m = /^(.*?)\s*\(([A-Za-z0-9]{4,6})\)\s*$/.exec(f.getName()); if (!m) continue;
+    const c = m[2].toLowerCase(); if (!known(c)) continue;
+    if (m[1]) byTitle[nt(m[1])] = c;
+    const cur = P.getProperty('gf_' + c);
+    if (!cur) { log.push('🔗 ' + f.getName() + ' ← المجموعة ' + c); if (go) P.setProperty('gf_' + c, f.getId()); }
+    else if (cur != f.getId()) log.push('⚠️ فيه أكتر من فولدر للمجموعة ' + c + ': «' + f.getName() + '» (سبته زي ما هو)');
+  }
+  Object.keys(rooms).forEach(c => { const n = rooms[c] && rooms[c].n; if (n && n != 'حصة' && !byTitle[nt(n)]) byTitle[nt(n)] = c; });
+  /* (2) الملفات القديمة المتسابة لوحدها */
+  const it = DriveApp.searchFiles("trashed = false and (mimeType contains 'video/' or mimeType = 'application/pdf') and title contains '_20'");
+  let moved = 0, skip = 0;
+  while (it.hasNext() && Date.now() - t0 < 300000) {
+    const x = it.next(), nm = x.getName(), m = /^(.+?)_(\d{4}-\d\d-\d\d_\d\d-\d\d)/.exec(nm); if (!m) continue;
+    const c = byTitle[nt(m[1])]; if (!c) { skip++; continue; }
+    const par = x.getParents(), p = par.hasNext() ? par.next() : null;
+    if (p && p.getName() == m[2]) continue; // متنقّل قبل كده
+    const gid = P.getProperty('gf_' + c);
+    log.push('📦 ' + nm + ' ← ' + c + '/' + m[2]); moved++;
+    if (!go) continue;
+    let g = gid ? DriveApp.getFolderById(gid) : folder_(m[1] + ' (' + c.toUpperCase() + ')');
+    if (!gid) P.setProperty('gf_' + c, g.getId());
+    const s = g.getFoldersByName(m[2]), d = s.hasNext() ? s.next() : g.createFolder(m[2]);
+    x.moveTo(d); if (/^video\//.test(x.getMimeType()) || /السبورة/.test(nm)) try { x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  }
+  Object.keys(rooms).concat(Object.keys(S)).forEach(c => CacheService.getScriptCache().remove('lib_' + c));
+  Logger.log((go ? '✅ اتنفّذ' : '🔎 تجربة بس (مفيش حاجة اتغيّرت)') + ' — ملفات: ' + moved + ' · ملفات مالقيتلهاش مجموعة: ' + skip + (it.hasNext() ? ' · الوقت خلص، شغّلها تاني تكمّل' : '') + '\n' + log.slice(0, 300).join('\n'));
 }
