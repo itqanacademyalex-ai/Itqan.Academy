@@ -271,22 +271,50 @@ function testGemini() { PropertiesService.getScriptProperties().deleteProperty('
 const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
 const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
 
+/* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
+   وتريجر hwJob_ بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
 function hwGen_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!GEM_()) return out_({ ok: false, e: 'nokey' });
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
-  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return out_({ ok: false, e: 'empty' });
+  if (!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
+  const P = PropertiesService.getScriptProperties(), L = LockService.getScriptLock(); L.waitLock(15000);
+  try { let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {}
+    if (!q.some(j => j.c == b.c && j.d == b.d)) q.push({ c: b.c, d: String(b.d), re: b.re ? 1 : 0 });
+    P.setProperties({ hwq: JSON.stringify(q.slice(-30)), ['hws_' + b.c + '|' + b.d]: JSON.stringify({ s: 'run', t: Date.now() }) });
+  } finally { L.releaseLock(); }
+  hwKick_(); return out_({ ok: true, pending: 1 });
+}
+function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob_')) ScriptApp.newTrigger('hwJob_').timeBased().after(1000).create(); }
+function hwJob_() {
+  const P = PropertiesService.getScriptProperties(), t0 = Date.now(), L = LockService.getScriptLock(); if (!L.tryLock(1000)) return;
+  try {
+    ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwJob_') ScriptApp.deleteTrigger(t); });
+    while (Date.now() - t0 < 240000) {
+      let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {} if (!q.length) break;
+      const j = q.shift(); P.setProperty('hwq', JSON.stringify(q)); let r;
+      try { r = hwMake_(j.c, j.d, j.re); } catch (x) { r = { ok: false, e: String(x && x.message || x) }; }
+      if (r.ok) P.deleteProperty('hws_' + j.c + '|' + j.d); else P.setProperty('hws_' + j.c + '|' + j.d, JSON.stringify({ s: 'err', e: String(r.e).slice(0, 300), t: Date.now() }));
+    }
+    if (JSON.parse(P.getProperty('hwq') || '[]').length) ScriptApp.newTrigger('hwJob_').timeBased().after(1000).create();
+  } finally { L.releaseLock(); }
+}
+function hwMake_(c, d, re) {
+  const f = cls_(c, d); if (!f) return { ok: false, e: 'class' };
+  const old = jget_(f, 'hw.json'); if (old && !re) return { ok: true, hw: old };
+  const b = { c: c, d: d };
+  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return ({ ok: false, e: 'empty' });
   const room = load_()[b.c] || {};
   const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
     'بالظبط 10 أسئلة متنوعة ومتدرجة من السهل للصعب: 4 اختيار من متعدد (4 اختيارات)، 2 صح وغلط، 2 أكمل، 2 سؤال مقالي/مسألة قصيرة.\n' +
     'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة"}]}' }];
   if (pdf && pdf.getSize() < 18e6) parts.push({ inline_data: { mime_type: 'application/pdf', data: Utilities.base64Encode(pdf.getBlob().getBytes()) } });
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
-  let o; try { o = gem_(parts); } catch (e) { return out_({ ok: false, e: String(e.message || e) }); }
+  let o; try { o = gem_(parts); } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
   const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
-  if (!qs.length) return out_({ ok: false, e: 'gen' });
+  if (!qs.length) return ({ ok: false, e: 'gen' });
   const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
-  return out_({ ok: true, hw: hw });
+  return ({ ok: true, hw: hw });
 }
 function hwPub_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
@@ -322,7 +350,10 @@ function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: !!GEM_() });
   const out = [], it = DriveApp.getFolderById(id).getFolders();
   while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
-    if (has || hw) out.push({ d: f.getName(), st: hw ? hw.st : '', hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
+    let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
+    /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
+    const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
+    if (has || hw) out.push({ d: f.getName(), st: run ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
 }
 
