@@ -407,7 +407,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-g';
+const VER='2026.11.14-h';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3068,8 +3068,11 @@ async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#lib
   const mk=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;row.append(b)};
   const kind=f=>/^video\//.test(f.m||'')?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
   const order={v:0,b:1,s:2,t:3,o:4};it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]).forEach(f=>{const k=kind(f);
-   const label=k=='v'?'▶ الفيديو':k=='b'?'📄 السبورة':k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
-   mk(label,k=='v'?'#1a9486':'#27496b',()=>libView(f,label,c))});
+   /* الفيديو والسبورة: زرار كبير بيفتح الملف على طول (بيشتغل على كل الأجهزة، والآيفون كمان) */
+   if(k=='v'||k=='b'){const u='https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/view',B=document.createElement('a');B.href=u;B.target='_blank';B.rel='noopener';
+    B.textContent=k=='v'?'▶ افتح الفيديو':'📄 افتح السبورة';B.style.cssText='flex:1 1 100%;display:block;text-align:center;text-decoration:none;color:#fff;font-weight:800;font-size:17px;padding:14px 12px;border-radius:14px;background:'+(k=='v'?'#1a9486':'#27496b');row.append(B);return}
+   const label=k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
+   mk(label,'#27496b',()=>libView(f,label,c))});
   if(it.hw&&(it.hw.qs||[]).length)row.append(hwBtn('📝 الواجب','#8a6d1d',()=>hwSolve(c,it.d,it.hw)));
   r.append(row);L.append(r)})};
  if(j)show(j);else L.innerHTML='<small>⏳ جارٍ التحميل… (أول مرة بتاخد كام ثانية)</small>';
