@@ -84,6 +84,17 @@ function doGet(e) {
     for (let i = 0; i < n; i++) d += P.getProperty('fxb_' + i) || '';
     return out_({ ok: true, d: d, t: +(P.getProperty('fxb_t') || 0) });
   }
+  /* مكتبة المجموعة: كل حصة (فولدر بالتاريخ) والملفات اللي فيها — الأحدث الأول */
+  if (p.a === 'lib') {
+    const c = String(p.c || '').toLowerCase(); if (!/^[a-z0-9]{4,6}$/.test(c)) return out_({ ok: false });
+    const C = CacheService.getScriptCache(), hit = C.get('lib_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
+    const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id) return out_({ ok: true, items: [] });
+    const out = []; try { const it = DriveApp.getFolderById(id).getFolders();
+      while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); const mt = x.getMimeType(), nm = x.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) files.push({ n: nm, id: x.getId(), m: mt, s: x.getSize() }); } const hw = jget_(f, 'hw.json'), it2 = { d: f.getName(), files: files }; if (hw && hw.st == 'pub') it2.hw = pubHw_(hw); if (files.length || it2.hw) out.push(it2); }
+    } catch (x) { return out_({ ok: false, e: String(x) }); }
+    out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lib_' + c, j, 300);
+    return out_({ ok: true, items: out });
+  }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
 }
@@ -92,6 +103,10 @@ function doPost(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, e: 'json' }); }
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
+  if (b.a === 'hwgen') return hwGen_(b);
+  if (b.a === 'hwpub') return hwPub_(b);
+  if (b.a === 'hwsub') return hwSub_(b);
+  if (b.a === 'hwlist') return hwList_(b);
   if (b.a === 'start') return upStart_(b);
   if (b.a === 'chunk') return upChunk_(b);
   if (b.a === 'status') return upStatus_(b);
@@ -109,7 +124,7 @@ function doPost(e) {
     (b.rooms || []).slice(0, 300).forEach(r => {
       const c = String(r.c || '').toLowerCase();
       if (!/^[a-z0-9]{4,6}$/.test(c)) return;
-      R[c] = { v: String(r.v || '').slice(0, 20), t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
+      R[c] = { v: String(r.v || '').slice(0, 20), h: /^[a-f0-9]{64}$/.test(r.h || '') ? r.h : '', t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
     });
     PropertiesService.getScriptProperties().setProperty('rooms', JSON.stringify(R));
     return out_({ ok: true, n: Object.keys(R).length });
@@ -149,20 +164,24 @@ function fillCodes() {
 /* ===== التسجيل والملفات على Drive: فولدر «تسجيلات أكاديمية إتقان»، وجواه فولدر لكل حصة
    (الفيديو + السبورة PDF + التفريغ + الملفات المشاركة). الرفع على أجزاء (Drive resumable upload). ===== */
 const ROOT = 'تسجيلات أكاديمية إتقان';
+/* «المجموعة/التاريخ» ← فولدر المجموعة وجواه فولدر الحصة */
 function folder_(name) {
-  const it = DriveApp.getFoldersByName(ROOT), root = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT);
-  if (!name) return root;
-  const n = String(name).replace(/[\\/:*?"<>|]/g, '_').slice(0, 120), s = root.getFoldersByName(n);
-  return s.hasNext() ? s.next() : root.createFolder(n);
+  const it = DriveApp.getFoldersByName(ROOT); let f = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT);
+  String(name || '').split('/').map(x => x.replace(/[\\:*?"<>|]/g, '_').trim().slice(0, 120)).filter(Boolean).slice(0, 3).forEach(n => {
+    const s = f.getFoldersByName(n); f = s.hasNext() ? s.next() : f.createFolder(n);
+  });
+  return f;
 }
 function upStart_(b) {
-  const f = folder_(b.f), meta = { name: String(b.name || 'ملف').slice(0, 200), mimeType: String(b.mime || 'application/octet-stream').split(';')[0], parents: [f.getId()] };
+  const f = folder_(b.f), c = String(b.c || '').toLowerCase();
+  /* المكتبة: فولدر المجموعة بتاع الغرفة دي */
+  if (/^[a-z0-9]{4,6}$/.test(c) && String(b.f || '').indexOf('/') > 0) { try { const g = f.getParents(); if (g.hasNext()) PropertiesService.getScriptProperties().setProperty('gf_' + c, g.next().getId()); } catch (x) {} } meta = { name: String(b.name || 'ملف').slice(0, 200), mimeType: String(b.mime || 'application/octet-stream').split(';')[0], parents: [f.getId()] };
   const r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
     method: 'post', contentType: 'application/json; charset=UTF-8', payload: JSON.stringify(meta),
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
   const h = r.getHeaders(), loc = h['Location'] || h['location'];
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
-  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600);
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
   return out_({ ok: true, s: s });
 }
 function upChunk_(b) {
@@ -172,7 +191,12 @@ function upChunk_(b) {
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
   if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} CacheService.getScriptCache().remove('up_' + b.s); return out_({ ok: true, done: 1, id: id }); }
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s);
+    /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
+    /* الفيديو والسبورة بس بيتفتحوا باللينك (الملخص والتفريغ بيفضلوا خاصين بالإدارة) */
+    if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
+    if (rc) C.remove('lib_' + rc);
+    return out_({ ok: true, done: 1, id: id }); }
   return out_({ ok: false, e: 'chunk ' + c });
 }
 function upStatus_(b) {
@@ -183,3 +207,78 @@ function upStatus_(b) {
 }
 /* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية Drive وبتعمل الفولدر الرئيسي */
 function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
+
+/* ===== 📝 الواجب التلقائي من السبورة (Gemini) — المفتاح في Script Properties باسم GEMINI_KEY، مابيوصلش لأي جهاز =====
+   hwgen: مسودة 10 أسئلة من سبورة الحصة وتفريغها ← المعلم يراجع ← hwpub: ينشر (والإجابات النموذجية ملف للمعلم بس)
+   hwsub: الطالب يحل ← تصحيح تلقائي (الاختيارات بالمقارنة، والكتابي بالذكاء الاصطناعي) ← hwres: النتايج للمعلم */
+const GMODEL = 'gemini-2.5-flash';
+const GEM_ = () => PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || '';
+function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
+function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
+function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
+function jget_(f, name) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')); try { return x ? JSON.parse(x.getBlob().getDataAsString()) : null; } catch (e) { return null; } }
+function jput_(f, name, o) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')), t = JSON.stringify(o); if (x) x.setContent(t); else f.createFile(name, t, MimeType.PLAIN_TEXT); }
+function gem_(parts, temp) {
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GMODEL + ':generateContent?key=' + encodeURIComponent(GEM_()), {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: { temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' } }) });
+  if (r.getResponseCode() != 200) throw new Error('Gemini ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160));
+  const j = JSON.parse(r.getContentText()); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join(''));
+}
+const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
+const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
+
+function hwGen_(b) {
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!GEM_()) return out_({ ok: false, e: 'nokey' });
+  const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
+  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return out_({ ok: false, e: 'empty' });
+  const room = load_()[b.c] || {};
+  const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
+    'بالظبط 10 أسئلة متنوعة ومتدرجة من السهل للصعب: 4 اختيار من متعدد (4 اختيارات)، 2 صح وغلط، 2 أكمل، 2 سؤال مقالي/مسألة قصيرة.\n' +
+    'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة"}]}' }];
+  if (pdf && pdf.getSize() < 18e6) parts.push({ inline_data: { mime_type: 'application/pdf', data: Utilities.base64Encode(pdf.getBlob().getBytes()) } });
+  if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
+  let o; try { o = gem_(parts); } catch (e) { return out_({ ok: false, e: String(e.message || e) }); }
+  const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
+  if (!qs.length) return out_({ ok: false, e: 'gen' });
+  const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
+  return out_({ ok: true, hw: hw });
+}
+function hwPub_(b) {
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const h = b.hw || {}; const qs = (h.qs || []).filter(q => q && q.q).slice(0, 15).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
+  if (!qs.length) return out_({ ok: false, e: 'empty' });
+  const hw = { st: b.pub ? 'pub' : 'draft', at: Date.now(), title: String(h.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
+  if (b.pub) { const t = '📝 ' + (hw.title || 'الواجب') + ' — الإجابات النموذجية\n\n' + qs.map((q, i) => (i + 1) + ') ' + q.q + (q.options ? '\n   [' + q.options.join(' / ') + ']' : '') + '\n   ✅ ' + q.answer + (q.explain ? '\n   💡 ' + q.explain : '')).join('\n\n');
+    const x = fileIn_(f, /الإجابات_النموذجية\.txt$/); if (x) x.setContent('﻿' + t); else f.createFile(f.getName() + '_الإجابات_النموذجية.txt', '﻿' + t, MimeType.PLAIN_TEXT); }
+  CacheService.getScriptCache().remove('lib_' + b.c);
+  return out_({ ok: true, hw: hw });
+}
+function hwSub_(b) {
+  const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const hw = jget_(f, 'hw.json'); if (!hw || hw.st != 'pub') return out_({ ok: false, e: 'nohw' });
+  const ans = Array.isArray(b.ans) ? b.ans.map(a => String(a == null ? '' : a).slice(0, 1500)) : [], res = [], ai = [];
+  hw.qs.forEach((q, i) => { const a = ans[i] || '';
+    if (!a.trim()) { res[i] = { s: 0, fb: 'مفيش إجابة' }; return; }
+    if (q.type == 'mcq' || q.type == 'tf') { const ok = nrm_(a) == nrm_(q.answer) || (q.type == 'tf' && /^(صح|صحيح|true|t)$/.test(nrm_(a)) == /^(صح|صحيح|true|t)$/.test(nrm_(q.answer))); res[i] = { s: ok ? 1 : 0, fb: ok ? '✔' : 'الصح: ' + q.answer }; return; }
+    if (nrm_(a) == nrm_(q.answer)) { res[i] = { s: 1, fb: '✔' }; return; }
+    ai.push(i); });
+  if (ai.length && GEM_()) { try {
+    const o = gem_([{ text: 'صحّح إجابات الطالب دي مقارنةً بالإجابة النموذجية. اقبل الإجابة لو المعنى صح حتى لو الصياغة مختلفة أو فيها أخطاء إملائية بسيطة. لكل سؤال اديله درجة 0 أو 0.5 أو 1، وملاحظة قصيرة بالعربي بتشرح الغلط لو فيه.\nرجّع JSON: {"r":[{"i":رقم,"s":درجة,"fb":"ملاحظة"}]}\n\n' +
+      ai.map(i => '#' + i + '\nالسؤال: ' + hw.qs[i].q + '\nالنموذجية: ' + hw.qs[i].answer + '\nالطالب: ' + ans[i]).join('\n\n') }], 0);
+    (o.r || []).forEach(x => { if (ai.indexOf(+x.i) > -1) res[+x.i] = { s: Math.max(0, Math.min(1, +x.s || 0)), fb: String(x.fb || '').slice(0, 300) }; });
+  } catch (e) {} }
+  ai.forEach(i => { if (!res[i]) res[i] = { s: 0, fb: 'هيتصحح من المعلم', p: 1 }; });
+  const score = res.reduce((a, x) => a + (x ? x.s : 0), 0), total = hw.qs.length;
+  const L = LockService.getScriptLock(); L.waitLock(20000);
+  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { L.releaseLock(); }
+  return out_({ ok: true, score: score, total: total, res: res, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
+}
+function hwList_(b) {
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: !!GEM_() });
+  const out = [], it = DriveApp.getFolderById(id).getFolders();
+  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
+    if (has || hw) out.push({ d: f.getName(), st: hw ? hw.st : '', hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
+  out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
+}
