@@ -438,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-f';
+const VER='2026.11.15-g';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2494,7 +2494,8 @@ function filePick(acc,multi,fn){const i=document.createElement('input');i.type='
 /* الملفات اللي المعلم شاركها (PDF/صور) بتتحفظ عشان تترفع على Drive مع السبورة في آخر الحصة */
 const SHF=[],SHU=new WeakSet();
 /* الملفات اللي المعلم بيشاركها بتترفع على Drive أول ما تتشارك (في الخلفية) بدل ما تستنى آخر الحصة */
-function shfUp(f){if(role!='t'||!RC||SHU.has(f))return;SHU.add(f);try{driveUp(f,recBase()+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}}
+/* الملفات المشاركة مابقتش بتترفع (دي ملفات المعلم أصلًا، ورفعها كان بياخد معظم النت) — صفحاتها اللي اتشرحت محفوظة في PDF السبورة */
+function shfUp(f){return;if(role!='t'||!RC||SHU.has(f))return;SHU.add(f);try{driveUp(f,recBase()+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}}
 function pgRange(fn,N){return new Promise(res=>{const m=document.createElement('div');m.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(10,20,34,.88);display:flex;align-items:center;justify-content:center;padding:14px;direction:rtl';
  const ip='width:90px;background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;font-size:18px;text-align:center';
  m.innerHTML='<div class="card" style="width:min(400px,100%);gap:12px;text-align:center"><h3 style="margin:0">📄 تختار أنهي صفحات؟</h3><small style="color:#a9bccd" translate="no">'+esc(String(fn||'').slice(0,60))+' — '+N+' صفحة</small>'+
@@ -3376,7 +3377,7 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
   {const why=L.length?'':'لم يتم تفريغ أي كلام في الحصة دي.\n— التفريغ بالـ API: '+(TR.cfg||TR.on?'كان مفعّل':'مش مفعّل')+' · مقاطع اتفرّغت: '+(TR.ok||0)+' · أخطاء: '+(TR.err||0)+(TR.last?' · آخر مشكلة: '+TR.last:'')+'\n— تفريغ المتصفح: '+(typeof srOn!='undefined'&&srOn?'كان شغّال':'مش شغّال')+'\n(فعّل التفريغ من «ملخص الحصة» ← التفريغ التلقائي)\n\n';const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+why+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
    driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
  try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
- SHF.filter(f=>!SHU.has(f)).forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
+ [].forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recBase()+'_فيديو'+(suf||''),f:window.RF,c:room},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
