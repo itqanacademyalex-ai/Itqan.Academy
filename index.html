@@ -274,6 +274,8 @@ body.stu #gate{background:radial-gradient(1200px 600px at 85% -10%,rgba(26,148,1
 /* مفيش تحديد (select) للكلام في الواجهة — بيبان كأن حاجات متعلّمة وبيفتح قايمة الكليك يمين. الكتابة في الخانات شغّالة عادي */
 html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* التفريغ اتلغى: نخفي أزراره */
+#ai_sr,#ai_tgo,#ai_trs,#trchip{display:none!important}
 /* ½ كسر بشرطة أفقية */
 .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.15;margin:0 3px;direction:ltr}.fr>span:first-child{border-bottom:1.6px solid currentColor;padding:0 3px}
 #stabs{position:fixed;top:0;left:0;right:0;z-index:255;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(180deg,rgba(10,20,34,.92),rgba(10,20,34,.6));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06);direction:rtl}
@@ -438,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-d';
+const VER='2026.11.15-h';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1864,7 +1866,9 @@ function aiProv(keep){const p=$('#ai_prov').value,m=$('#ai_model'),w=p=='webhook
  $('#ai_key').hidden=w;m.hidden=w;$('#ai_url').hidden=!w}
 function aiUi(){$('#ai_trc').textContent=LOG.tr.length?LOG.tr.length+' مقطع مفرَّغ':'';$('#ai_sr').textContent=srOn?'⏹ إيقاف التفريغ الصوتي':'🎙 بدء التفريغ الصوتي'}
 function srToggle(){if(srOn){srOn=0;sr&&sr.stop();sr=null;aiUi();return}srBegin(1)}
-function srBegin(m){if(srOn||TR.on)return;if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){m&&aiSt('هذا المتصفح لا يدعم التفريغ الصوتي — استخدم Chrome أو Edge على الكمبيوتر، أو اكتب ملاحظاتك في الخانة',1);return}
+/* 🚫 التفريغ الصوتي اتلغى (بأمر الإدارة): مفيش تفريغ ولا ملف تفريغ على Drive */
+const TR_OFF=1;
+function srBegin(m){if(TR_OFF||srOn||TR.on)return;if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){m&&aiSt('هذا المتصفح لا يدعم التفريغ الصوتي — استخدم Chrome أو Edge على الكمبيوتر، أو اكتب ملاحظاتك في الخانة',1);return}
  if(!m&&MOB)return;const l=$('#ai_lang').value,fx=l!='auto';
  sr=srMake(fx?l:'ar-EG',t=>{LOG.tr.push({ts:Date.now(),t,n:name});if(LOG.tr.length>6000)LOG.tr.shift();aiUi()},null,fx);srOn=1;aiSt('');aiUi()}
 function aiData(){const fm=t=>new Date(t).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
@@ -2494,7 +2498,8 @@ function filePick(acc,multi,fn){const i=document.createElement('input');i.type='
 /* الملفات اللي المعلم شاركها (PDF/صور) بتتحفظ عشان تترفع على Drive مع السبورة في آخر الحصة */
 const SHF=[],SHU=new WeakSet();
 /* الملفات اللي المعلم بيشاركها بتترفع على Drive أول ما تتشارك (في الخلفية) بدل ما تستنى آخر الحصة */
-function shfUp(f){if(role!='t'||!RC||SHU.has(f))return;SHU.add(f);try{driveUp(f,recBase()+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}}
+/* الملفات المشاركة مابقتش بتترفع (دي ملفات المعلم أصلًا، ورفعها كان بياخد معظم النت) — صفحاتها اللي اتشرحت محفوظة في PDF السبورة */
+function shfUp(f){return;if(role!='t'||!RC||SHU.has(f))return;SHU.add(f);try{driveUp(f,recBase()+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}}
 function pgRange(fn,N){return new Promise(res=>{const m=document.createElement('div');m.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(10,20,34,.88);display:flex;align-items:center;justify-content:center;padding:14px;direction:rtl';
  const ip='width:90px;background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;font-size:18px;text-align:center';
  m.innerHTML='<div class="card" style="width:min(400px,100%);gap:12px;text-align:center"><h3 style="margin:0">📄 تختار أنهي صفحات؟</h3><small style="color:#a9bccd" translate="no">'+esc(String(fn||'').slice(0,60))+' — '+N+' صفحة</small>'+
@@ -3129,10 +3134,13 @@ let _db=null;
 function rdb(){return _db||(_db=new Promise((res,rej)=>{const q=indexedDB.open('itqan_rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('meta',{keyPath:'id'});d.createObjectStore('chunks',{keyPath:'key'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))}
 async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
 /* ---- الرفع (عبر سكريبت Google) ---- */
+/* أخطاء نت (مهلة/انقطاع/السيرفر مشغول) ← إعادة المحاولة، مش تحويل لسكربت تاني */
+const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|NetworkError)/i.test(String(e&&e.message||e));
 function recUp(meta,onSt){
- const U={meta,q:[],busy:0,err:'',fails:0,fin:0};
+ const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
- const api=async b=>{const r=await fetch(meta.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:meta.k,...b})});if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(!j.ok)throw new Error(j.e||'error');return j};
+ /* كل طلب ليه مهلة دقيقتين: لو النت اتغيّر (4G ← Wi-Fi) الطلب بيعلّق للأبد — كده بيتلغى ويتعاد لوحده */
+ const api=async b=>{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),120000);let r;try{r=await fetch(meta.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:meta.k,...b}),signal:ac.signal})}catch(e){throw new Error(ac.signal.aborted?'timeout':'net')}finally{clearTimeout(tm)}if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(!j.ok)throw new Error(j.e||'error');return j};
  const b64=bl=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>{const r=String(f.result),i=r.indexOf(';base64,');res(i<0?'':r.slice(i+8))};f.onerror=()=>rej(f.error);f.readAsDataURL(bl)});
  U.save=sv;
  U.add=c=>{U.q.push(c);rtx('chunks','readwrite',s=>s.put({key:meta.id+':'+c.idx,id:meta.id,idx:c.idx,blob:c.blob,last:c.last})).catch(()=>{});U.pump()};
@@ -3140,17 +3148,17 @@ function recUp(meta,onSt){
   try{
    /* الرفع بيروح لسكربت السجل الأول (بيعمل فولدر لكل حصة)، ولو مارضيش بيرجع لسكربت التسجيل القديم */
    if(!meta.sid){if(!meta.fb&&REG_URL&&meta.u!==REG_URL){meta.u0=meta.u;meta.u=REG_URL}
-    let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||'',c:meta.c||''})}catch(e){if(meta.u0&&!meta.fb){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
+    let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||'',c:meta.c||''})}catch(e){/* مشكلة نت ← نعيد على نفس السجل (عشان الملف يروح لفولدر الحصة ويظهر في المكتبة). نرجع للسكربت القديم بس لو السجل رفض فعلًا */if(meta.u0&&!meta.fb&&!UPNET(e)){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
     meta.sid=j.s;await sv()}
    while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
     catch(e){let r=-1;try{r=(await api({a:'status',s:meta.sid})).r}catch(x){}if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
-    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
+    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
-   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=2){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
+   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
 /* ---- المحرك: يرسم الفيديو على canvas ويدمج الأصوات ويسجل ---- */
@@ -3371,9 +3379,9 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
  /* تفريغ الكلام (والملخص لو اتعمل) كملف نص */
  try{const L=(LOG.tr||[]).slice().sort((a,b)=>a.ts-b.ts),hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
   {const why=L.length?'':'لم يتم تفريغ أي كلام في الحصة دي.\n— التفريغ بالـ API: '+(TR.cfg||TR.on?'كان مفعّل':'مش مفعّل')+' · مقاطع اتفرّغت: '+(TR.ok||0)+' · أخطاء: '+(TR.err||0)+(TR.last?' · آخر مشكلة: '+TR.last:'')+'\n— تفريغ المتصفح: '+(typeof srOn!='undefined'&&srOn?'كان شغّال':'مش شغّال')+'\n(فعّل التفريغ من «ملخص الحصة» ← التفريغ التلقائي)\n\n';const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+why+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
-   driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
+   if(!TR_OFF)driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
  try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
- SHF.filter(f=>!SHU.has(f)).forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
+ [].forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recBase()+'_فيديو'+(suf||''),f:window.RF,c:room},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
@@ -3435,7 +3443,13 @@ addEventListener('beforeunload',e=>{if(recBusy()&&!window.NOWARN){e.preventDefau
 /* ☁️ شريط صغير تحت في الرئيسية: الرفع شغّال في الخلفية وفاضل كام */
 function upChip(){let c=$('#upchip');let ed=false;try{ed=!!endDone}catch(e){}let ro='';try{ro=role}catch(e){}const busy=RUPS.length&&(!ro||ro=='c'||ed);if(!busy){if(c)c.remove();return}
  if(!c){c=document.createElement('div');c.id='upchip';c.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:400;background:#14283fee;border:1px solid #35607f;color:#e8eef5;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 8px 24px #0006;direction:rtl;white-space:nowrap;pointer-events:none';document.body.append(c)}
- const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0);c.textContent=(RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
+ const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0),stuck=RUPS.every(u=>Date.now()-(u.ok||0)>180000);
+ c.style.pointerEvents='auto';c.style.cursor='pointer';c.onclick=()=>upKick(1);
+ c.textContent=(stuck?'⚠️ الرفع واقف — اضغط هنا يكمّل ':RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
+/* لو الرفع وقف (أو النت رجع): نكمّل. الضغط على الشريط بيبدأ من جديد من الأجزاء المحفوظة على الجهاز */
+function upKick(force){if(force){window.NOWARN=1;location.reload();return}RUPS.forEach(u=>{try{u.pump()}catch(e){}})}
+addEventListener('online',()=>upKick());document.addEventListener('visibilitychange',()=>{if(!document.hidden)upKick()});
+setInterval(()=>{try{upChip()}catch(e){}},15000)
 recRecover(recRefresh);
 </script>
 
@@ -3475,7 +3489,7 @@ function srMake(lang,onText,gate,fixed){const SR=window.SpeechRecognition||windo
   r.onerror=e=>{if(e.error=='not-allowed'||e.error=='service-not-allowed')on=0};
   try{r.start()}catch(x){}};
  mk();return{stop:()=>{on=0;try{r.stop()}catch(x){}}}}
-function sSrStart(){if(sSr||sSrBlock||role!='s'||MOB)return;
+function sSrStart(){if(TR_OFF||sSr||sSrBlock||role!='s'||MOB)return;
  sSr=srMake('ar-EG',t=>{try{conn&&conn.open&&conn.send({t:'tr',x:t.slice(0,500)})}catch(e){}},()=>!!(micS&&micS.enabled&&canTalk&&admitted),0)}
 function tSwap(){if(role!='t')return;if(!(scrT||stuS)){if(!st.wb)tWb();else alert('ابدأ مشاركة الشاشة أولاً (🖥) ثم بدّل بينها وبين السبورة');return}
  if(st.wb)st.wb=0;else{st.wb=1;st.bg=1}bst();ui()}
@@ -3533,9 +3547,9 @@ const TRP={eg:'the Egyptian Arabic colloquial dialect',sa:'the Saudi/Gulf Arabic
 function trCfgFrom(c){c=c||{};const p=c.tp||'gemini',key=(c.tkey||'').trim()||((c.provider==p)?(c.key||'').trim():'');
  return{p,key,model:(c.tmodel||'').trim()||(p=='gemini'?'gemini-2.5-flash':'gpt-4o-transcribe'),dial:c.tdial||'eg'}}
 function trCfgDom(){return trCfgFrom({tp:$('#ai_tp').value,tkey:$('#ai_tkey').value,tmodel:$('#ai_tmodel').value,tdial:$('#ai_tdial').value,provider:$('#ai_prov').value,key:$('#ai_key').value})}
-function trBoot(){if(role!='t')return false;const c=aiLoad();if(c.tauto===0||!c.tp&&!c.tkey)return false;const f=trCfgFrom(c);if(!f.key)return false;trStart(f,1);return true}
+function trBoot(){if(TR_OFF||role!='t')return false;const c=aiLoad();if(c.tauto===0||!c.tp&&!c.tkey)return false;const f=trCfgFrom(c);if(!f.key)return false;trStart(f,1);return true}
 function trToggle(){if(TR.on){trStop();return}aiSave();const f=trCfgDom();if(!f.key)return aiSt('أدخل مفتاح API للتفريغ',1);trStart(f,0)}
-function trStart(f,auto){if(TR.on)return;if(!mxAC())return aiSt('المتصفح لا يدعم معالجة الصوت',1);
+function trStart(f,auto){if(TR_OFF||TR.on)return;if(!mxAC())return aiSt('المتصفح لا يدعم معالجة الصوت',1);
  TR.cfg=f;TR.on=1;TR.err=0;TR.ok=0;TR.drops=0;
  if(srOn){srOn=0;try{sr&&sr.stop()}catch(e){}sr=null}
  try{if(!LOG.tr.length){const o=JSON.parse(localStorage.getItem('itqan_tr_'+room)||'[]');if(Array.isArray(o))LOG.tr=o}}catch(e){}
@@ -3577,7 +3591,7 @@ async function trRun(it){let tx;
  tx=String(tx||'').replace(/^["«]|["»]$/g,'').trim();if(tx.length<2||/^EMPTY\.?$/i.test(tx))return;
  TR.ok++;LOG.tr.push({ts:it.ts,t:tx,n:it.name,api:1});LOG.tr.sort((a,b)=>a.ts-b.ts);if(LOG.tr.length>6000)LOG.tr.shift();TR.dirty=1}
 /* ===== 📝 حالة التفريغ قدام المعلم: بيشتغل ولا لأ، كام مقطع اتفرّغ، وآخر مشكلة — وزرار «اختبر دلوقتي» ===== */
-function trChip(){if(role!='t')return;let c=$('#trchip');if(!c){const a=$('#tmr');if(!a)return;c=document.createElement('button');c.id='trchip';c.style.cssText='font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;border:0;cursor:pointer;font-family:inherit';c.onclick=trDiag;a.after(c)}
+function trChip(){if(TR_OFF){const c=$('#trchip');if(c)c.remove();return}if(role!='t')return;let c=$('#trchip');if(!c){const a=$('#tmr');if(!a)return;c=document.createElement('button');c.id='trchip';c.style.cssText='font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;border:0;cursor:pointer;font-family:inherit';c.onclick=trDiag;a.after(c)}
  const on=TR.on,bad=on&&TR.ok==0&&(TR.err>0||!!TR.last),late=on&&TR.ok==0&&LOG.start&&Date.now()-LOG.start>180000;
  c.style.background=!on?'#7a3b3b':(bad||late)?'#b5473f':'#1f8f5f';c.textContent=!on?'📝 التفريغ مقفول':(bad||late)?'📝 التفريغ فيه مشكلة':'📝 التفريغ ✓ '+TR.ok}
 async function trDiag(){const k=trCfgFrom(aiLoad()),lines=['حالة التفريغ التلقائي:',TR.on?'● شغّال':'○ مقفول'+(k.key?'':' — مفيش مفتاح API متسجّل على الجهاز ده (من «ملخص الحصة» ← التفريغ بالـ API)'),'مقاطع اتفرّغت: '+TR.ok+' · بتستنى: '+TR.q.length+' · أخطاء: '+TR.err+(TR.last?' · آخر مشكلة: '+TR.last:'')];
