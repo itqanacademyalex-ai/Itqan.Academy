@@ -438,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-c';
+const VER='2026.11.15-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3429,9 +3429,13 @@ function rcStatus(){const e=$('#rcst');if(!e)return;let h='';
  e.innerHTML=h}
 function recUi(){const el=$('#recs');if(!el)return;if(role=='c'||!RUPS.length){el.hidden=true;return}
  const u=RUPS[0];el.hidden=false;el.textContent=u.err?'⚠️ تعذر رفع التسجيل — ستتم إعادة المحاولة':'☁️ جارٍ رفع التسجيل… '+recMB(u.meta.off)+' ميجا'+(recSelfEng?'':' (لا تغلق الصفحة)')}
-function recRefresh(){recUi();rcStatus()}
+function recRefresh(){recUi();rcStatus();try{upChip()}catch(e){}}
 setInterval(()=>{if(typeof SXS!=='undefined'&&sxAll().some(X=>X.rec))rcStatus()},1000);
-addEventListener('beforeunload',e=>{if(recBusy()){e.preventDefault();e.returnValue=''}});
+addEventListener('beforeunload',e=>{if(recBusy()&&!window.NOWARN){e.preventDefault();e.returnValue=''}});
+/* ☁️ شريط صغير تحت في الرئيسية: الرفع شغّال في الخلفية وفاضل كام */
+function upChip(){let c=$('#upchip');let ed=false;try{ed=!!endDone}catch(e){}let ro='';try{ro=role}catch(e){}const busy=RUPS.length&&(!ro||ro=='c'||ed);if(!busy){if(c)c.remove();return}
+ if(!c){c=document.createElement('div');c.id='upchip';c.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:400;background:#14283fee;border:1px solid #35607f;color:#e8eef5;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 8px 24px #0006;direction:rtl;white-space:nowrap;pointer-events:none';document.body.append(c)}
+ const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0);c.textContent=(RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
 recRecover(recRefresh);
 </script>
 
@@ -3628,16 +3632,13 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localS
  if(aiAutoOn()){try{sum=await Promise.race([aiAutoRun(),new Promise((_,j)=>setTimeout(()=>j(new Error('انتهت المهلة')),35000))])}catch(e){why=String(e&&e.message||e).slice(0,120)}}else why='لم يُضبط مفتاح الملخص';
  await upP;try{if(sum&&RC)driveUp(new Blob(['\ufeff'+sum],{type:'text/plain;charset=utf-8'}),recBase()+'_الملخص.txt','text/plain')}catch(e){}
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
- /* بنستنى الرفع يخلص ونبيّن الباقي بالميجا. لو المعلم قفل بدري: الأجزاء الباقية محفوظة على الجهاز وبتكمل لوحدها أول ما الموقع/البرنامج يتفتح تاني */
- try{await recP;const t0=Date.now();let skip=0,sb=null;while(RUPS.length&&!skip&&Date.now()-t0<180000){const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,c)=>x+(c.blob?c.blob.size:0),0),0);
-   $('#gt').textContent='📤 جارٍ رفع '+RUPS.length+' ملف على Drive'+(left?' — فاضل '+(left/1048576).toFixed(1)+' ميجا':'')+'… سيب الصفحة مفتوحة';
-   if(!sb&&Date.now()-t0>8000){sb=document.createElement('button');sb.className='w';sb.style.cssText='margin-top:10px;background:#27496b;font-weight:700';sb.textContent='🚪 اقفل دلوقتي — والرفع يكمل أول ما أفتح الموقع تاني';sb.onclick=()=>{skip=1};const g=$('#gate .card')||$('#gate');g&&g.append(sb)}
-   await new Promise(r=>setTimeout(r,700))}if(sb)sb.remove()}catch(e){}
+ /* مابنستناش الرفع: الأجزاء كلها بتتحفظ على الجهاز، والرفع بيكمل في الخلفية وهو على الرئيسية (أو أول ما الموقع يتفتح تاني) */
+ try{await recP;$('#gt').textContent='💾 بنحفظ الملفات على الجهاز…';await new Promise(r=>setTimeout(r,1500))}catch(e){}
  /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  /* من غير نافذة الملخص: رسالة قصيرة وبعدين الرئيسية */
- endDone=1;showGate('✅','انتهت الحصة — التقرير اتبعت والملفات اترفعت على Drive');setTimeout(()=>{location.href=location.pathname},1800)}
+ endDone=1;showGate('✅','انتهت الحصة — الفيديو والسبورة بيترفعوا على Drive في الخلفية');setTimeout(()=>{window.NOWARN=1;location.href=location.pathname},1500)}
 function sxDropWatch(X){clearTimeout(X.dropT);if(X.bye||!X.had||!mlOn())return;
  X.dropT=setTimeout(()=>{if(!sxLive(X)||X.hub||X.bye)return;mailSend('⚠️ انقطع اتصال المعلم عن الحصة '+(X.title||X.room),'انقطع اتصال المعلم'+(X.tn?' ('+X.tn+')':'')+' عن الحصة ('+(X.title||X.room)+') منذ حوالي دقيقة ونصف ولم يعد. قد يكون أغلق الصفحة أو انقطع الإنترنت عنده.\nالوقت: '+mailNow())},90000)}
 </script>
