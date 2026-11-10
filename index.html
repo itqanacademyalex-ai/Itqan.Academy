@@ -438,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-e';
+const VER='2026.11.15-f';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3129,6 +3129,8 @@ let _db=null;
 function rdb(){return _db||(_db=new Promise((res,rej)=>{const q=indexedDB.open('itqan_rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('meta',{keyPath:'id'});d.createObjectStore('chunks',{keyPath:'key'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))}
 async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
 /* ---- الرفع (عبر سكريبت Google) ---- */
+/* أخطاء نت (مهلة/انقطاع/السيرفر مشغول) ← إعادة المحاولة، مش تحويل لسكربت تاني */
+const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|NetworkError)/i.test(String(e&&e.message||e));
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -3141,7 +3143,7 @@ function recUp(meta,onSt){
   try{
    /* الرفع بيروح لسكربت السجل الأول (بيعمل فولدر لكل حصة)، ولو مارضيش بيرجع لسكربت التسجيل القديم */
    if(!meta.sid){if(!meta.fb&&REG_URL&&meta.u!==REG_URL){meta.u0=meta.u;meta.u=REG_URL}
-    let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||'',c:meta.c||''})}catch(e){if(meta.u0&&!meta.fb){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
+    let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||'',c:meta.c||''})}catch(e){/* مشكلة نت ← نعيد على نفس السجل (عشان الملف يروح لفولدر الحصة ويظهر في المكتبة). نرجع للسكربت القديم بس لو السجل رفض فعلًا */if(meta.u0&&!meta.fb&&!UPNET(e)){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
     meta.sid=j.s;await sv()}
    while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
@@ -3151,7 +3153,7 @@ function recUp(meta,onSt){
     meta.n=c.idx+1;await sv();onSt&&onSt()}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
-   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=2){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
+   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
 /* ---- المحرك: يرسم الفيديو على canvas ويدمج الأصوات ويسجل ---- */
