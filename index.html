@@ -438,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-z';
+const VER='2026.11.15-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2962,16 +2962,18 @@ function xpMake(tn){const rooms=fxList().filter(x=>x.tn===tn);if(!rooms.length)r
   '<label style="flex:1;display:flex;flex-direction:column;gap:4px"><small>⏳ المدة</small><select id="xpd" style="'+ip+'">'+[[60,'ساعة'],[90,'ساعة ونص'],[120,'ساعتين'],[150,'ساعتين ونص'],[180,'3 ساعات']].map(([v,t])=>'<option value="'+v+'"'+(v==120?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>'+
   '<button class="sxb g" id="xpgo" style="padding:12px;font-size:15px">💾 حفظ وابعت للمعلم على واتساب</button><small id="xpe" style="color:#a9bccd;line-height:1.7"></small></div>';
  document.body.appendChild(m);m.onclick=e=>{if(e.target===m)m.remove()};$('#xpx').onclick=()=>m.remove();
- $('#xpgo').onclick=function(){const x=rooms[+$('#xpr').value||0],t=($('#xpt').value||hh).padStart(5,'0'),mins=+$('#xpd').value||120;if(!x)return;
-  /* نفتح تاب واتساب دلوقتي (جوه الضغطة) ونملاه بالرسالة بعد ما تجهز */
-  const w=window.open('','_blank');const n2=cNow(),date=n2.getFullYear()+'-'+String(n2.getMonth()+1).padStart(2,'0')+'-'+String(n2.getDate()).padStart(2,'0');
-  const a=fxList(),y=a.find(r=>r.room===x.room);y.sch=(y.sch||[]).filter(q=>!q.date||q.date>=date);y.sch.push({d:n2.getDay(),t,m:mins,date});y.schL=1;fxPut(a);regSync(1);fxRender();
-  this.disabled=true;this.textContent='⏳ بنجهّز الرسالة…';
-  tLink(tn).then(({url})=>{const msg='⚡ أ/ '+tn+' — عندك حصة استثنائية النهارده:\n📚 '+(x.title||fmtCode(x.room))+'\n⏰ الساعة '+t12a(t)+' لمدة '+(mins/60)+' ساعة (تقدر تدخل قبلها بـ 10 دقايق)\n\n📲 افتح لينك حصصك واضغط على الحصة:\n'+url,wa='https://wa.me/?text='+encodeURIComponent(msg);
-   toast('⚡','الحصة الاستثنائية اتسجّلت');
-   if(w&&!w.closed){w.location.href=wa;m.remove();return}
-   /* المتصفح منع التاب: زرار يفتحه بضغطة */
-   this.remove();$('#xpe').innerHTML='✅ اتسجّلت — المتصفح منع فتح واتساب لوحده، اضغطي هنا:';const b=document.createElement('a');b.href=wa;b.target='_blank';b.rel='noopener';b.className='sxb g';b.style.cssText='padding:12px;font-size:15px;text-align:center;text-decoration:none';b.textContent='📲 افتحي واتساب وابعتي الرسالة';b.onclick=()=>setTimeout(()=>m.remove(),300);$('#xpe').after(b)}).catch(()=>{if(w)w.close();this.disabled=false;this.textContent='💾 حفظ وابعت للمعلم على واتساب';$('#xpe').textContent='تعذّر تجهيز الرسالة — حاولي تاني'})}}
+ /* لينك المعلم بيتجهّز من أول ما الفورم يفتح — عشان الضغطة تفتح واتساب على طول (أي انتظار بعد الضغطة بيخلّي المتصفح أو البرنامج يمنعه) */
+ let URL0=null;const go=$('#xpgo');go.disabled=true;go.textContent='⏳ لحظة…';tLink(tn).then(({url})=>{URL0=url;go.disabled=false;go.textContent='💾 حفظ وابعت للمعلم على واتساب'},()=>{go.textContent='تعذّر تجهيز لينك المعلم — اقفلي وافتحي تاني'});
+ go.onclick=function(){const x=rooms[+$('#xpr').value||0],t=($('#xpt').value||hh).padStart(5,'0'),mins=+$('#xpd').value||120;if(!x||!URL0)return;
+  const n2=cNow(),date=n2.getFullYear()+'-'+String(n2.getMonth()+1).padStart(2,'0')+'-'+String(n2.getDate()).padStart(2,'0');
+  const msg='⚡ أ/ '+tn+' — عندك حصة استثنائية النهارده:\n📚 '+(x.title||fmtCode(x.room))+'\n⏰ الساعة '+t12a(t)+' لمدة '+(mins/60)+' ساعة (تقدر تدخل قبلها بـ 10 دقايق)\n\n📲 افتح لينك حصصك واضغط على الحصة:\n'+URL0,wa='https://wa.me/?text='+encodeURIComponent(msg);
+  const opened=window.open(wa,'_blank');
+  const a=fxList(),y=a.find(r=>r.room===x.room);y.sch=(y.sch||[]).filter(q=>!q.date||q.date>=date);y.sch.push({d:n2.getDay(),t,m:mins,date});y.schL=1;fxPut(a);regSync(1);fxRender();toast('⚡','الحصة الاستثنائية اتسجّلت');
+  /* زرار احتياطي دايمًا (لو واتساب مااتفتحش، أو عايزة تبعتيها تاني) + نسخ الرسالة */
+  this.remove();$('#xpe').innerHTML='✅ اتسجّلت'+(opened?' — واتساب اتفتح':'')+'. لو واتساب مافتحش اضغطي هنا:';
+  const b=document.createElement('a');b.href=wa;b.target='_blank';b.rel='noopener';b.className='sxb g';b.style.cssText='padding:12px;font-size:15px;text-align:center;text-decoration:none;display:block';b.textContent='📲 افتحي واتساب وابعتي الرسالة';
+  const cp=document.createElement('button');cp.className='sxb d';cp.style.cssText='padding:10px';cp.textContent='📋 انسخي الرسالة';cp.onclick=async()=>{try{await navigator.clipboard.writeText(msg);toast('✅','الرسالة اتنسخت — الصقيها في واتساب')}catch(e){prompt('انسخي:',msg)}};
+  $('#xpe').after(b,cp)}}
 /* ===== 🎓 لينكات الطلاب: لينك ثابت لكل مجموعة — الطالب يضغط ويدخل غرفة الانتظار ===== */
 /* 🔎 بحث في اللينكات: اسم المجموعة أو المعلم أو الكود — من غير ما يفرق همزة/تاء مربوطة/تشكيل */
 const qN=t=>String(t||'').toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim();
