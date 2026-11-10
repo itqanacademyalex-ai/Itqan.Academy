@@ -270,7 +270,9 @@ function jput_(f, name, o) { const x = fileIn_(f, new RegExp('^' + name.replace(
 /* ▶ Run من المحرر: بيختار الموديل ويجرّبه — النتيجة في Execution log */
 function testGemini() { PropertiesService.getScriptProperties().deleteProperty('gem_model'); const m = gemPick_(); Logger.log('الموديل: ' + m + '\n' + JSON.stringify(gem_([{ text: 'رجّع JSON: {"ok":true}' }], 0))); }
 const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
-const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null })) });
+const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null, fig: q.fig || '' })) });
+/* رسمة السؤال (هندسة/رسم بياني): SVG بس، من غير سكربت ولا روابط خارجية — والموقع بيعرضها كصورة فمفيش أي كود بيشتغل */
+function fig_(v) { const t = String(v || '').trim(); if (!/^<svg[\s>]/i.test(t) || t.length > 30000 || /<script|on\w+\s*=|javascript:|<foreignObject|href\s*=\s*["']?(?!#)/i.test(t)) return ''; return t; }
 
 /* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
    وتريجر hwJob بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
@@ -310,20 +312,21 @@ function hwMake_(c, d, re) {
   const room = load_()[b.c] || {};
   const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
     'لو المادة بالإنجليزي (أو أي لغة غير العربي): اكتب كل حاجة بلغة المادة — العنوان ونص كل سؤال وتعليماته (Choose the correct answer / True or False / Complete …) والإجابة والشرح — من غير ولا كلمة عربي.\n' +
+    'لو السؤال محتاج رسمة (هندسة: مثلث/زوايا/دايرة، أو رسم بياني/محاور/خط أعداد، أو شكل) ضيف للسؤال حقل "fig" فيه كود SVG بسيط وواضح: viewBox، خلفية بيضا، خطوط سودا تخينة، تسميات بالحروف والأرقام، ومن غير صور خارجية ولا سكربت. الأسئلة اللي مش محتاجة رسمة من غير fig.\n' +
     'الكسور اكتبها بالشكل 3/4 (والعدد الكسري 1 2/3) — الموقع بيعرضها بشرطة أفقية.\n' +
     'بالظبط 10 أسئلة متنوعة ومتدرجة من السهل للصعب: 4 اختيار من متعدد (4 اختيارات)، 2 صح وغلط، 2 أكمل، 2 سؤال مقالي/مسألة قصيرة.\n' +
-    'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة"}]}' }];
+    'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة","fig":"<svg ...> (اختياري — للأسئلة اللي محتاجة رسمة بس)"}]}' }];
   if (pdf && pdf.getSize() < 18e6) parts.push({ inline_data: { mime_type: 'application/pdf', data: Utilities.base64Encode(pdf.getBlob().getBytes()) } });
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
   let o; try { o = gem_(parts); } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
-  const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
+  const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400), fig: fig_(q.fig) }));
   if (!qs.length) return ({ ok: false, e: 'gen' });
   const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
   return ({ ok: true, hw: hw });
 }
 function hwPub_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
-  const h = b.hw || {}; const qs = (h.qs || []).filter(q => q && q.q).slice(0, 15).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400) }));
+  const h = b.hw || {}; const qs = (h.qs || []).filter(q => q && q.q).slice(0, 15).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400), fig: fig_(q.fig) }));
   if (!qs.length) return out_({ ok: false, e: 'empty' });
   const hw = { st: b.pub ? 'pub' : 'draft', at: Date.now(), title: String(h.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
   if (b.pub) { const t = '📝 ' + (hw.title || 'الواجب') + ' — الإجابات النموذجية\n\n' + qs.map((q, i) => (i + 1) + ') ' + q.q + (q.options ? '\n   [' + q.options.join(' / ') + ']' : '') + '\n   ✅ ' + q.answer + (q.explain ? '\n   💡 ' + q.explain : '')).join('\n\n');
