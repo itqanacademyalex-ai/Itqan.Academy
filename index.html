@@ -271,6 +271,9 @@ body{background:radial-gradient(1200px 700px at 85% -10%,#1b3a5c 0%,transparent 
 body.stu{background:radial-gradient(1200px 600px at 85% -10%,rgba(26,148,134,.22),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(227,192,141,.14),transparent 60%),linear-gradient(160deg,#0a1422 0%,#0f2236 55%,#132c44 100%) fixed}
 body.stu #gate{background:radial-gradient(1200px 600px at 85% -10%,rgba(26,148,134,.22),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(227,192,141,.14),transparent 60%),linear-gradient(160deg,#0a1422 0%,#0f2236 55%,#132c44 100%);padding-top:96px}
 #sxfx.fxsel .sxr:not(:first-child) .bt{display:none}
+/* مفيش تحديد (select) للكلام في الواجهة — بيبان كأن حاجات متعلّمة وبيفتح قايمة الكليك يمين. الكتابة في الخانات شغّالة عادي */
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* ½ كسر بشرطة أفقية */
 .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.15;margin:0 3px;direction:ltr}.fr>span:first-child{border-bottom:1.6px solid currentColor;padding:0 3px}
 #stabs{position:fixed;top:0;left:0;right:0;z-index:255;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(180deg,rgba(10,20,34,.92),rgba(10,20,34,.6));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06);direction:rtl}
@@ -435,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.14-y';
+const VER='2026.11.14-z';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1684,6 +1687,8 @@ function wbCancel(){if(role!='t'){sdr=null;sPrev=null;redraw();return}if(!drag)r
  drag=null;cur=null;pv=null;rebuild()}
 /* نقط القلم بتتبعت كل 25ms (مقرّبة لرقم عشري واحد = رسالة أصغر)، ولو القلم وقف شوية النقط اللي فاضلة بتتبعت لوحدها بدل ما تستنى */
 let flT=0;function flush(f){clearTimeout(flT);if(!pend.length)return;if(f||Date.now()-lastSend>25){bc({t:'sp',p:pend.map(q=>q.map((v,i)=>i<2?Math.round(v*10)/10:v))});pend=[];lastSend=Date.now()}else flT=setTimeout(()=>flush(true),25)}
+/* أيقونة القلم الليزر (رسمة SVG بدل 🪄 اللي بتظهر مربع على أجهزة كتير) */
+const LZICO='<svg viewBox="0 0 24 24" width="28" height="28" style="display:block;margin:auto" aria-hidden="true"><circle cx="4.2" cy="4.2" r="3.8" fill="#ff3b3b" opacity=".3"/><circle cx="4.2" cy="4.2" r="2.2" fill="#ff2d2d"/><g transform="rotate(-45 13 13)"><rect x="10.2" y="4.6" width="5.6" height="18.6" rx="2.6" fill="#eef2f6" stroke="#22313f" stroke-width="1.1"/><rect x="10.2" y="15" width="5.6" height="2.4" fill="#8aa0b6"/><circle cx="13" cy="10" r="1.25" fill="#e5484d"/><rect x="11.2" y="2.4" width="3.6" height="2.6" rx=".6" fill="#5b6b7c"/></g><path d="M6 6 8.6 8.6" stroke="#ff3b3b" stroke-width="1.8" stroke-linecap="round"/></svg>';
 /* ===== 🪄 القلم السحري (ليزر): الكتابة بتلمع بالأحمر وبتختفي لوحدها بعد ثانيتين — للإشارة والشرح من غير ما توسّخ السبورة ===== */
 const LZ=[],LZH=1100,LZF=900;let lzR=0;
 function lzAdd(p,n){const now=performance.now();if(n||!LZ.length)LZ.push({p:[p],l:now});else{const L=LZ[LZ.length-1];L.p.push(p);L.l=now}if(LZ.length>40)LZ.shift();lzLoop()}
@@ -1758,7 +1763,7 @@ function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
  /* صفحات السبورة جنب القلم عشان تبان على الموبايل: قبل / رقم الصفحة / بعد / صفحة جديدة / تحميل الكل PDF */
  SP();B('▶','الصفحة اللي قبل',()=>pgGo(pi-1));B('1/1','الصفحات: جديدة / استيراد PDF / حفظ PDF',function(){tbPop(this,'pg')},'pgl dd');B('◀','الصفحة اللي بعد',()=>pgGo(pi+1));
  B('➕','صفحة جديدة فاضية بعد الصفحة دي',()=>pgNew());B('📑','تحميل كل صفحات السبورة في ملف PDF واحد',()=>pgPdf());SP();
- B('🪄','القلم السحري (ليزر) — الكتابة بتلمع وبتختفي لوحدها بعد ثانيتين',()=>setTool('lz')).dataset.tool='lz';
+ B(LZICO,'القلم الليزر — الكتابة بتلمع وبتختفي لوحدها بعد ثانيتين',()=>setTool('lz')).dataset.tool='lz';
  B('✨','القلم الذكي — ارسم شكل بإيدك (خط، دائرة، مربع، مثلث…) ويتحوّل لشكل منتظم',()=>setTool('sm')).dataset.tool='sm';
  B('🖊','هايلايتر — اضغط مرتين للون والسُمك',function(){toolTap(this,'hl')}).dataset.tool='hl';
  B('🧽','ممحاة — اضغط مرتين لاختيار: ممحاة جزء / ممحاة الخط كله',function(){toolTap(this,tool=='se'?'se':'era')}).dataset.tool='era';
@@ -2646,6 +2651,9 @@ function drawSP(){const c=cx;c.save();c.setTransform(S,0,0,S,OX,OY);
  const n=Date.now();for(const k in lps){const l=lps[k];if(n-l.ts>1500)continue;c.fillStyle='rgba(229,72,77,.85)';c.beginPath();c.arc(l.x,l.y,10,0,7);c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke();c.font='bold 16px sans-serif';c.fillStyle='#111';c.textAlign='left';c.fillText(l.n,l.x+14,l.y-12)}
  c.restore()}
 try{setLang(localStorage.getItem('itqan_lang')||'ar')}catch(e){setLang('ar')}
+/* مفيش قايمة كليك يمين (ولا ضغطة طويلة) على الواجهة — في خانات الكتابة بس */
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea,[contenteditable]'))e.preventDefault()},true);
+document.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===3?e.target.parentElement:e.target;if(!t||!t.closest||!t.closest('input,textarea,[contenteditable]'))e.preventDefault()},true);
 </script>
 
 <script>
