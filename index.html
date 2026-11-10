@@ -438,7 +438,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-d';
+const VER='2026.11.15-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3130,9 +3130,10 @@ function rdb(){return _db||(_db=new Promise((res,rej)=>{const q=indexedDB.open('
 async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
 /* ---- الرفع (عبر سكريبت Google) ---- */
 function recUp(meta,onSt){
- const U={meta,q:[],busy:0,err:'',fails:0,fin:0};
+ const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
- const api=async b=>{const r=await fetch(meta.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:meta.k,...b})});if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(!j.ok)throw new Error(j.e||'error');return j};
+ /* كل طلب ليه مهلة دقيقتين: لو النت اتغيّر (4G ← Wi-Fi) الطلب بيعلّق للأبد — كده بيتلغى ويتعاد لوحده */
+ const api=async b=>{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),120000);let r;try{r=await fetch(meta.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:meta.k,...b}),signal:ac.signal})}catch(e){throw new Error(ac.signal.aborted?'timeout':'net')}finally{clearTimeout(tm)}if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(!j.ok)throw new Error(j.e||'error');return j};
  const b64=bl=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>{const r=String(f.result),i=r.indexOf(';base64,');res(i<0?'':r.slice(i+8))};f.onerror=()=>rej(f.error);f.readAsDataURL(bl)});
  U.save=sv;
  U.add=c=>{U.q.push(c);rtx('chunks','readwrite',s=>s.put({key:meta.id+':'+c.idx,id:meta.id,idx:c.idx,blob:c.blob,last:c.last})).catch(()=>{});U.pump()};
@@ -3145,7 +3146,7 @@ function recUp(meta,onSt){
    while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
     catch(e){let r=-1;try{r=(await api({a:'status',s:meta.sid})).r}catch(x){}if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
-    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
+    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
@@ -3435,7 +3436,13 @@ addEventListener('beforeunload',e=>{if(recBusy()&&!window.NOWARN){e.preventDefau
 /* ☁️ شريط صغير تحت في الرئيسية: الرفع شغّال في الخلفية وفاضل كام */
 function upChip(){let c=$('#upchip');let ed=false;try{ed=!!endDone}catch(e){}let ro='';try{ro=role}catch(e){}const busy=RUPS.length&&(!ro||ro=='c'||ed);if(!busy){if(c)c.remove();return}
  if(!c){c=document.createElement('div');c.id='upchip';c.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:400;background:#14283fee;border:1px solid #35607f;color:#e8eef5;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 8px 24px #0006;direction:rtl;white-space:nowrap;pointer-events:none';document.body.append(c)}
- const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0);c.textContent=(RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
+ const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0),stuck=RUPS.every(u=>Date.now()-(u.ok||0)>180000);
+ c.style.pointerEvents='auto';c.style.cursor='pointer';c.onclick=()=>upKick(1);
+ c.textContent=(stuck?'⚠️ الرفع واقف — اضغط هنا يكمّل ':RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
+/* لو الرفع وقف (أو النت رجع): نكمّل. الضغط على الشريط بيبدأ من جديد من الأجزاء المحفوظة على الجهاز */
+function upKick(force){if(force){window.NOWARN=1;location.reload();return}RUPS.forEach(u=>{try{u.pump()}catch(e){}})}
+addEventListener('online',()=>upKick());document.addEventListener('visibilitychange',()=>{if(!document.hidden)upKick()});
+setInterval(()=>{try{upChip()}catch(e){}},15000)
 recRecover(recRefresh);
 </script>
 
