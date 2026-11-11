@@ -17,7 +17,12 @@ const DUR = 120;    // مدة الحصة بالدقايق (لو مفيش عمو�
 const DAYS = { 'الأحد': 0, 'الاحد': 0, 'الإثنين': 1, 'الاثنين': 1, 'الإتنين': 1, 'الثلاثاء': 2, 'التلات': 2, 'الأربعاء': 3, 'الاربعاء': 3, 'الخميس': 4, 'الجمعة': 5, 'السبت': 6 };
 
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-function load_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('rooms') || '{}'); } catch (e) { return {}; } }
+/* الجدول بيتحفظ على أجزاء (كل خانة في Script Properties أقصاها 9 كيلو — الجدول الكامل بقى أكبر من كده فكان التحديث بيترفض) */
+function load_() { try { const P = PropertiesService.getScriptProperties(), n = +(P.getProperty('rooms_n') || 0); if (!n) return JSON.parse(P.getProperty('rooms') || '{}');
+  let t = ''; for (let i = 0; i < n; i++) t += P.getProperty('rooms_' + i) || ''; return JSON.parse(t || '{}'); } catch (e) { return {}; } }
+function save_(R) { const P = PropertiesService.getScriptProperties(), t = JSON.stringify(R), old = +(P.getProperty('rooms_n') || 0), o = {};
+  let i = 0; for (let k = 0; k < t.length; k += 2500) o['rooms_' + (i++)] = t.slice(k, k + 2500); o.rooms_n = String(i); P.setProperties(o);
+  for (let k = i; k < old; k++) P.deleteProperty('rooms_' + k); P.deleteProperty('rooms'); }
 function min_(t) { const p = String(t).split(':'); return (+p[0]) * 60 + (+p[1] || 0); }
 const norm_ = s => String(s || '').replace(/[ً-ْـ]/g, '').trim();
 
@@ -135,7 +140,7 @@ function doPost_(e) {
       if (!/^[a-z0-9]{4,6}$/.test(c)) return;
       R[c] = { v: String(r.v || '').slice(0, 20), h: /^[a-f0-9]{64}$/.test(r.h || '') ? r.h : '', t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
     });
-    PropertiesService.getScriptProperties().setProperty('rooms', JSON.stringify(R));
+    save_(R);
     /* لينك المعلم الثابت: أكواد حصص كل معلم (متشفّرة بكوده) — بتتحفظ باسم بصمة (اسمه + كوده)، فمحدش ياخدها من غير الكود */
     if (Array.isArray(b.teachers)) { const P = PropertiesService.getScriptProperties(), keep = {}, o = {};
       b.teachers.slice(0, 200).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.b || ''); if (/^[a-f0-9]{64}$/.test(h) && /^[A-Za-z0-9_-]{40,8000}$/.test(x)) { o['tb_' + h] = x; keep['tb_' + h] = 1; } });
