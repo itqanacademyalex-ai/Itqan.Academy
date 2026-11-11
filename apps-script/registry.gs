@@ -99,6 +99,7 @@ function doGet_(e) {
     return out_({ ok: true, items: out });
   }
   /* أكواد حصص المعلم المتشفّرة — بالبصمة بس (اسمه + كوده) */
+  if (p.a === 'tr') { const h = String(p.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false }); const x = PropertiesService.getScriptProperties().getProperty('tr_' + h); return out_(x ? { ok: true, p: x } : { ok: false }); }
   if (p.a === 'tb') { const h = String(p.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false }); const x = PropertiesService.getScriptProperties().getProperty('tb_' + h); return out_(x ? { ok: true, b: x } : { ok: false, e: 'notfound' }); }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
@@ -140,6 +141,11 @@ function doPost_(e) {
       b.teachers.slice(0, 200).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.b || ''); if (/^[a-f0-9]{64}$/.test(h) && /^[A-Za-z0-9_-]{40,8000}$/.test(x)) { o['tb_' + h] = x; keep['tb_' + h] = 1; } });
       let old = []; try { old = JSON.parse(P.getProperty('tb_keys') || '[]'); } catch (e) {}
       o.tb_keys = JSON.stringify(Object.keys(keep)); P.setProperties(o); old.forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
+    /* كود المعلم الموحّد ← كود كل غرفة من غرفه (بالبصمة بتاعة «الغرفة + الكود الموحّد») */
+    if (Array.isArray(b.tpins)) { const P = PropertiesService.getScriptProperties(), keep = {}, o = {};
+      b.tpins.slice(0, 400).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.p || ''); if (/^[a-f0-9]{64}$/.test(h) && /^\d{4,6}$/.test(x)) { o['tr_' + h] = x; keep['tr_' + h] = 1; } });
+      let old = []; try { old = JSON.parse(P.getProperty('tr_keys') || '[]'); } catch (e) {}
+      o.tr_keys = JSON.stringify(Object.keys(keep)); P.setProperties(o); old.forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
     return out_({ ok: true, n: Object.keys(R).length });
   }
   return out_({ ok: false });
