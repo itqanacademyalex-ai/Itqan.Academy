@@ -77,7 +77,8 @@ function doGet_(e) {
     /* ميعاد ليه تاريخ (حصة استثنائية) بيشتغل في اليوم ده بس */
     const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
     const allow = s.some(q => (q[3] ? q[3] === today : +q[0] === d) && n >= min_(q[1]) - EARLY && n < min_(q[1]) + (+q[2] || DUR));
-    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, today: today, src: (r.s && r.s.length) ? 'app' : 'sheet' });
+    const lv = +(PropertiesService.getScriptProperties().getProperty('lv_' + c) || 0);
+    return out_({ ok: true, known: true, v: r.v || '', allow: allow, live: Date.now() - lv < 150000, s: s, now: hm, d: d, today: today, src: (r.s && r.s.length) ? 'app' : 'sheet' });
   }
   /* حصص معلم واحد (لـ «حصصي» عند المعلم): بالاسم، أو باسم معلم الغرفة c */
   if (p.a === 'tl') {
@@ -118,6 +119,10 @@ function doPost_(e) {
   if (b.a === 'lib') return doGet_({ parameter: { a: 'lib', c: b.c } });
   /* القراءات كمان بـ POST (طلبات GET ساعات بتترفض من جوجل قبل ما توصل هنا) */
   if (/^(chk|tl|tb|tr|fxget)$/.test(String(b.a || ''))) { const q = {}; Object.keys(b).forEach(k => { if (typeof b[k] !== 'object') q[k] = String(b[k]); }); return doGet_({ parameter: q }); }
+  /* 🟢 المعلم فاتح الحصة: جهازه بيبلّغ كل دقيقة (بكوده أو ببصمة مفتاح الغرفة) */
+  if (b.a === 'live') { const c = String(b.c || '').toLowerCase(), r = load_()[c]; if (!r) return out_({ ok: false });
+    if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
+    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now())); return out_({ ok: true }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
