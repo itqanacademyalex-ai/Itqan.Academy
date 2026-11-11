@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-p';
+const VER='2026.11.15-t';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -668,6 +668,11 @@ async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()
 async function regQ(o,ms){const u=regUrl();if(!u)return null;const tmo=f=>{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||12000);return f(ac.signal).finally(()=>clearTimeout(t))};
  try{const j=await tmo(sg=>fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:sg}).then(r=>r.text())).then(t=>JSON.parse(t));if(j&&(j.ok||(j.e&&j.e!='key')))return j}catch(e){}
  try{const q=Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');return await tmo(sg=>fetch(u+(u.includes('?')?'&':'?')+q+'&t='+Date.now(),{signal:sg}).then(r=>r.json()))}catch(e){return null}}
+/* 🟢 المعلم جوه الحصة: جهاز المعلم بيبلّغ السجل كل دقيقة إنه فاتح — عشان الطالب يعرف على طول لو المعلم لسه مادخلش */
+let liveT=0;async function liveSend(off){if(role!='t'||!room)return;const pin=tpGet(room);try{const h=pin?await hwH(room,pin):'',v=LK&&LK.k?fpOf(LK.k):'',u=regUrl();if(!u||(!h&&!v))return;
+ fetch(u,{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'live',c:room,h,v,off:off?1:0})}).catch(()=>{})}catch(e){}}
+function liveOn(){clearInterval(liveT);liveSend(0);liveT=setInterval(()=>liveSend(0),60000)}
+function liveOff(){clearInterval(liveT);liveT=0;liveSend(1)}
 async function regOne(code){const u=regUrl();if(!u)return null;const j=await regQ({a:'chk',c:code},10000);return j&&j.ok?j:null}
 /* بنسأل سجل جوجل (جدول السكرتارية) وملف الموقع مع بعض: سجل جوجل الأول، والملف احتياطي */
 async function regChk(code){const[G,S]=await Promise.all([regOne(code),siteChk(code)]);
@@ -877,7 +882,9 @@ function codeLanding0(c,r){
  /* لينك فيه الكود: شاشة البداية بتفتح والكود مكتوب لوحده والدور مختار، وبيدوّر على الحصة على طول */
  /* لينك المعلم: الكود المحفوظ (أو كود المعلم مرة واحدة) ← الحصة على طول. لينك الطالب: على طول لغرفة الانتظار — من غير اختيار دور ولا أرقام */
  if(r=='t')return tOpenCode(c);
- $('#join').hidden=true;libBtn(c);const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
+ $('#join').hidden=true;libBtn(c);let first=1;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
+ /* جدول الحصص بيرد أسرع من خادم الاتصال: لو مش وقت الحصة نقول على طول، والبحث بيكمل في الخلفية */
+ if(first){first=0;regChk(c).then(R=>{if(!R||!R.known||!(R.s||[]).length||$('#gate').hidden)return;if(R.allow){if(R.live===false&&/جارٍ البحث/.test($('#gt').textContent))showGate('🕒','👩‍🏫 المعلم لسه مادخلش الحصة '+fmtCode(c)+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.');return}const nx=nextSlot(R.s,R.d,R.now);if(/جارٍ البحث/.test($('#gt').textContent))showGate('🕒','الحصة '+fmtCode(c)+' مش وقتها دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.')}).catch(()=>{})}
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');nextFor(c).then(n=>{if(n&&!$('#gate').hidden)$('#gt').textContent='🗓 الحصة الجاية '+n+'\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.'});libBtn(c);setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
 function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
  if(u.origin!==location.origin||u.pathname!==location.pathname||!q.get('s')||!q.get('k')||!/^(t|s)$/.test(q.get('r')||''))return null;return u}catch(e){return null}}
@@ -1132,7 +1139,7 @@ async function tReq(pin){
  /* لما المعلم يرجع للصفحة (بعد ما كان في تطبيق أو تبويب تاني) نعيد المحاولة فوراً */
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!got){if(c&&!c.open)c=null;later(300)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();{const back=tRestore();/* إيميل «المعلم فتح الحصة» بيتبعت دايماً أول ما المعلم يفتح (حتى لو الإيميلات الفورية مقفولة) */if(back){if(MAILLIVE)mailSend('↩️ عاد المعلم للغرفة '+fmtCode(roomName),'عاد المعلم ('+name+') إلى الغرفة: '+fmtCode(roomName)+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow())}else mailTeacherIn()}sys(window._selfOpen?'✓ فتحت الحصة بكودك — أنت الآن مسؤول عن الحصة، والطلاب هيستنوا في غرفة الانتظار لحد ما تدخّلهم':'✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();try{liveOn()}catch(e){}{const back=tRestore();/* إيميل «المعلم فتح الحصة» بيتبعت دايماً أول ما المعلم يفتح (حتى لو الإيميلات الفورية مقفولة) */if(back){if(MAILLIVE)mailSend('↩️ عاد المعلم للغرفة '+fmtCode(roomName),'عاد المعلم ('+name+') إلى الغرفة: '+fmtCode(roomName)+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow())}else mailTeacherIn()}sys(window._selfOpen?'✓ فتحت الحصة بكودك — أنت الآن مسؤول عن الحصة، والطلاب هيستنوا في غرفة الانتظار لحد ما تدخّلهم':'✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
@@ -1477,7 +1484,7 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  if(conn&&conn.open)return;
  try{conn&&conn.close()}catch(e){}
  const c=conn=peer.connect('itqan-'+room,{reliable:true});let ok=0;
- const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
+ const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
  c.on('open',()=>{ok=1;cFail=0;clearTimeout(ct);vOk=0;vNonce=rnd();c.send({t:'chal',n:vNonce})});
  c.on('data',sData);
  c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;if(admitted){admitted=0;sys('انقطع الاتصال بالمعلم')}dropCall();showGate('🔒',CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)});
@@ -1485,11 +1492,15 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
 async function initS(){
  admitted=0;final=0;
  if(!(window.RTCPeerConnection||window.webkitRTCPeerConnection)){showGate('⚠️',T('noRtc'),1);return}
- showGate('⏳','جارٍ الاتصال بالغرفة...'+(sTries?' ('+(sTries+1)+')':''));
+ if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳','جارٍ الاتصال بالغرفة...'+(sTries?' ('+(sTries+1)+')':''));
+ /* في نفس الوقت بنسأل جدول الحصص: لو مش وقت الحصة بنقول على طول (بدل ما نستنى خادم الاتصال يرد) — والاتصال بيكمل في الخلفية وأول ما المعلم يفتح بيدخل */
+ if(!sTries)(async()=>{try{const R=await regChk(room);if(!R||!R.known||!(R.s||[]).length)return;if(admitted||(conn&&conn.open)||final)return;
+  if(R.allow){if(R.live===false){window.SCLOSED='👩‍🏫 المعلم لسه مادخلش الحصة.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}return}
+  const nx=nextSlot(R.s,R.d,R.now);window.SCLOSED='الحصة مش وقتها دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}catch(e){}})();
  const ice=await getIce();
  const p=peer=new Peer(undefined,{config:ice});let up=0;
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
- p.on('error',e=>{if(e.type=='peer-unavailable'){showGate('🔒',CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
+ p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
  p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn()});
  peer.on('call',c=>{c.answer();
@@ -1559,7 +1570,7 @@ function endCall(){
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;lastDel();if(role=='s')try{sessionStorage.setItem('itqan_left','1')}catch(e){}
  /* المعلم: علامة «الحصة خلصت» (عشان ماتفتحش لوحدها تاني) والرجوع للرئيسية بدل إعادة تحميل لينك الحصة */
- if(role=='t'){endDone=1;try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}}
+ if(role=='t'){endDone=1;try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}try{liveOff()}catch(e){}}
  if(role=='t'&&LOG.tr.length)try{trDl()}catch(e){}
  const fin=()=>{try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}if(role=='t')location.href=location.pathname;else location.reload()};
  /* نستنى إيميل تقرير الحصة يتبعت (لحد 15 ثانية) قبل إعادة التحميل — وإلا الطلب بيتقطع ومايوصلش */
@@ -3192,12 +3203,16 @@ function recUp(meta,onSt){
     meta.sid=j.s;await sv()}
    while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
-    catch(e){let r=-1;try{r=(await api({a:'status',s:meta.sid})).r}catch(x){}if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
+    catch(e){let r=-1,sd=null;try{sd=await api({a:'status',s:meta.sid});r=sd.r}catch(x){}
+     /* الجزء وصل فعلًا والرد بس اللي ضاع: نكمّل — ولو الملف كله خلص (آخر جزء) نعتبره اترفع */
+     if(sd&&sd.done)j={ok:1,done:1,id:sd.id||''};else if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
     meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
+   /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
+   if(/^session/.test(U.err)&&U.fails>=3){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
    if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
@@ -3484,7 +3499,7 @@ addEventListener('beforeunload',e=>{if(recBusy()&&!window.NOWARN){e.preventDefau
 function upChip(){let c=$('#upchip');let ed=false;try{ed=!!endDone}catch(e){}let ro='';try{ro=role}catch(e){}const busy=RUPS.length&&(!ro||ro=='c'||ed);if(!busy){if(c)c.remove();return}
  if(!c){c=document.createElement('div');c.id='upchip';c.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:400;background:#14283fee;border:1px solid #35607f;color:#e8eef5;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 8px 24px #0006;direction:rtl;white-space:nowrap;pointer-events:none';document.body.append(c)}
  const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0),stuck=RUPS.every(u=>Date.now()-(u.ok||0)>180000);
- c.style.pointerEvents='auto';c.style.cursor='pointer';c.onclick=()=>upKick(1);
+ c.style.pointerEvents='auto';c.style.cursor='pointer';c.onclick=()=>{const d=RUPS.map(u=>'• '+u.meta.name+'\n   اترفع '+recMB(u.meta.off)+' ميجا · فاضل '+recMB(u.q.reduce((a,k)=>a+(k.blob?k.blob.size:0),0))+' ميجا'+(u.err?'\n   آخر مشكلة: '+u.err+' (محاولة '+u.fails+')':'')).join('\n\n');if(confirm('☁️ الرفع:\n\n'+d+'\n\nOK = ابدأ الرفع من جديد دلوقتي'))upKick(1)};
  c.textContent=(stuck?'⚠️ الرفع واقف — اضغط هنا يكمّل ':RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
 /* لو الرفع وقف (أو النت رجع): نكمّل. الضغط على الشريط بيبدأ من جديد من الأجزاء المحفوظة على الجهاز */
 function upKick(force){if(force){window.NOWARN=1;location.reload();return}RUPS.forEach(u=>{try{u.pump()}catch(e){}})}
@@ -3673,7 +3688,7 @@ function attRep(l){const en=l=='en',ev=LOG.att.slice().sort((a,b)=>a.ts-b.ts),en
  const L=Object.values(M);if(!L.length)return en?'Attendance: no students joined.\n':'الحضور: لم يدخل أي طالب.\n';
  return(en?'===== Attendance ('+L.length+' students) =====\n':'===== الحضور ('+L.length+' طالب) =====\n')+L.map(m=>{const open=m.at!=null,mm=Math.round((m.tot+(open?end-m.at:0))/60000);
   return'- '+m.n+': '+(en?'joined ':'دخل ')+f(m.first)+(open?(en?' • stayed until the end':' • فضل لحد النهاية'):(en?' • left ':' • خرج ')+f(m.last))+' • '+mm+(en?' min':' د')+((open?m.drops>=1:m.drops>1)?(en?' • disconnected '+m.drops+'x':' • انقطع/خرج '+(m.drops==1?'مرة':m.drops+' مرات')):'')+(m.kicked?(en?' • removed':' • اتطرد'):'')}).join('\n')+'\n'}
-async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}
+async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{liveOff()}catch(e){}try{localStorage.setItem('itqan_end_'+room,String(Date.now()))}catch(e){}
  try{if(!$('#aip').hidden)aiSave()}catch(e){}
  showGate('⏳','جارٍ إنهاء الحصة وتجهيز الملخص… لا تغلق الصفحة');
  if(!forced)Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'انتهت الحصة — شكراً لكم'})}catch(e){}});

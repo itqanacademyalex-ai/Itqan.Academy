@@ -77,7 +77,8 @@ function doGet_(e) {
     /* ميعاد ليه تاريخ (حصة استثنائية) بيشتغل في اليوم ده بس */
     const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
     const allow = s.some(q => (q[3] ? q[3] === today : +q[0] === d) && n >= min_(q[1]) - EARLY && n < min_(q[1]) + (+q[2] || DUR));
-    return out_({ ok: true, known: true, v: r.v || '', allow: allow, s: s, now: hm, d: d, today: today, src: (r.s && r.s.length) ? 'app' : 'sheet' });
+    const lv = +(PropertiesService.getScriptProperties().getProperty('lv_' + c) || 0);
+    return out_({ ok: true, known: true, v: r.v || '', allow: allow, live: Date.now() - lv < 150000, s: s, now: hm, d: d, today: today, src: (r.s && r.s.length) ? 'app' : 'sheet' });
   }
   /* حصص معلم واحد (لـ «حصصي» عند المعلم): بالاسم، أو باسم معلم الغرفة c */
   if (p.a === 'tl') {
@@ -118,6 +119,10 @@ function doPost_(e) {
   if (b.a === 'lib') return doGet_({ parameter: { a: 'lib', c: b.c } });
   /* القراءات كمان بـ POST (طلبات GET ساعات بتترفض من جوجل قبل ما توصل هنا) */
   if (/^(chk|tl|tb|tr|fxget)$/.test(String(b.a || ''))) { const q = {}; Object.keys(b).forEach(k => { if (typeof b[k] !== 'object') q[k] = String(b[k]); }); return doGet_({ parameter: q }); }
+  /* 🟢 المعلم فاتح الحصة: جهازه بيبلّغ كل دقيقة (بكوده أو ببصمة مفتاح الغرفة) */
+  if (b.a === 'live') { const c = String(b.c || '').toLowerCase(), r = load_()[c]; if (!r) return out_({ ok: false });
+    if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
+    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now())); return out_({ ok: true }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
@@ -224,13 +229,15 @@ function upChunk_(b) {
     if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
     if (rc) C.remove('lib_' + rc);
     return out_({ ok: true, done: 1, id: id }); }
-  return out_({ ok: false, e: 'chunk ' + c });
+  return out_({ ok: false, e: 'chunk ' + c + ' ' + r.getContentText().slice(0, 80) });
 }
 function upStatus_(b) {
   const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
+  /* لو الملف خلص رفع فعلًا (والرد الأخير ضاع في النت) Drive بيرد 200 — نقول للموقع إنه خلص بدل ما يفضل يعيد */
+  const code = r.getResponseCode(); if (code == 200 || code == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} return out_({ ok: true, done: 1, id: id }); }
   const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
-  return out_({ ok: true, r: m ? +m[1] + 1 : 0 });
+  return out_({ ok: true, r: m ? +m[1] + 1 : 0, code: code });
 }
 /* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية Drive وبتعمل الفولدر الرئيسي */
 function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
