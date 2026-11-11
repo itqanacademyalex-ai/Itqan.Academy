@@ -229,13 +229,15 @@ function upChunk_(b) {
     if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
     if (rc) C.remove('lib_' + rc);
     return out_({ ok: true, done: 1, id: id }); }
-  return out_({ ok: false, e: 'chunk ' + c });
+  return out_({ ok: false, e: 'chunk ' + c + ' ' + r.getContentText().slice(0, 80) });
 }
 function upStatus_(b) {
   const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
+  /* لو الملف خلص رفع فعلًا (والرد الأخير ضاع في النت) Drive بيرد 200 — نقول للموقع إنه خلص بدل ما يفضل يعيد */
+  const code = r.getResponseCode(); if (code == 200 || code == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} return out_({ ok: true, done: 1, id: id }); }
   const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
-  return out_({ ok: true, r: m ? +m[1] + 1 : 0 });
+  return out_({ ok: true, r: m ? +m[1] + 1 : 0, code: code });
 }
 /* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية Drive وبتعمل الفولدر الرئيسي */
 function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
