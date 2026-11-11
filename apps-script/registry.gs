@@ -98,6 +98,8 @@ function doGet_(e) {
     out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lib_' + c, j, 21600); // بيتمسح لوحده أول ما ملف جديد يترفع أو واجب يتنشر
     return out_({ ok: true, items: out });
   }
+  /* أكواد حصص المعلم المتشفّرة — بالبصمة بس (اسمه + كوده) */
+  if (p.a === 'tb') { const h = String(p.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false }); const x = PropertiesService.getScriptProperties().getProperty('tb_' + h); return out_(x ? { ok: true, b: x } : { ok: false, e: 'notfound' }); }
   if (p.a === 'list') { try { return out_({ ok: true, rooms: sheet_() }); } catch (x) { return out_({ ok: false, e: String(x) }); } }
   return out_({ ok: false });
 }
@@ -133,6 +135,11 @@ function doPost_(e) {
       R[c] = { v: String(r.v || '').slice(0, 20), h: /^[a-f0-9]{64}$/.test(r.h || '') ? r.h : '', t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
     });
     PropertiesService.getScriptProperties().setProperty('rooms', JSON.stringify(R));
+    /* لينك المعلم الثابت: أكواد حصص كل معلم (متشفّرة بكوده) — بتتحفظ باسم بصمة (اسمه + كوده)، فمحدش ياخدها من غير الكود */
+    if (Array.isArray(b.teachers)) { const P = PropertiesService.getScriptProperties(), keep = {}, o = {};
+      b.teachers.slice(0, 200).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.b || ''); if (/^[a-f0-9]{64}$/.test(h) && /^[A-Za-z0-9_-]{40,8000}$/.test(x)) { o['tb_' + h] = x; keep['tb_' + h] = 1; } });
+      let old = []; try { old = JSON.parse(P.getProperty('tb_keys') || '[]'); } catch (e) {}
+      o.tb_keys = JSON.stringify(Object.keys(keep)); P.setProperties(o); old.forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
     return out_({ ok: true, n: Object.keys(R).length });
   }
   return out_({ ok: false });

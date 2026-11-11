@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-i';
+const VER='2026.11.15-j';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -719,12 +719,20 @@ async function tbMake(code,obj){const salt=crypto.getRandomValues(new Uint8Array
  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj))));const o=new Uint8Array(28+ct.length);o.set(salt);o.set(iv,16);o.set(ct,28);return b64u(o)}
 async function tbOpen(code,b){try{const u=ub64(b),k=await tbKey(code,u.slice(0,16));return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(16,28)},k,u.slice(28))))}catch(e){return null}}
 const tbGet=()=>{try{return localStorage.getItem('itqan_tb')||''}catch(e){return''}};
+/* 🔗 لينك المعلم الثابت: اللينك فيه اسمه بس — أكواد حصصه (متشفّرة بكوده) بتتجاب من سجل جوجل كل ما يفتح،
+   فلو السكرتارية زوّدت أو غيّرت حصصه بتظهر عنده لوحدها من غير لينك جديد. السجل مابيدّيش الأكواد غير لمين معاه كود المعلم */
+const tnGet=()=>{try{return localStorage.getItem('itqan_tname')||''}catch(e){return''}};
+const tbHas=()=>!!(tbGet()||tnGet());
+async function tbH(tn,code){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-tb|'+String(tn).trim()+'|'+String(code).trim()));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function tbFetch(code){const tn=tnGet(),u=regUrl();if(!tn||!u||!/^\d{6}$/.test(String(code||'').trim()))return'';
+ try{const h=await tbH(tn,code),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),12000);const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tb&h='+h+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);
+  if(j&&j.ok&&/^[A-Za-z0-9_-]{40,8000}$/.test(j.b||'')){localStorage.setItem('itqan_tb',j.b);return j.b}}catch(e){}return''}
 /* بيفك الأكواد ويحفظ كود كل غرفة على الجهاز — بيرجّع عدد الغرف أو 0 لو الكود غلط */
-async function tbUnlock(code){const b=tbGet();if(!b||!/^\d{6}$/.test(String(code||'').trim()))return 0;const o=await tbOpen(String(code).trim(),b);if(!o||!o.r)return 0;
+async function tbUnlock(code){if(!/^\d{6}$/.test(String(code||'').trim()))return 0;const b=(await tbFetch(code))||tbGet();if(!b)return 0;const o=await tbOpen(String(code).trim(),b);if(!o||!o.r)return 0;try{localStorage.setItem('itqan_tcode',String(code).trim())}catch(e){}
  Object.entries(o.r).forEach(([r,p])=>{if(/^[a-z0-9]{4,6}$/.test(r)&&/^\d{4,6}$/.test(String(p)))tpSet(r,String(p))});try{localStorage.setItem('itqan_tbok','1')}catch(e){}return Object.keys(o.r).length}
 /* كود الغرفة للمعلم: محفوظ؟ ← خلاص. فيه لينك شخصي؟ ← اطلب كود المعلم مرة واحدة. غير كده ← اطلب كود الغرفة */
 async function tPinFor(c){let p=tpGet(c);if(p)return p;
- if(tbGet()){const v=(prompt('اكتب كود المعلم (نفس الكود لكل حصصك — مرة واحدة بس على الجهاز ده):')||'').trim();if(!v)return'';if(await tbUnlock(v)){p=tpGet(c);if(p)return p}else{alert('كود المعلم غلط');return''}}
+ if(tbHas()){const v=(prompt('اكتب كود المعلم (نفس الكود لكل حصصك — مرة واحدة بس على الجهاز ده):')||'').trim();if(!v)return'';if(await tbUnlock(v)){p=tpGet(c);if(p)return p}else{alert('كود المعلم غلط');return''}}
  return(prompt('اكتب كود المعلم السري (اللي بعتته لك السكرتارية):')||'').trim()}
 function tpGet(r){try{return localStorage.getItem('itqan_tp_'+r)||''}catch(e){return''}}
 function tpSet(r,p){try{p?localStorage.setItem('itqan_tp_'+r,String(p)):localStorage.removeItem('itqan_tp_'+r)}catch(e){}}
@@ -774,7 +782,7 @@ setTimeout(()=>{try{const m=sessionStorage.getItem('itqan_gmsg');if(m){sessionSt
 if(!new URLSearchParams(location.search).get('s')&&(tsGet().length||localStorage.getItem('itqan_tname')||Object.keys(localStorage).some(k=>/^itqan_tk_/.test(k))))
 {/* جدول المعلم بيتحدّث من السجل: أول ما الصفحة تفتح، وكل دقيقتين وهي مفتوحة — أي حصة جديدة أو استثنائية بتظهر لوحدها */
  const tsRe=()=>tschSync(Object.keys(localStorage).filter(k=>/^itqan_tk_/.test(k)).map(k=>k.slice(9))[0]||'').then(ch=>{try{const last=+sessionStorage.getItem('itqan_tsr')||0;if(ch&&!$('#join').hidden&&Date.now()-last>20000){sessionStorage.setItem('itqan_tsr',String(Date.now()));location.reload()}}catch(e){}},()=>{});
- tsRe();window.tsRe=tsRe;setInterval(()=>{try{if(!$('#join').hidden&&!document.hidden)tsRe()}catch(e){}},120000)}
+ {let tc='';try{tc=localStorage.getItem('itqan_tcode')||''}catch(e){}if(tc)tbUnlock(tc).catch(()=>0).then(tsRe);else tsRe()}window.tsRe=tsRe;setInterval(()=>{try{if(!$('#join').hidden&&!document.hidden)tsRe()}catch(e){}},120000)}
 /* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
 /* المعلم يفتح حصته في ميعادها بس (من قبلها بربع ساعة لحد ما تخلص) — لو جدول الحصة متسجّل على جهازه */
 function tWin(rm){const X=tsGet().find(x=>x.c===rm);if(!X||!X.s.length)return{ok:1};const now=cNow(),n=now.getHours()*60+now.getMinutes(),D=now.getDay(),hm3=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
@@ -867,7 +875,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
   let wk=0;const start=c=>tOpenCode(c);
   let tbok=0;try{tbok=localStorage.getItem('itqan_tbok')==='1'}catch(e){}
   const draw=()=>{const now=cNow(),n=now.getHours()*60+now.getMinutes();w.innerHTML='';
-   if(tbGet()&&!tbok){const u=document.createElement('div');u.id='tcu';u.innerHTML='<b>🔑 اكتب كود المعلم مرة واحدة</b><small style="color:#cfe3df;line-height:1.7">نفس الكود لكل حصصك — بعد كده كل حصة بتفتح بضغطة.</small>';
+   if(tbHas()&&!tbok){const u=document.createElement('div');u.id='tcu';u.innerHTML='<b>🔑 اكتب كود المعلم مرة واحدة</b><small style="color:#cfe3df;line-height:1.7">نفس الكود لكل حصصك — بعد كده كل حصة بتفتح بضغطة.</small>';
     const i=document.createElement('input');i.inputMode='numeric';i.maxLength=6;i.placeholder='• • • • • •';i.dir='ltr';const ok=document.createElement('button');ok.textContent='حفظ';const er=document.createElement('small');er.style.color='#fca5a5';
     ok.onclick=async()=>{ok.disabled=true;ok.textContent='⏳';const n=await tbUnlock(i.value);ok.disabled=false;ok.textContent='حفظ';if(n){tbok=1;toast('✅','اتحفظ — '+n+' حصة جاهزة على الجهاز ده');draw();try{sessionStorage.removeItem('itqan_tsr');window.tsRe&&tsRe()}catch(e){}}else er.textContent='الكود غلط — راجع رسالة السكرتارية'};
     i.onkeydown=e=>{if(e.key=='Enter')ok.click()};u.append(i,ok,er);w.append(u)}
@@ -2807,7 +2815,7 @@ function sxAdhoc(){const P={};const f=t=>{new Intl.DateTimeFormat('en-GB',{timeZ
   if(st0+10+360>1440){const n2=f((x.ts||Date.now())+864e5),d2=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(n2.weekday);sch.push({d:d2,t:'00:00',m:st0+10+360-1440,date:n2.year+'-'+n2.month+'-'+n2.day})}
   return{room:x.room,pub:x.pub,pin:x.pin,title:x.title||'',tn:x.tn||'',sch}})}
 function regSync(now){clearTimeout(regT);regT=setTimeout(async()=>{const c=regCfg(),u=regUrl();if(!u||!c.k)return;const HH={},ALL=fxList().concat(sxAdhoc());for(const x of ALL){try{if(/^\d{4,6}$/.test(String(x.pin)))HH[x.room]=await hwH(x.room,String(x.pin))}catch(e){}}
- try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,rooms:ALL.map(x=>({c:x.room,v:fpOf(x.pub),h:HH[x.room]||'',t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'put',k:c.k,teachers:await (async()=>{const out=[];for(const tn of [...new Set(fxList().map(x=>x.tn).filter(Boolean))]){try{const L=await tLink(tn);if(L.rooms.length)out.push({h:await tbH(tn,L.code),b:L.b})}catch(e){}}return out})(),rooms:ALL.map(x=>({c:x.room,v:fpOf(x.pub),h:HH[x.room]||'',t:String(x.tn||'').slice(0,40),n:String(x.title||'').slice(0,60),s:(x.sch||[]).map(q=>q.date?[+q.d,q.t,+q.m||60,q.date]:[+q.d,q.t,+q.m||60])}))})});const j=await r.json();
   regMsg=j&&j.ok?'✅ الجدول متحدّث على جوجل ('+j.n+' غرفة) — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'❌ السجل رفض التحديث'+(j&&j.e=='key'?' — المفتاح غلط':'')}catch(e){regMsg='❌ تعذّر الوصول لسجل جوجل — هنحاول تاني'}
  const el=$('#regst');if(el)el.textContent=regMsg},now?0:1500)}
 /* ملف الجدول للموقع: السكرتارية تحمّله وترفعه على GitHub باسم schedule.json (أو تبعته) */
@@ -2959,13 +2967,13 @@ async function tLink(tn){const rooms=fxList().filter(x=>x.tn===tn&&/^\d{4,6}$/.t
  /* اللينك بيفضل هو هو طول ما حصص المعلم وكوده ماتغيّروش (التشفير كل مرة بيطلع شكل مختلف — فبنحفظ آخر واحد ونرجّعه) */
  const sig=code+'|'+Object.keys(r).sort().map(k=>k+':'+r[k]).join(',');let C={};try{C=JSON.parse(localStorage.getItem('itqan_tlc')||'{}')}catch(e){}
  let b=C[tn]&&C[tn].sig===sig?C[tn].b:'';if(!b){b=await tbMake(code,{r});C[tn]={sig,b};try{localStorage.setItem('itqan_tlc',JSON.stringify(C))}catch(e){}}
- const url=fxSite()+'?r=t&tn='+encodeURIComponent(tn)+'&b='+b+schTj(tn);TLM[tn]={code,rooms,url};return{code,rooms,url}}
+ const url=fxSite()+'?r=t&tn='+encodeURIComponent(tn);TLM[tn]={code,rooms,url,b};return{code,rooms,url,b}}
 /* لينك المعلم الشخصي جاهز في الذاكرة — عشان أزرار الغرف تفتح واتساب/تنسخ على طول بنفس اللينك اللي في «لينكات المعلمين» */
 const TLM={};let tlwT=0;function tlWarm(){clearTimeout(tlwT);tlwT=setTimeout(async()=>{for(const tn of [...new Set(fxList().map(x=>x.tn).filter(Boolean))]){try{await tLink(tn)}catch(e){}}},400)}
 async function tMsg(tn){await tLink(tn);return tMsgOf(tn)}
 function tMsgOf(tn){const T=TLM[tn];if(!T||!T.rooms.length)return'';const{code,rooms,url}=T;
  return 'مرحباً أ/ '+tn+' 👋\nدي بيانات حصصك في أكاديمية إتقان — احفظها:\n\n🔑 كود المعلم (واحد لكل حصصك): '+code+'\n📲 لينك حصصك: '+url+'\n\n🗓 حصصك:\n'+rooms.map(x=>'• '+(slotTxt(x.sch)||'—')+' — '+(x.title||'حصة')+' — غرفة '+fmtCode(x.room)).join('\n')+
-  '\n\n👈 افتح اللينك مرة واحدة واكتب كود المعلم، وبعد كده هتلاقي حصصك في التطبيق، وكل حصة بتفتح بضغطة «▶ ابدأ» قبل ميعادها بـ 10 دقايق. الطلاب بيستنوا في غرفة الانتظار لحد ما تدخّلهم.'}
+  '\n\n🔒 اللينك ده ثابت — احفظه. لو حصصك اتغيّرت أو زادت هتظهر عندك لوحدها.\n👈 افتح اللينك مرة واحدة واكتب كود المعلم، وبعد كده هتلاقي حصصك في التطبيق، وكل حصة بتفتح بضغطة «▶ ابدأ» قبل ميعادها بـ 10 دقايق. الطلاب بيستنوا في غرفة الانتظار لحد ما تدخّلهم.'}
 /* حصة استثنائية (السكرتارية بس): ميعاد لليوم ده بس — بيتسجّل في جدول السجل، والمعلم بيلاقيها في «حصصي» ويدخل بكوده */
 /* ⚡ حصة استثنائية: فورم واحد (الحصة، الساعة، المدة) ← «حفظ وابعت واتساب» بيفتح واتساب على طول
    (واتساب لازم يتفتح في نفس لحظة الضغط، وإلا المتصفح بيمنعه كـ popup) */
@@ -3314,7 +3322,7 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
   try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),m=/^itqan_tp_([a-z0-9]{4,6})$/.exec(k||'');if(m&&!seen.has(m[1])&&localStorage.getItem(k)){seen.add(m[1]);L.push({c:m[1],t:'',p:localStorage.getItem(k)})}}}catch(e){}return L})();
  /* لسه كود المعلم مااتكتبش على الجهاز ده: نطلبه هنا على طول بدل ما نقول «اكتب الكود الأول» */
  const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:3px';
- if(!rooms.length){if(!tbGet()){B.innerHTML='<small style="line-height:1.8">اكتب كود الحصة وكود المعلم بتاعها (من رسالة السكرتارية) — مرة واحدة بس على الجهاز ده:</small><input id="hwrc" placeholder="كود الحصة (زي NF6W)" maxlength="6" style="'+ip+'"><input id="hwrp" placeholder="كود المعلم" inputmode="numeric" maxlength="6" style="'+ip+'"><small id="hwpe" style="color:#fca5a5"></small>';
+ if(!rooms.length){if(!tbHas()){B.innerHTML='<small style="line-height:1.8">اكتب كود الحصة وكود المعلم بتاعها (من رسالة السكرتارية) — مرة واحدة بس على الجهاز ده:</small><input id="hwrc" placeholder="كود الحصة (زي NF6W)" maxlength="6" style="'+ip+'"><input id="hwrp" placeholder="كود المعلم" inputmode="numeric" maxlength="6" style="'+ip+'"><small id="hwpe" style="color:#fca5a5"></small>';
    B.append(hwBtn('فتح الواجبات','#1a9486',()=>{const c=String($('#hwrc').value||'').trim().toLowerCase(),p=String($('#hwrp').value||'').trim();if(!/^[a-z0-9]{4,6}$/.test(c)||!/^\d{4,6}$/.test(p))return $('#hwpe').textContent='اكتب الكودين صح';tpSet(c,p);hwPanel()}));return}
   B.innerHTML='<small style="line-height:1.8">اكتب كود المعلم (6 أرقام) — مرة واحدة بس على الجهاز ده:</small><input id="hwpc" inputmode="numeric" maxlength="6" style="background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:4px"><small id="hwpe" style="color:#fca5a5"></small>';
   B.append(hwBtn('فتح الواجبات','#1a9486',async function(){this.disabled=true;const n=await tbUnlock($('#hwpc').value).catch(()=>0);this.disabled=false;if(n){toast('✅','اتحفظ — '+n+' حصة');hwPanel()}else $('#hwpe').textContent='الكود غلط — راجع رسالة السكرتارية.'}));return}
