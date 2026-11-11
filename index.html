@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-o';
+const VER='2026.11.15-p';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -664,7 +664,11 @@ async function siteChk(code){try{const ac=new AbortController(),tm=setTimeout(()
  if(!x)return{ok:true,known:false,now:hm,d,src:'site'};
  const allow=(x.s||[]).some(q=>+q[0]===d&&n>=m(q[1])-10&&n<m(q[1])+(+q[2]||60));
  return{ok:true,known:true,v:x.v,allow,s:x.s||[],now:hm,d,src:'site'}}catch(e){return null}}
-async function regOne(code){const u=regUrl();if(!u)return null;try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);const r=await fetch(u+(u.includes('?')?'&':'?')+'a=chk&c='+encodeURIComponent(code)+'&t='+Date.now(),{signal:ac.signal});clearTimeout(tm);const j=await r.json();return j&&j.ok?j:null}catch(e){return null}}
+/* 📡 قراءة من سجل الحصص: POST الأول (طلبات GET ساعات بتترفض من جوجل قبل ما توصل للسكربت — زي اللي حصل مع المكتبة)، ولو السكربت قديم ومابيقبلش ← GET */
+async function regQ(o,ms){const u=regUrl();if(!u)return null;const tmo=f=>{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||12000);return f(ac.signal).finally(()=>clearTimeout(t))};
+ try{const j=await tmo(sg=>fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:sg}).then(r=>r.text())).then(t=>JSON.parse(t));if(j&&(j.ok||(j.e&&j.e!='key')))return j}catch(e){}
+ try{const q=Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');return await tmo(sg=>fetch(u+(u.includes('?')?'&':'?')+q+'&t='+Date.now(),{signal:sg}).then(r=>r.json()))}catch(e){return null}}
+async function regOne(code){const u=regUrl();if(!u)return null;const j=await regQ({a:'chk',c:code},10000);return j&&j.ok?j:null}
 /* بنسأل سجل جوجل (جدول السكرتارية) وملف الموقع مع بعض: سجل جوجل الأول، والملف احتياطي */
 async function regChk(code){const[G,S]=await Promise.all([regOne(code),siteChk(code)]);
  if(G&&G.known&&(G.s||[]).length){if(!G.v&&S&&S.v)G.v=S.v;return G}if(S&&S.known)return S;if(G&&G.known)return G;return G||S||null}
@@ -705,7 +709,7 @@ async function tGate0(code,pin,pub){
    (بالبصمة بتاعة «الغرفة + الكود الموحّد» — محدش ياخده من غير الكود) */
 async function trH(room,code){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-tr|'+String(room).toLowerCase()+'|'+String(code).trim()));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function pinMap(room,pin){pin=String(pin||'').trim();const u=regUrl();if(!u||!/^\d{6}$/.test(pin))return pin;
- try{const h=await trH(room,pin),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tr&h='+h+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);if(j&&j.ok&&/^\d{4,6}$/.test(String(j.p||'')))return String(j.p)}catch(e){}return pin}
+ try{const h=await trH(room,pin);const j=await regQ({a:'tr',h},9000);if(j&&j.ok&&/^\d{4,6}$/.test(String(j.p||'')))return String(j.p)}catch(e){}return pin}
 async function tCodeOpen(code,pin){pin=await pinMap(code,pin);const k=await roomKey(code,pin);
 {const g=await tGate(code,pin,k.pub);if(!g)tpSet(code,pin);if(g){if(/كود المعلم/.test(g))tpSet(code,'');/* الكود صح بس مش وقتها: نحفظ جدوله عشان يظهر في «جدولي» */
   if(/وقت الحصة/.test(g))try{if(await Promise.race([tschSync(code),new Promise(r=>setTimeout(()=>r(false),4000))])&&!LK){sessionStorage.setItem('itqan_gmsg',g);location.reload();await new Promise(()=>{})}}catch(x){}
@@ -730,7 +734,7 @@ const tnGet=()=>{try{return localStorage.getItem('itqan_tname')||''}catch(e){ret
 const tbHas=()=>!!(tbGet()||tnGet());
 async function tbH(tn,code){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-tb|'+String(tn).trim()+'|'+String(code).trim()));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function tbFetch(code){const tn=tnGet(),u=regUrl();if(!tn||!u||!/^\d{6}$/.test(String(code||'').trim()))return'';
- try{const h=await tbH(tn,code),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),12000);const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tb&h='+h+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);
+ try{const h=await tbH(tn,code);const j=await regQ({a:'tb',h},12000);
   if(j&&j.ok&&/^[A-Za-z0-9_-]{40,8000}$/.test(j.b||'')){localStorage.setItem('itqan_tb',j.b);return j.b}}catch(e){}return''}
 /* بيفك الأكواد ويحفظ كود كل غرفة على الجهاز — بيرجّع عدد الغرف أو 0 لو الكود غلط */
 async function tbUnlock(code){if(!/^\d{6}$/.test(String(code||'').trim()))return 0;const b=(await tbFetch(code))||tbGet();if(!b)return 0;const o=await tbOpen(String(code).trim(),b);if(!o||!o.r)return 0;try{localStorage.setItem('itqan_tcode',String(code).trim())}catch(e){}
@@ -779,7 +783,7 @@ function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));retu
 async function tschSync(code){let R={};
  /* جدول المعلم من سجل جوجل (اللي السكرتارية بتعدّله) — ولو مش متاح من ملف الموقع */
  try{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}const u=regUrl();if(u&&(n||code)){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);
-  const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tl&n='+encodeURIComponent(n)+'&c='+encodeURIComponent(code||'')+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);if(j&&j.ok&&j.rooms&&Object.keys(j.rooms).length)R=j.rooms}}catch(e){}
+  const j=await regQ({a:'tl',n,c:code||''},9000);clearTimeout(tm);if(j&&j.ok&&j.rooms&&Object.keys(j.rooms).length)R=j.rooms}}catch(e){}
  if(!Object.keys(R).length){const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json();R=J.rooms||{}}
  /* لو اسم المعلم معروف (من لينكه) بناخد حصصه هو بس — مانخمّنش المعلم من كود غرفة قديمة على الجهاز */
  let me=null;{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me){me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}}if(!me||!me.t)return false;
@@ -2740,7 +2744,7 @@ function fxCloudPush(){if(!fxPulled)return;clearTimeout(fxUpT);fxUpT=setTimeout(
  fxSyncSt(j&&j.ok?'☁️ الغرف متزامنة بين الأجهزة ('+rooms.length+' غرفة)':'⚠️ تعذّرت مزامنة الغرف'+(j&&j.e=='key'?' — مفتاح السجل غلط':''))}catch(e){fxSyncSt('⚠️ تعذّرت مزامنة الغرف — هنحاول تاني')}},1500)}
 /* تنزيل ودمج: أي غرفة أو كود معلم موجود على جهاز تاني بيظهر هنا */
 async function fxCloudPull(){try{const K=await syk(),u=regUrl();if(!u)return;if(!K){fxSyncSt('🔐 اخرجي وادخلي اللوحة بكلمة السر تاني عشان الغرف تتزامن بين الأجهزة');return}
- const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=fxget&t='+Date.now())).json();
+ const j=await regQ({a:'fxget'},15000);
  if(!(j&&j.ok))throw 0;if(j.d){const b=ub64(j.d),pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},K,b.slice(12)),R=JSON.parse(new TextDecoder().decode(pt));
   const del=new Set([...fxDelGet(),...(R.del||[])]);try{localStorage.setItem('itqan_fxdel',JSON.stringify([...del].slice(-500)))}catch(e){}
   const L=fxList().filter(x=>!del.has(x.room)),have=new Set(L.map(x=>x.room));let add=0;
@@ -3052,6 +3056,8 @@ async function tPanel(){try{await Promise.race([fxCloudPull(),new Promise(r=>set
   mk('🔗 نسخ اللينك','d',async()=>{try{await copyTxt(url);toast('✅','اتنسخ لينك '+tn)}catch(e){prompt('انسخ اللينك:',url)}});
   mk('📋 نسخ الرسالة','d',async()=>{const msg=await tMsg(tn);try{await copyTxt(msg);toast('✅','اتنسخت رسالة '+tn)}catch(e){prompt('انسخ:',msg)}});
   mk('⚡ حصة استثنائية','d',()=>xpMake(tn));
+  /* 🔎 تتأكدي إن جدول المعلم واصل لسجل جوجل (ده اللي المعلم بيشوفه) */
+  mk('🔎 اللي واصل للمعلم','d',async()=>{const j=await regQ({a:'tl',n:tn},12000);if(!j||!j.ok)return alert('❌ تعذّر قراءة السجل — '+(j&&j.e?j.e:'اتأكدي من النت ومن نشر السكربت (New version)'));const L=Object.values(j.rooms||{});alert(L.length?'📡 في سجل جوجل دلوقتي لـ '+tn+' ('+L.length+' حصة):\n\n'+L.map(x=>'• '+(x.n||'حصة')+' — '+slotTxt((x.s||[]).filter(q=>!q[3]).map(q=>({d:+q[0],t:q[1],m:+q[2]})))+((x.s||[]).filter(q=>q[3]).length?' + ⚡ استثنائية '+(x.s||[]).filter(q=>q[3]).map(q=>q[3]+' '+q[1]).join('، '):'')).join('\n'):'⚠️ مفيش ولا حصة لـ «'+tn+'» في سجل جوجل — دوسي «⬆️ رفع الجدول الآن» وبصّي الرسالة اللي تحته.')});
   r.append(bt);L.append(r)}}
 async function schWaT(){const tn=schT||prompt('اسم المعلم (زي ما هو مكتوب في الغرف):',[...new Set(fxList().map(x=>x.tn).filter(Boolean))][0]||'');if(!tn)return;
  const w=window.open('','_blank');const m=await tMsg(tn);if(!m){if(w)w.close();return alert('مفيش غرف للمعلم ده على الجهاز ده')}
