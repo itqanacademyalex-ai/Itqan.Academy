@@ -116,6 +116,8 @@ function doPost_(e) {
   /* رفع التسجيل والملفات (زي سكربت التسجيل: من غير المفتاح) */
   /* المكتبة كمان بـ POST — بعض المتصفحات/الشبكات طلب GET بتاعها مابيوصلش للسكربت */
   if (b.a === 'lib') return doGet_({ parameter: { a: 'lib', c: b.c } });
+  /* القراءات كمان بـ POST (طلبات GET ساعات بتترفض من جوجل قبل ما توصل هنا) */
+  if (/^(chk|tl|tb|tr|fxget)$/.test(String(b.a || ''))) { const q = {}; Object.keys(b).forEach(k => { if (typeof b[k] !== 'object') q[k] = String(b[k]); }); return doGet_({ parameter: q }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
