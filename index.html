@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-l';
+const VER='2026.11.15-n';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -765,7 +765,10 @@ const pnOf=c=>{try{return sessionStorage.getItem('itqan_pn_'+c)||''}catch(e){ret
 /* ===== «جدولي» للمعلم: السكرتارية بتبعت جدول المعلم جوه اللينك (tj) ← بيتحفظ على جهازه ويظهر في شاشة البداية ===== */
 function tsGet(){try{const a=JSON.parse(localStorage.getItem('itqan_tsch'));return Array.isArray(a)?a:[]}catch(e){return[]}}
 /* لينك المعلم الشخصي: اسمه + أكواد غرفه المتشفّرة — بيتحفظوا على الجهاز وجدوله بيظهر في «جدولي» */
-{const q=new URLSearchParams(location.search),tn=q.get('tn'),tb=q.get('b');if(tn)try{localStorage.setItem('itqan_tname',tn.slice(0,40));if(!localStorage.getItem('itqan_nm'))localStorage.setItem('itqan_nm',tn.slice(0,40));localStorage.setItem('itqan_tsch_role','t')}catch(e){}
+{const q=new URLSearchParams(location.search),tn=q.get('tn'),tb=q.get('b');if(tn)try{
+ /* لينك معلم تاني على نفس الجهاز: نمسح جدول وكود المعلم اللي قبله عشان حصصه ماتظهرش هنا */
+ const prev=localStorage.getItem('itqan_tname')||'';if(prev&&prev!==tn.slice(0,40)){['itqan_tsch','itqan_tcode','itqan_tb','itqan_tbok'].forEach(k=>localStorage.removeItem(k));Object.keys(localStorage).filter(k=>/^itqan_(tp|tk)_/.test(k)).forEach(k=>localStorage.removeItem(k))}
+ localStorage.setItem('itqan_tname',tn.slice(0,40));if(!localStorage.getItem('itqan_nm'))localStorage.setItem('itqan_nm',tn.slice(0,40));localStorage.setItem('itqan_tsch_role','t')}catch(e){}
  if(tb&&/^[A-Za-z0-9_-]{40,4000}$/.test(tb))try{if(localStorage.getItem('itqan_tb')!==tb){localStorage.setItem('itqan_tb',tb);localStorage.removeItem('itqan_tbok')}}catch(e){}}
 {const tj=new URLSearchParams(location.search).get('tj');if(tj)try{const a=JSON.parse(new TextDecoder().decode(ub64(tj)));if(Array.isArray(a)){
  a.forEach(x=>{if(x&&/^[a-z0-9]{4,6}$/.test(x.c)&&/^[A-Za-z0-9_-]{14}$/.test(x.v||''))try{localStorage.setItem('itqan_v_'+x.c,x.v)}catch(e){}});
@@ -778,16 +781,25 @@ async function tschSync(code){let R={};
  try{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}const u=regUrl();if(u&&(n||code)){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);
   const j=await (await fetch(u+(u.includes('?')?'&':'?')+'a=tl&n='+encodeURIComponent(n)+'&c='+encodeURIComponent(code||'')+'&t='+Date.now(),{signal:ac.signal})).json();clearTimeout(tm);if(j&&j.ok&&j.rooms&&Object.keys(j.rooms).length)R=j.rooms}}catch(e){}
  if(!Object.keys(R).length){const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json();R=J.rooms||{}}
- let me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}if(!me){let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me||!me.t)return false;
+ /* لو اسم المعلم معروف (من لينكه) بناخد حصصه هو بس — مانخمّنش المعلم من كود غرفة قديمة على الجهاز */
+ let me=null;{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me){me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}}if(!me||!me.t)return false;
  const L=Object.entries(R).filter(([c,y])=>y.t===me.t&&Array.isArray(y.s)).map(([c,y])=>{if(/^[A-Za-z0-9_-]{14}$/.test(y.v||''))try{localStorage.setItem('itqan_v_'+c,y.v)}catch(e){}
   return{c,t:String(y.n||'').slice(0,50),s:y.s.map(q=>q[3]?[+q[0],q[1],+q[2]||120,q[3]]:[+q[0],q[1],+q[2]||120])}});
  const old=localStorage.getItem('itqan_tsch')||'',nw=JSON.stringify(L);if(old===nw)return false;
  localStorage.setItem('itqan_tsch',nw);try{localStorage.setItem('itqan_tsch_role','t')}catch(e){}return true}
 setTimeout(()=>{try{const m=sessionStorage.getItem('itqan_gmsg');if(m){sessionStorage.removeItem('itqan_gmsg');toast('⏰',m+' — جدولك كله ظاهر في «🗓 جدولي».')}}catch(e){}},800);
 if(!new URLSearchParams(location.search).get('s')&&(tsGet().length||localStorage.getItem('itqan_tname')||Object.keys(localStorage).some(k=>/^itqan_tk_/.test(k))))
-{/* جدول المعلم بيتحدّث من السجل: أول ما الصفحة تفتح، وكل دقيقتين وهي مفتوحة — أي حصة جديدة أو استثنائية بتظهر لوحدها */
- const tsRe=()=>tschSync(Object.keys(localStorage).filter(k=>/^itqan_tk_/.test(k)).map(k=>k.slice(9))[0]||'').then(ch=>{try{const last=+sessionStorage.getItem('itqan_tsr')||0;if(ch&&!$('#join').hidden&&Date.now()-last>20000){sessionStorage.setItem('itqan_tsr',String(Date.now()));location.reload()}}catch(e){}},()=>{});
- {let tc='';try{tc=localStorage.getItem('itqan_tcode')||''}catch(e){}if(tc)tbUnlock(tc).catch(()=>0).then(tsRe);else tsRe()}window.tsRe=tsRe;setInterval(()=>{try{if(!$('#join').hidden&&!document.hidden)tsRe()}catch(e){}},120000)}
+{/* 🔄 جدول المعلم بيتحدّث لوحده: أول ما الصفحة تفتح، وكل 30 ثانية وهي قدامه، وأول ما يرجع للتطبيق/التاب.
+   أي حصة جديدة أو استثنائية أو ميعاد اتغيّر بيظهر لوحده — وأكواد الحصص الجديدة بتتجاب بكوده المحفوظ من غير ما يكتبه تاني */
+ let tsBusy=0;const tcGetL=()=>{try{return localStorage.getItem('itqan_tcode')||''}catch(e){return''}};
+ const tsRe=async()=>{if(tsBusy)return;tsBusy=1;try{
+   const ch=await tschSync(Object.keys(localStorage).filter(k=>/^itqan_tk_/.test(k)).map(k=>k.slice(9))[0]||'').catch(()=>false);
+   const tc=tcGetL();let un=0;if(tc&&tsGet().some(x=>!tpGet(x.c))){const before=tsGet().filter(x=>tpGet(x.c)).length;await tbUnlock(tc).catch(()=>0);un=tsGet().filter(x=>tpGet(x.c)).length>before}
+   const last=+sessionStorage.getItem('itqan_tsr')||0;
+   if((ch||un)&&!$('#join').hidden&&Date.now()-last>8000){sessionStorage.setItem('itqan_tsr',String(Date.now()));window.NOWARN=1;location.reload()}}catch(e){}finally{tsBusy=0}};
+ {const tc=tcGetL();if(tc)tbUnlock(tc).catch(()=>0).then(tsRe);else tsRe()}window.tsRe=tsRe;
+ const tick=()=>{try{if(!$('#join').hidden&&!document.hidden)tsRe()}catch(e){}};setInterval(tick,30000);
+ document.addEventListener('visibilitychange',tick);addEventListener('focus',tick);addEventListener('online',tick)}
 /* المعلم في غرفة ثابتة على نفس الجهاز: تصريحه لسه صالح ← مايكتبش الكود السري تاني */
 /* المعلم يفتح حصته في ميعادها بس (من قبلها بربع ساعة لحد ما تخلص) — لو جدول الحصة متسجّل على جهازه */
 function tWin(rm){const X=tsGet().find(x=>x.c===rm);if(!X||!X.s.length)return{ok:1};const now=cNow(),n=now.getHours()*60+now.getMinutes(),D=now.getDay(),hm3=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
