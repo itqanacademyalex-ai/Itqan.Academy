@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-k';
+const VER='2026.11.15-l';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -880,12 +880,15 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
   let wk=0;const start=c=>tOpenCode(c);
   let tbok=0;try{tbok=localStorage.getItem('itqan_tbok')==='1'}catch(e){}
   const draw=()=>{const now=cNow(),n=now.getHours()*60+now.getMinutes();w.innerHTML='';
-   if(tbHas()&&!tbok){const u=document.createElement('div');u.id='tcu';u.innerHTML='<b>🔑 اكتب كود المعلم مرة واحدة</b><small style="color:#cfe3df;line-height:1.7">نفس الكود لكل حصصك — بعد كده كل حصة بتفتح بضغطة.</small>';
+   /* خانة الكود بتظهر كمان لو فيه حصة مقفولة 🔒 (حصة جديدة لسه كودها مااتجابش) */
+   const locked=TS.some(x=>!tpGet(x.c));
+   if(tbHas()&&(!tbok||locked)){const u=document.createElement('div');u.id='tcu';u.innerHTML=tbok&&locked?'<b>🔑 فيه حصص جديدة 🔒 — اكتب كود المعلم تاني</b><small style="color:#cfe3df;line-height:1.7">نفس كودك — عشان الحصص الجديدة تتفتح على الجهاز ده.</small>':'<b>🔑 اكتب كود المعلم مرة واحدة</b><small style="color:#cfe3df;line-height:1.7">نفس الكود لكل حصصك — بعد كده كل حصة بتفتح بضغطة.</small>';
     const i=document.createElement('input');i.inputMode='numeric';i.maxLength=6;i.placeholder='• • • • • •';i.dir='ltr';const ok=document.createElement('button');ok.textContent='حفظ';const er=document.createElement('small');er.style.color='#fca5a5';
     ok.onclick=async()=>{ok.disabled=true;ok.textContent='⏳';const n=await tbUnlock(i.value);ok.disabled=false;ok.textContent='حفظ';if(n){tbok=1;toast('✅','اتحفظ — '+n+' حصة جاهزة على الجهاز ده');draw();try{sessionStorage.removeItem('itqan_tsr');window.tsRe&&tsRe()}catch(e){}}else er.textContent='الكود غلط — راجع رسالة السكرتارية'};
     i.onkeydown=e=>{if(e.key=='Enter')ok.click()};u.append(i,ok,er);w.append(u)}
    const hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:6px';{let nm='';try{nm=localStorage.getItem('itqan_tname')||''}catch(e){}hd.innerHTML='<b style="color:#e3c08d;font-size:16px">🗓 حصصي'+(nm?' — <span translate="no">'+esc(nm)+'</span>':'')+'</b>'};
    if(tbok||tsGet().some(x=>tpGet(x.c))){const hb=document.createElement('button');hb.className='w';hb.style.cssText='flex:none;width:auto;padding:5px 10px;font-size:13px;background:#27496b';hb.textContent='📝 الواجبات';hb.onclick=()=>hwPanel();hd.append(hb)}
+   {const rb=document.createElement('button');rb.className='w';rb.title='تحديث حصصي';rb.style.cssText='flex:none;width:auto;padding:5px 10px;font-size:13px;background:#27496b';rb.textContent='🔄';rb.onclick=async()=>{rb.disabled=true;rb.textContent='⏳';let tc='';try{tc=localStorage.getItem('itqan_tcode')||''}catch(e){}if(tc)await tbUnlock(tc).catch(()=>0);try{sessionStorage.removeItem('itqan_tsr')}catch(e){}const ch=await tschSync(Object.keys(localStorage).filter(k=>/^itqan_tk_/.test(k)).map(k=>k.slice(9))[0]||'').catch(()=>false);if(ch||tc){window.NOWARN=1;location.reload()}else{rb.disabled=false;rb.textContent='🔄';toast('✅','حصصك متحدّثة')}};hd.append(rb)}
    w.append(hd);
    /* كل حصة كارت واحد — اضغط على اسمها: لو وقتها (من قبلها بـ 10 دقايق لحد ما تخلص) بتفتح على طول، غير كده بيقولك إمتى */
    const D=now.getDay(),G={};all.forEach(x=>{const a=hm2(x.h),b=a+x.m,live=(x.d===D&&n>=a-10&&n<b)||!!xpGet(x.c);let k=((x.d-D+7)%7)*1440+a-n;if(k<0&&!live)k+=7*1440;
