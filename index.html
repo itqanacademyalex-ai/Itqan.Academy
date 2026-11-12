@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-t';
+const VER='2026.11.15-u';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -705,7 +705,8 @@ async function tGate0(code,pin,pub){
  const R=await regChk(code),fp=fpOf(pub);
  const ok=(R&&R.known&&R.v)?R.v===fp:(await pinOk(code,pin))||(vGet(code)&&vGet(code)===fp);
  if(!ok)return /^\d{6}$/.test(String(pin))||(R&&R.known)?'كود المعلم غلط — اكتب الكود اللي بعتته لك السكرتارية.':'كود المعلم ده قديم — اطلب من السكرتارية «كود معلم جديد» (6 أرقام).';
- /* السجل مش متوصّل أو مش بيرد: نكمّل بالكود + جدول المعلم المحفوظ على الجهاز بدل ما نقفل الحصة */
+ /* ⏰ المعلم يقدر يفتح حصته في أي وقت (قرار الإدارة) — الكود بس هو اللي بيتراجع، والطلاب بيدخلوا لما المعلم يفتح */
+ return '';
  if(!R||!R.known){const w=tWin(code);return w.ok?'':'مش وقت الحصة دي دلوقتي'+(w.next?' — ميعادها الجاي '+w.next:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
  if(!(R.s||[]).length)return 'الحصة دي مالهاش مواعيد مسجّلة — كلّم السكرتارية.';
  if(!R.allow){const nx=nextSlot(R.s,R.d,R.now);return '⏰ مش وقت الحصة دي دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'. تقدر تفتحها قبل ميعادها بـ 10 دقايق.'}
@@ -884,7 +885,7 @@ function codeLanding0(c,r){
  if(r=='t')return tOpenCode(c);
  $('#join').hidden=true;libBtn(c);let first=1;const tryIt=()=>{showGate('⏳','جارٍ البحث عن الحصة '+fmtCode(c)+'…');
  /* جدول الحصص بيرد أسرع من خادم الاتصال: لو مش وقت الحصة نقول على طول، والبحث بيكمل في الخلفية */
- if(first){first=0;regChk(c).then(R=>{if(!R||!R.known||!(R.s||[]).length||$('#gate').hidden)return;if(R.allow){if(R.live===false&&/جارٍ البحث/.test($('#gt').textContent))showGate('🕒','👩‍🏫 المعلم لسه مادخلش الحصة '+fmtCode(c)+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.');return}const nx=nextSlot(R.s,R.d,R.now);if(/جارٍ البحث/.test($('#gt').textContent))showGate('🕒','الحصة '+fmtCode(c)+' مش وقتها دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.')}).catch(()=>{})}
+ if(first){first=0;regChk(c).then(R=>{if(!R||!R.known||$('#gate').hidden)return;if(R.live!==false)return;const nx=R.allow?'':nextSlot(R.s,R.d,R.now);if(/جارٍ البحث/.test($('#gt').textContent))showGate('🕒','👩‍🏫 المعلم لسه مادخلش الحصة '+fmtCode(c)+(nx?' — ميعادها '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.')}).catch(()=>{})}
  resolveCode(c).then(x=>{location.replace(linkOf(x.room,x.k,r))},e=>{if(/مفيش حصة مفتوحة|مش لاقي الحصة/.test(String(e))){showGate('🕒','المعلم لسه مافتحش الحصة '+fmtCode(c)+' — سيب الصفحة مفتوحة، وأول ما يفتح هتدخل غرفة الانتظار لوحدك.');nextFor(c).then(n=>{if(n&&!$('#gate').hidden)$('#gt').textContent='🗓 الحصة الجاية '+n+'\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل غرفة الانتظار لوحدك.'});libBtn(c);setTimeout(tryIt,8000)}else showGate('⛔',String(e),1)})};tryIt()}
 function inviteOf(v){try{const u=new URL(String(v||'').trim());const q=u.searchParams;
  if(u.origin!==location.origin||u.pathname!==location.pathname||!q.get('s')||!q.get('k')||!/^(t|s)$/.test(q.get('r')||''))return null;return u}catch(e){return null}}
@@ -921,7 +922,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
     const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#1a9486,#137a6f)':soon?'#22405f':'#1d3652')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
     const xp=xpGet(g.c),st=g.live&&x.ex?'⚡ حصة استثنائية — اضغط وادخل':xp&&!(x.d===D&&n>=a-10&&n<a+x.m)?'⚡ حصة استثنائية — متاحة لحد '+t12b(String(new Date(xp.e).getHours()).padStart(2,'0')+':'+String(new Date(xp.e).getMinutes()).padStart(2,'0')):g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
     r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'18px')+'">'+(g.live?'▶ ادخل':'🔒')+'</b>';
-    r.onclick=()=>{if(g.live)return start(g.c);toast('⏰','الحصة دي '+when+' — بتفتح من قبل ميعادها بـ 10 دقايق')};w.append(r)})};
+    r.onclick=()=>start(g.c);w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
   const tick=()=>{return;const now=cNow(),n=now.getHours()*60+now.getMinutes(),key=now.toDateString();
@@ -1494,9 +1495,10 @@ async function initS(){
  if(!(window.RTCPeerConnection||window.webkitRTCPeerConnection)){showGate('⚠️',T('noRtc'),1);return}
  if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳','جارٍ الاتصال بالغرفة...'+(sTries?' ('+(sTries+1)+')':''));
  /* في نفس الوقت بنسأل جدول الحصص: لو مش وقت الحصة بنقول على طول (بدل ما نستنى خادم الاتصال يرد) — والاتصال بيكمل في الخلفية وأول ما المعلم يفتح بيدخل */
- if(!sTries)(async()=>{try{const R=await regChk(room);if(!R||!R.known||!(R.s||[]).length)return;if(admitted||(conn&&conn.open)||final)return;
-  if(R.allow){if(R.live===false){window.SCLOSED='👩‍🏫 المعلم لسه مادخلش الحصة.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}return}
-  const nx=nextSlot(R.s,R.d,R.now);window.SCLOSED='الحصة مش وقتها دلوقتي'+(nx?' — ميعادها الجاي '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما المعلم يفتح هتدخل لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}catch(e){}})();
+ if(!sTries)(async()=>{try{const R=await regChk(room);if(!R||!R.known)return;if(admitted||(conn&&conn.open)||final)return;
+  /* الطالب مربوط بدخول المعلم بس (المعلم يقدر يفتح في أي وقت) */
+  if(R.live!==false)return;const nx=R.allow?'':nextSlot(R.s,R.d,R.now);
+  window.SCLOSED='👩‍🏫 المعلم لسه مادخلش الحصة'+(nx?' — ميعادها '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}catch(e){}})();
  const ice=await getIce();
  const p=peer=new Peer(undefined,{config:ice});let up=0;
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
