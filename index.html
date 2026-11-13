@@ -452,7 +452,7 @@ let ICE={iceServers:STUN},hasTurn=0,iceWhy='';
    الاتنين بيتحطوا في نفس القايمة: ExpressTURN الأول (المفضّل)، وMetered بعده. المتصفح بيجرب كل الطرق ويختار أول واحدة تشتغل.
    الطريقة 1 (المفضّلة): MET_APP + MET_KEY من لوحة Metered ← بيانات مؤقتة بتتجاب أوتوماتيك.
    الطريقة 2: MET_USER + MET_PASS (بيانات ثابتة من لوحة Metered ← TURN Credentials). */
-const MET_APP='',MET_KEY='',MET_USER='',MET_PASS='';
+const MET_APP='',MET_KEY='',MET_USER='17e4eded289112d50261441a',MET_PASS='XJYdn1uR4V4GNrG8';
 const MET_STATIC=MET_USER?[{urls:['turn:global.relay.metered.ca:80','turn:global.relay.metered.ca:80?transport=tcp','turns:global.relay.metered.ca:443?transport=tcp'],username:MET_USER,credential:MET_PASS}]:[];
 let metC=null,metT=0;
 async function metIce(){if(MET_APP&&MET_KEY){if(metC&&Date.now()-metT<30*60000)return metC;
