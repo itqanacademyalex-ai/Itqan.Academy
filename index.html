@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-v';
+const VER='2026.11.15-w';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2518,7 +2518,7 @@ let pfT=0;function pbgPre(){clearTimeout(pfT);pfT=setTimeout(()=>{if(!WPG)return
 /* 📄⇄✏️ زرار واضح للتنقل بين صفحات الملف والسبورة العادية (أسهم التقليب العايمة اتشالت) */
 let LPDF=-1,LPLAIN=-1;
 function pdfSw(){let b=$('#pdfsw');if(role!='t'||!WPG){if(b)b.hidden=true;return}const any=WPG.some(p=>p.bg);
- if(!b){const st0=$('#stage');if(!st0)return;b=document.createElement('button');b.id='pdfsw';b.style.cssText='position:absolute;top:10px;left:10px;z-index:30;border:0;border-radius:999px;padding:9px 16px;font:inherit;font-weight:800;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)';b.onclick=pdfSwGo;st0.append(b)}
+ if(!b){const st0=$('#stage');if(!st0)return;b=document.createElement('button');b.id='pdfsw';b.style.cssText='position:absolute;top:12px;left:58px;z-index:30;border:0;border-radius:999px;padding:9px 16px;font:inherit;font-weight:800;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)';b.onclick=pdfSwGo;st0.append(b)}
  b.hidden=!any;if(!any)return;const onPdf=!!WPG[pi].bg;b.textContent=onPdf?'✏️ رجوع للسبورة':'📄 رجوع للملف';b.style.background=onPdf?'linear-gradient(135deg,#1a9486,#2a7fa6)':'linear-gradient(135deg,#c79a4b,#e3c08d)';b.style.color=onPdf?'#fff':'#1b2533'}
 function pdfSwGo(){if(!WPG)return;if(WPG[pi].bg){let t=LPLAIN>=0&&WPG[LPLAIN]&&!WPG[LPLAIN].bg?LPLAIN:-1;if(t<0){for(let d=1;d<WPG.length&&t<0;d++){if(WPG[pi-d]&&!WPG[pi-d].bg)t=pi-d;else if(WPG[pi+d]&&!WPG[pi+d].bg)t=pi+d}}
   if(t<0){pgSave();WPG.push({s:[]});t=WPG.length-1}pgGo(t)}
