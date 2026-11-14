@@ -95,13 +95,24 @@ function doGet_(e) {
   }
   /* مكتبة المجموعة: كل حصة (فولدر بالتاريخ) والملفات اللي فيها — الأحدث الأول */
   if (p.a === 'lib') {
+    /* المكتبة بتتقري من Drive مباشرة كل مرة (من غير نسخة محفوظة): أي ملف يترفع يظهر، وأي ملف أو فولدر يتحذف يختفي على طول */
     const c = String(p.c || '').toLowerCase(); if (!/^[a-z0-9]{4,6}$/.test(c)) return out_({ ok: false });
-    const C = CacheService.getScriptCache(), hit = C.get('lb2_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
-    const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id) return out_({ ok: true, items: [] });
-    const out = []; try { const it = DriveApp.getFolderById(id).getFolders();
-      while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); const mt = x.getMimeType(), nm = x.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) files.push({ n: nm, id: x.getId(), m: mt, s: x.getSize() }); } const hw = jget_(f, 'hw.json'), it2 = { d: f.getName(), files: files }; if (hw && hw.st == 'pub') it2.hw = pubHw_(hw); if (files.length || it2.hw) out.push(it2); }
+    const PS = PropertiesService.getScriptProperties(), C = CacheService.getScriptCache(); let id = PS.getProperty('gf_' + c), g = null;
+    try { if (id) { g = DriveApp.getFolderById(id); if (g.isTrashed()) g = null; } } catch (x) { g = null; }
+    /* مفيش فولدر مربوط؟ ندوّر على فولدر باسم المجموعة جوه «تسجيلات أكاديمية إتقان» */
+    if (!g) { try { const r = load_()[c], t = r && String(r.n || '').replace(/[\\:*?"<>|]/g, '_').trim().slice(0, 120), R = DriveApp.getFoldersByName(ROOT);
+      if (t && R.hasNext()) { const s2 = R.next().getFoldersByName(t); while (s2.hasNext()) { const x = s2.next(); if (!x.isTrashed()) { g = x; PS.setProperty('gf_' + c, x.getId()); break; } } } } catch (x) {} }
+    if (!g) return out_({ ok: true, items: [] });
+    const out = []; try { const it = g.getFolders();
+      while (it.hasNext()) { const f = it.next(); if (f.isTrashed()) continue; const files = [], fi = f.getFiles();
+        while (fi.hasNext()) { const x = fi.next(); if (x.isTrashed()) continue; const mt = x.getMimeType(), nm = x.getName();
+          if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) { const xid = x.getId();
+            /* أي فيديو أو سبورة (حتى اللي اتحط على Drive بإيدك) يتفتح باللينك عشان الطالب يشغّله — مرة واحدة لكل ملف */
+            if (!C.get('sh_' + xid)) { try { if (x.getSharingAccess() != DriveApp.Access.ANYONE_WITH_LINK) x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); C.put('sh_' + xid, '1', 21600); } catch (e) {} }
+            files.push({ n: nm, id: xid, m: mt, s: x.getSize() }); } }
+        const hw = jget_(f, 'hw.json'), it2 = { d: f.getName(), files: files }; if (hw && hw.st == 'pub') it2.hw = pubHw_(hw); if (files.length || it2.hw) out.push(it2); }
     } catch (x) { return out_({ ok: false, e: String(x) }); }
-    out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lb2_' + c, j, out.length ? 600 : 60); // 10 دقايق بس (ودقيقة لو فاضية)، وبيتمسح لوحده أول ما ملف يخلص رفع أو واجب يتنشر
+    out.sort((a, b) => a.d < b.d ? 1 : -1);
     return out_({ ok: true, items: out });
   }
   /* أكواد حصص المعلم المتشفّرة — بالبصمة بس (اسمه + كوده) */
