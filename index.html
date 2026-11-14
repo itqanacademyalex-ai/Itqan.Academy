@@ -3733,7 +3733,7 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{liveOf
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
  /* مابنستناش الرفع: الأجزاء كلها بتتحفظ على الجهاز، والرفع بيكمل في الخلفية وهو على الرئيسية (أو أول ما الموقع يتفتح تاني) */
  try{await recP;$('#gt').textContent='💾 بنحفظ الملفات على الجهاز…';await new Promise(r=>setTimeout(r,1500))}catch(e){}
- /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
+ /* مسودة الواجب بتتعمل لوحدها على السيرفر أول ما السبورة تخلص رفع (ده طلب احتياطي) — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  /* من غير نافذة الملخص: رسالة قصيرة وبعدين الرئيسية */

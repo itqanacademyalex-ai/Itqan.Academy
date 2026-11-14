@@ -233,6 +233,7 @@ function upDone_(s, id) {
   C.remove('up_' + s); P.deleteProperty('up_' + s); P.deleteProperty('upc_' + s); C.remove('upc_' + s);
   if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
   if (rc) C.remove('lb2_' + rc);
+  if (rc && id) hwAuto_(rc, id);
 }
 function upLoc_(s) { return CacheService.getScriptCache().get('up_' + s) || PropertiesService.getScriptProperties().getProperty('up_' + s); }
 function upChunk_(b) {
@@ -328,12 +329,21 @@ function hwGen_(b) {
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
   if (!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
+  hwEnq_(b.c, b.d, b.re); return out_({ ok: true, pending: 1 });
+}
+/* يحط الحصة في طابور الواجبات (الذكاء الاصطناعي بيعمل المسودة في الخلفية، والمعلم يراجعها وينشرها) */
+function hwEnq_(c, d, re) {
   const P = PropertiesService.getScriptProperties(), L = LockService.getScriptLock(); L.waitLock(15000);
   try { let q = []; try { q = JSON.parse(P.getProperty('hwq') || '[]'); } catch (x) {}
-    if (!q.some(j => j.c == b.c && j.d == b.d)) q.push({ c: b.c, d: String(b.d), re: b.re ? 1 : 0 });
-    P.setProperties({ hwq: JSON.stringify(q.slice(-30)), ['hws_' + b.c + '|' + b.d]: JSON.stringify({ s: 'run', t: Date.now() }) });
+    if (!q.some(j => j.c == c && j.d == d)) q.push({ c: c, d: String(d), re: re ? 1 : 0 });
+    P.setProperties({ hwq: JSON.stringify(q.slice(-30)), ['hws_' + c + '|' + d]: JSON.stringify({ s: 'run', t: Date.now() }) });
   } finally { L.releaseLock(); }
-  hwKick_(); return out_({ ok: true, pending: 1 });
+  hwKick_();
+}
+/* أوتوماتيك: أول ما سبورة الحصة تخلص رفع ← مسودة الواجب تتعمل لوحدها (من غير ما المعلم يدوس حاجة) */
+function hwAuto_(c, id) {
+  try { if (!/^[a-z0-9]{4,6}$/.test(c || '') || !id || !GEM_()) return; const fl = DriveApp.getFileById(id); if (!/السبورة\.pdf$/.test(fl.getName())) return;
+    const ps = fl.getParents(); if (!ps.hasNext()) return; const f = ps.next(); if (jget_(f, 'hw.json')) return; hwEnq_(c, f.getName(), 0); } catch (x) {}
 }
 function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
 function hwJob() {
@@ -408,7 +418,10 @@ function hwList_(b) {
     let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
-    if (has || hw) out.push({ d: f.getName(), st: run ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
+    /* حصة من آخر 3 أيام عندها سبورة ومالهاش واجب (اتسجّلت قبل التحديث) ← تتعمل لوحدها */
+    if (has && !hw && !S && GEM_()) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(f.getName()); if (m && Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime() < 3 * 864e5) { try { hwEnq_(b.c, f.getName(), 0); S = { s: 'run', t: Date.now() }; } catch (x) {} } }
+    const run2 = S && S.s == 'run' && Date.now() - S.t < 600000;
+    if (has || hw) out.push({ d: f.getName(), st: run2 ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
 }
 
