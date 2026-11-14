@@ -284,6 +284,16 @@ function gemPick_() {
   L.sort((a, b) => (/(preview|exp)/.test(a) - /(preview|exp)/.test(b)) || (ver(b) - ver(a)) || (/lite/.test(a) - /lite/.test(b)) || (a.length - b.length));
   PropertiesService.getScriptProperties().setProperties({ gem_model: L[0], gem_models: JSON.stringify(L.slice(0, 6)) }); return L[0];
 }
+/* «تفكير» أقل = رد أسرع بكتير: Gemini 3 بـ thinkingLevel منخفض، و2.5 بميزانية تفكير صفر (من غيرها بيفكّر لوحده دقايق) */
+function gemThink_(m) { if (PropertiesService.getScriptProperties().getProperty('gem_nothink_' + m)) return null; const v = +((/gemini-(\d+(?:\.\d+)?)/.exec(m) || [])[1] || 0); return v >= 3 ? { thinkingLevel: 'low' } : v >= 2.5 ? { thinkingBudget: 0 } : null; }
+function gemBody_(parts, temp, think) { return JSON.stringify({ contents: [{ parts: parts }], generationConfig: Object.assign({ temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' }, think ? { thinkingConfig: think } : {}) }); }
+function gemTxt_(txt) { const j = JSON.parse(txt); return JSON.parse(((j.candidates || [])[0].content.parts || []).filter(p => !p.thought).map(p => p.text || '').join('')); }
+/* كذا طلب في نفس الوقت (الواجب بيتقسم نصين بيتعملوا مع بعض = نص الوقت). اللي يفشل بيتعاد لوحده بالطريقة العادية */
+function gemAll_(list, temp) {
+  const m = gemModel_(), th = gemThink_(m), K = encodeURIComponent(GEM_());
+  let rs = []; try { rs = UrlFetchApp.fetchAll(list.map(parts => ({ url: 'https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + K, method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: gemBody_(parts, temp, th) }))); } catch (e) {}
+  return list.map((parts, i) => { const r = rs[i]; if (r && r.getResponseCode() == 200) { try { return gemTxt_(r.getContentText()); } catch (e) {} } return gem_(parts, temp); });
+}
 function gem_(parts, temp, again) {
   const P = PropertiesService.getScriptProperties(), fixed = P.getProperty('GEMINI_MODEL');
   const first = gemModel_(); let more = []; try { more = JSON.parse(P.getProperty('gem_models') || '[]'); } catch (e) {}
@@ -291,19 +301,17 @@ function gem_(parts, temp, again) {
   /* الموديل الأساسي، ولو عليه ضغط (503/429/500) بنستنى ونعيد، وبعدين نجرّب الموديلات اللي بعده */
   const models = [first].concat(fixed ? [] : more.filter(m => m != first)).slice(0, 3);
   /* «تفكير» قليل = رد أسرع بكتير (الواجب مش محتاج تفكير طويل). لو الموديل مابيدعمهوش بنشيله ونعيد */
-  let think = P.getProperty('gem_nothink') ? null : { thinkingLevel: 'low' };
-  const bodyOf = () => JSON.stringify({ contents: [{ parts: parts }], generationConfig: Object.assign({ temperature: temp == null ? 0.4 : temp, responseMimeType: 'application/json' }, think ? { thinkingConfig: think } : {}) });
-  let body = bodyOf();
   let last = '';
   for (let i = 0; i < models.length; i++) {
+    let think = gemThink_(models[i]), body = gemBody_(parts, temp, think);
     for (let t = 0; t < 3; t++) {
       const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + encodeURIComponent(GEM_()), { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: body });
       const code = r.getResponseCode(), txt = r.getContentText();
-      if (code == 200) { const j = JSON.parse(txt); return JSON.parse(((j.candidates || [])[0].content.parts || []).map(p => p.text || '').join('')); }
+      if (code == 200) return gemTxt_(txt);
       last = 'Gemini (' + models[i] + ') ' + code + ': ' + txt.slice(0, 200);
       /* الموديل اتقفل: نختار من جديد مرة واحدة */
       if ((code == 404 || code == 400 && /model/i.test(txt)) && !fixed && !again) { P.deleteProperty('gem_model'); gemPick_(); return gem_(parts, temp, 1); }
-      if (code == 400 && think && /think/i.test(txt)) { think = null; P.setProperty('gem_nothink', '1'); body = bodyOf(); t--; continue; }
+      if (code == 400 && think && /think/i.test(txt)) { think = null; P.setProperty('gem_nothink_' + models[i], '1'); body = gemBody_(parts, temp, null); t--; continue; }
       if (code == 503 || code == 429 || code == 500) { Utilities.sleep([2000, 5000, 0][t]); continue; }
       throw new Error(last);
     }
@@ -320,7 +328,58 @@ function testGemini() { PropertiesService.getScriptProperties().deleteProperty('
 const nrm_ = s => String(s == null ? '' : s).toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}.\-\/]+/gu, ' ').trim();
 const pubHw_ = hw => ({ title: hw.title || '', qs: (hw.qs || []).map(q => ({ type: q.type, q: q.q, options: q.options || null, fig: q.fig || '' })) });
 /* رسمة السؤال (هندسة/رسم بياني): SVG بس، من غير سكربت ولا روابط خارجية — والموقع بيعرضها كصورة فمفيش أي كود بيشتغل */
-function fig_(v) { const t = String(v || '').trim(); if (!/^<svg[\s>]/i.test(t) || t.length > 30000 || /<script|on\w+\s*=|javascript:|<foreignObject|href\s*=\s*["']?(?!#)/i.test(t)) return ''; return t; }
+/* رسمة السؤال بوصف قصير (بدل ما الذكاء الاصطناعي يكتب SVG طويل = أبطأ بكتير): قايمة عناصر بإحداثيات رياضية (y لفوق)،
+   والسكربت بيرسمها SVG نضيف بمقاس ثابت. العناصر:
+   ["poly",[[x,y],...]] مضلع · ["line",[x,y],[x,y],1?] خط (1 = متقطع) · ["circle",[x,y],r] · ["arc",[x,y],r,من,لحد] قوس زاوية بالدرجات
+   ["right",[رأس],[نقطة على ضلع],[نقطة على ضلع]] علامة زاوية قايمة · ["point",[x,y],"A"] · ["text",[x,y],"8 cm"]
+   ["axes",xmin,xmax,ymin,ymax] محاور بأرقام · ["fn","x^2-1",xmin,xmax] منحنى دالة · ["numline",min,max,[علامات]] خط أعداد · ["bars",["أ","ب"],[3,5]] أعمدة */
+function figSvg_(F) {
+  try { if (!Array.isArray(F) || !F.length) return ''; F = F.filter(e => Array.isArray(e) && typeof e[0] == 'string').slice(0, 40);
+    const N = v => (typeof v == 'number' && isFinite(v)) ? v : (isFinite(+v) ? +v : 0), P = a => Array.isArray(a) ? [N(a[0]), N(a[1])] : [0, 0];
+    const esc = t => String(t == null ? '' : t).slice(0, 24).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+    const fnOf = ex => { const e = String(ex || '').toLowerCase().replace(/\s+/g, ''); if (!e || e.length > 60 || !/^([0-9x+\-*/^().]|sin|cos|tan|sqrt|abs|pi)+$/.test(e)) return null;
+      try { const f = new Function('x', 'with(Math){return ' + e.replace(/\^/g, '**').replace(/(\d)(x|\()/g, '$1*$2').replace(/\)(x|\d|\()/g, ')*$1').replace(/pi/g, 'PI') + '}'); f(1); return f; } catch (x) { return null; } };
+    /* حدود الرسمة */
+    let X0 = Infinity, X1 = -Infinity, Y0 = Infinity, Y1 = -Infinity; const add = (x, y) => { X0 = Math.min(X0, x); X1 = Math.max(X1, x); Y0 = Math.min(Y0, y); Y1 = Math.max(Y1, y); };
+    F.forEach(e => { const k = e[0];
+      if (k == 'poly') (e[1] || []).forEach(p => add(...P(p))); else if (k == 'line') { add(...P(e[1])); add(...P(e[2])); }
+      else if (k == 'circle' || k == 'arc') { const c = P(e[1]), r = Math.abs(N(e[2])); add(c[0] - r, c[1] - r); add(c[0] + r, c[1] + r); }
+      else if (k == 'point' || k == 'text' || k == 'right') add(...P(e[1])); else if (k == 'axes') { add(N(e[1]), N(e[3])); add(N(e[2]), N(e[4])); }
+      else if (k == 'fn') { const f = fnOf(e[1]); if (f) for (let i = 0; i <= 40; i++) { const x = N(e[2]) + (N(e[3]) - N(e[2])) * i / 40, y = f(x); if (isFinite(y) && Math.abs(y) < 1e4) add(x, y); } } });
+    const one = F.find(e => e[0] == 'numline' || e[0] == 'bars');
+    const W = 320, H = one ? 140 : 240, pad = 30; let svg = '';
+    if (one && one[0] == 'numline') { const a = N(one[1]), b = N(one[2]) > a ? N(one[2]) : a + 10, sx = v => pad + (v - a) * (W - 2 * pad) / (b - a), st = Math.max(1, Math.round((b - a) / 10));
+      svg += '<line x1="' + (pad - 10) + '" y1="70" x2="' + (W - pad + 10) + '" y2="70" stroke="#000" stroke-width="2.5"/>';
+      for (let v = a; v <= b + 1e-9; v += st) svg += '<line x1="' + sx(v) + '" y1="62" x2="' + sx(v) + '" y2="78" stroke="#000" stroke-width="2"/><text x="' + sx(v) + '" y="98" font-size="14" text-anchor="middle">' + +v.toFixed(2) + '</text>';
+      (one[3] || []).slice(0, 8).forEach(m => { const v = Array.isArray(m) ? N(m[0]) : N(m), l = Array.isArray(m) ? esc(m[1]) : ''; svg += '<circle cx="' + sx(v) + '" cy="70" r="6" fill="#d33"/>' + (l ? '<text x="' + sx(v) + '" y="50" font-size="15" text-anchor="middle" font-weight="bold">' + l + '</text>' : ''); });
+    } else if (one) { const L = (one[1] || []).slice(0, 8), V = (one[2] || []).slice(0, 8).map(N), mx = Math.max(1, ...V), bw = (W - 2 * pad) / Math.max(1, L.length);
+      svg += '<line x1="' + pad + '" y1="' + (H - 28) + '" x2="' + (W - pad) + '" y2="' + (H - 28) + '" stroke="#000" stroke-width="2"/>';
+      L.forEach((l, i) => { const h = (V[i] || 0) / mx * (H - 60), x = pad + i * bw + bw * .2; svg += '<rect x="' + x + '" y="' + (H - 28 - h) + '" width="' + bw * .6 + '" height="' + h + '" fill="#9ec5fe" stroke="#000" stroke-width="1.5"/><text x="' + (x + bw * .3) + '" y="' + (H - 10) + '" font-size="13" text-anchor="middle">' + esc(l) + '</text><text x="' + (x + bw * .3) + '" y="' + (H - 33 - h) + '" font-size="13" text-anchor="middle">' + (V[i] || 0) + '</text>'; });
+    } else {
+      if (!isFinite(X0)) return ''; if (X1 - X0 < 1e-6) { X0 -= 1; X1 += 1; } if (Y1 - Y0 < 1e-6) { Y0 -= 1; Y1 += 1; }
+      const sc = Math.min((W - 2 * pad) / (X1 - X0), (H - 2 * pad) / (Y1 - Y0)), ox = (W - (X1 - X0) * sc) / 2, oy = (H - (Y1 - Y0) * sc) / 2;
+      const sx = x => +(ox + (x - X0) * sc).toFixed(1), sy = y => +(H - oy - (y - Y0) * sc).toFixed(1), S = 'stroke="#000" stroke-width="2.5" fill="none"';
+      F.forEach(e => { const k = e[0];
+        if (k == 'axes') { const a = N(e[1]), b = N(e[2]), c = N(e[3]), d = N(e[4]), st = Math.max(1, Math.round(Math.max(b - a, d - c) / 10));
+          for (let v = Math.ceil(a); v <= b; v += st) svg += '<line x1="' + sx(v) + '" y1="' + sy(c) + '" x2="' + sx(v) + '" y2="' + sy(d) + '" stroke="#e5e7eb"/>' + (v ? '<text x="' + sx(v) + '" y="' + (sy(Math.max(c, Math.min(0, d))) + 14) + '" font-size="11" text-anchor="middle">' + v + '</text>' : '');
+          for (let v = Math.ceil(c); v <= d; v += st) svg += '<line x1="' + sx(a) + '" y1="' + sy(v) + '" x2="' + sx(b) + '" y2="' + sy(v) + '" stroke="#e5e7eb"/>' + (v ? '<text x="' + (sx(Math.max(a, Math.min(0, b))) - 5) + '" y="' + (sy(v) + 4) + '" font-size="11" text-anchor="end">' + v + '</text>' : '');
+          const y0 = Math.max(c, Math.min(0, d)), x0 = Math.max(a, Math.min(0, b));
+          svg += '<line x1="' + sx(a) + '" y1="' + sy(y0) + '" x2="' + sx(b) + '" y2="' + sy(y0) + '" stroke="#000" stroke-width="1.8"/><line x1="' + sx(x0) + '" y1="' + sy(c) + '" x2="' + sx(x0) + '" y2="' + sy(d) + '" stroke="#000" stroke-width="1.8"/>'; }
+        else if (k == 'poly') { const p = (e[1] || []).slice(0, 12).map(P); if (p.length > 1) svg += '<polygon points="' + p.map(q => sx(q[0]) + ',' + sy(q[1])).join(' ') + '" ' + S + '/>'; }
+        else if (k == 'line') { const a = P(e[1]), b = P(e[2]); svg += '<line x1="' + sx(a[0]) + '" y1="' + sy(a[1]) + '" x2="' + sx(b[0]) + '" y2="' + sy(b[1]) + '" ' + S + (e[3] ? ' stroke-dasharray="6 5"' : '') + '/>'; }
+        else if (k == 'circle') { const c = P(e[1]); svg += '<circle cx="' + sx(c[0]) + '" cy="' + sy(c[1]) + '" r="' + Math.abs(N(e[2])) * sc + '" ' + S + '/>'; }
+        else if (k == 'arc') { const c = P(e[1]), r = Math.abs(N(e[2])) * sc, a1 = N(e[3]) * Math.PI / 180, a2 = N(e[4]) * Math.PI / 180, X = a => sx(c[0]) + r * Math.cos(a), Y = a => sy(c[1]) - r * Math.sin(a);
+          svg += '<path d="M' + X(a1).toFixed(1) + ' ' + Y(a1).toFixed(1) + ' A' + r.toFixed(1) + ' ' + r.toFixed(1) + ' 0 ' + (Math.abs(a2 - a1) > Math.PI ? 1 : 0) + ' 0 ' + X(a2).toFixed(1) + ' ' + Y(a2).toFixed(1) + '" stroke="#000" stroke-width="2" fill="none"/>'; }
+        else if (k == 'right') { const v = P(e[1]), a = P(e[2]), b = P(e[3]), u = (p) => { const dx = sx(p[0]) - sx(v[0]), dy = sy(p[1]) - sy(v[1]), l = Math.hypot(dx, dy) || 1; return [dx / l * 13, dy / l * 13]; }, A = u(a), B = u(b), x = sx(v[0]), y = sy(v[1]);
+          svg += '<path d="M' + (x + A[0]) + ' ' + (y + A[1]) + ' L' + (x + A[0] + B[0]) + ' ' + (y + A[1] + B[1]) + ' L' + (x + B[0]) + ' ' + (y + B[1]) + '" stroke="#000" stroke-width="1.8" fill="none"/>'; }
+        else if (k == 'fn') { const f = fnOf(e[1]); if (f) { const pts = []; for (let i = 0; i <= 80; i++) { const x = N(e[2]) + (N(e[3]) - N(e[2])) * i / 80, y = f(x); if (isFinite(y) && y >= Y0 - 1 && y <= Y1 + 1) pts.push(sx(x) + ',' + sy(y)); } if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" stroke="#1a5fd1" stroke-width="2.5" fill="none"/>'; } }
+        else if (k == 'point') { const a = P(e[1]); svg += '<circle cx="' + sx(a[0]) + '" cy="' + sy(a[1]) + '" r="3.5" fill="#000"/><text x="' + (sx(a[0]) + 7) + '" y="' + (sy(a[1]) - 7) + '" font-size="16" font-weight="bold">' + esc(e[2]) + '</text>'; }
+        else if (k == 'text') { const a = P(e[1]); svg += '<text x="' + sx(a[0]) + '" y="' + sy(a[1]) + '" font-size="15" text-anchor="middle" dominant-baseline="middle">' + esc(e[2]) + '</text>'; } });
+    }
+    return svg ? '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="Arial"><rect width="' + W + '" height="' + H + '" fill="#fff"/>' + svg + '</svg>' : '';
+  } catch (x) { return ''; }
+}
+function fig_(v) { if (typeof v == 'string' && /^\s*\[/.test(v)) { try { v = JSON.parse(v); } catch (x) {} } if (Array.isArray(v)) v = figSvg_(v); const t = String(v || '').trim(); if (!/^<svg[\s>]/i.test(t) || t.length > 30000 || /<script|on\w+\s*=|javascript:|<foreignObject|href\s*=\s*["']?(?!#)/i.test(t)) return ''; return t; }
 
 /* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
    وتريجر hwJob بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
@@ -369,13 +428,18 @@ function hwMake_(c, d, re) {
   const room = load_()[b.c] || {};
   const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
     'لو المادة بالإنجليزي (أو أي لغة غير العربي): اكتب كل حاجة بلغة المادة — العنوان ونص كل سؤال وتعليماته (Choose the correct answer / True or False / Complete …) والإجابة والشرح — من غير ولا كلمة عربي.\n' +
-    'لو السؤال محتاج رسمة (هندسة: مثلث/زوايا/دايرة، أو رسم بياني/محاور/خط أعداد، أو شكل) ضيف للسؤال حقل "fig" فيه كود SVG بسيط وواضح: viewBox، خلفية بيضا، خطوط سودا تخينة، تسميات بالحروف والأرقام، ومن غير صور خارجية ولا سكربت. الأسئلة اللي مش محتاجة رسمة من غير fig.\n' +
+    'لو السؤال محتاج رسمة (هندسة، رسم بياني، خط أعداد، أعمدة) ضيف حقل "fig" = قايمة عناصر قصيرة (مش SVG) بإحداثيات رياضية (y لفوق) وبمقاسات منطقية زي السؤال، من العناصر دي بس:\n' +
+    '["poly",[[0,0],[8,0],[0,6]]] مضلع · ["line",[x,y],[x,y]] خط (["line",a,b,1] متقطع) · ["circle",[x,y],r] · ["arc",[x,y],r,زاوية_البداية,زاوية_النهاية] لعلامة الزاوية · ["right",[الرأس],[نقطة على ضلع],[نقطة على الضلع التاني]] زاوية قايمة · ["point",[x,y],"A"] · ["text",[x,y],"8 cm"] تسمية · ["axes",-5,5,-5,5] محاور · ["fn","x^2-1",-3,3] منحنى · ["numline",-5,5,[[2,"A"]]] خط أعداد · ["bars",["Mon","Tue"],[3,5]] أعمدة.\n' +
+    'مثال مثلث قايم: [["poly",[[0,0],[8,0],[0,6]]],["right",[0,0],[1,0],[0,1]],["text",[4,-0.7],"8 cm"],["text",[-0.8,3],"6 cm"],["text",[4.3,3.4],"x"]]. الأسئلة اللي مش محتاجة رسمة من غير fig.\n' +
     'الكسور اكتبها بالشكل 3/4 (والعدد الكسري 1 2/3) — الموقع بيعرضها بشرطة أفقية.\n' +
     'بالظبط 10 أسئلة متنوعة ومتدرجة من السهل للصعب: 4 اختيار من متعدد (4 اختيارات)، 2 صح وغلط، 2 أكمل، 2 سؤال مقالي/مسألة قصيرة.\n' +
-    'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة","fig":"<svg ...> (اختياري — للأسئلة اللي محتاجة رسمة بس)"}]}' }];
+    'رجّع JSON بس بالشكل ده: {"title":"عنوان قصير للواجب","questions":[{"type":"mcq|tf|fill|short","q":"نص السؤال","options":["..."] (للـ mcq بس),"answer":"الإجابة الصحيحة بالظبط (للـ mcq نص الاختيار الصح، وللـ tf «صح» أو «خطأ» أو True/False)","explain":"شرح سطر واحد للإجابة","fig":[...] (اختياري — للأسئلة اللي محتاجة رسمة بس)}]}' }];
   if (pdf && pdf.getSize() < 18e6) parts.push({ inline_data: { mime_type: 'application/pdf', data: Utilities.base64Encode(pdf.getBlob().getBytes()) } });
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
-  let o; try { o = gem_(parts); } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
+  /* الواجب نصين بيتعملوا في نفس الوقت (كل نص 5 أسئلة) = تقريبًا نص الوقت */
+  const half = t => parts.map((p, i) => i ? p : { text: p.text + '\n\nمهم: المرة دي اكتب ' + t + ' بس (مش الـ 10).' });
+  let o; try { const R = gemAll_([half('5 أسئلة: 4 اختيار من متعدد (4 اختيارات) + 1 صح وغلط'), half('5 أسئلة: 1 صح وغلط + 2 أكمل + 2 سؤال مقالي/مسألة قصيرة')]);
+    o = { title: (R[0] && R[0].title) || (R[1] && R[1].title) || '', questions: [].concat((R[0] && R[0].questions) || [], (R[1] && R[1].questions) || []) }; } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
   const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400), fig: fig_(q.fig) }));
   if (!qs.length) return ({ ok: false, e: 'gen' });
   const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
