@@ -96,12 +96,12 @@ function doGet_(e) {
   /* مكتبة المجموعة: كل حصة (فولدر بالتاريخ) والملفات اللي فيها — الأحدث الأول */
   if (p.a === 'lib') {
     const c = String(p.c || '').toLowerCase(); if (!/^[a-z0-9]{4,6}$/.test(c)) return out_({ ok: false });
-    const C = CacheService.getScriptCache(), hit = C.get('lib_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
+    const C = CacheService.getScriptCache(), hit = C.get('lb2_' + c); if (hit) return out_({ ok: true, items: JSON.parse(hit) });
     const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id) return out_({ ok: true, items: [] });
     const out = []; try { const it = DriveApp.getFolderById(id).getFolders();
       while (it.hasNext()) { const f = it.next(), files = [], fi = f.getFiles(); while (fi.hasNext()) { const x = fi.next(); const mt = x.getMimeType(), nm = x.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) files.push({ n: nm, id: x.getId(), m: mt, s: x.getSize() }); } const hw = jget_(f, 'hw.json'), it2 = { d: f.getName(), files: files }; if (hw && hw.st == 'pub') it2.hw = pubHw_(hw); if (files.length || it2.hw) out.push(it2); }
     } catch (x) { return out_({ ok: false, e: String(x) }); }
-    out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lib_' + c, j, 21600); // بيتمسح لوحده أول ما ملف جديد يترفع أو واجب يتنشر
+    out.sort((a, b) => a.d < b.d ? 1 : -1); const j = JSON.stringify(out); if (j.length < 95000) C.put('lb2_' + c, j, out.length ? 600 : 60); // 10 دقايق بس (ودقيقة لو فاضية)، وبيتمسح لوحده أول ما ملف يخلص رفع أو واجب يتنشر
     return out_({ ok: true, items: out });
   }
   /* أكواد حصص المعلم المتشفّرة — بالبصمة بس (اسمه + كوده) */
@@ -212,8 +212,16 @@ function upStart_(b) {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
   const h = r.getHeaders(), loc = h['Location'] || h['location'];
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
-  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); PropertiesService.getScriptProperties().setProperty('up_' + s, loc); // بيفضل محفوظ لو المعلم قفل والرفع كمّل بعد ساعات if (/^[a-z0-9]{4,6}$/.test(c)) CacheService.getScriptCache().put('upc_' + s, c, 21600);
+  const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); PropertiesService.getScriptProperties().setProperty('up_' + s, loc); // بيفضل محفوظ لو المعلم قفل والرفع كمّل بعد ساعات
+  if (/^[a-z0-9]{4,6}$/.test(c)) { CacheService.getScriptCache().put('upc_' + s, c, 21600); PropertiesService.getScriptProperties().setProperty('upc_' + s, c); CacheService.getScriptCache().remove('lb2_' + c); }
   return out_({ ok: true, s: s });
+}
+/* الملف خلص رفع: يتفتح باللينك (الفيديو والسبورة بس — الملخص والتفريغ خاصين بالإدارة) + تتمسح نسخة المكتبة القديمة عشان يظهر للطلاب على طول */
+function upDone_(s, id) {
+  const C = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties(), rc = C.get('upc_' + s) || P.getProperty('upc_' + s);
+  C.remove('up_' + s); P.deleteProperty('up_' + s); P.deleteProperty('upc_' + s); C.remove('upc_' + s);
+  if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
+  if (rc) C.remove('lb2_' + rc);
 }
 function upLoc_(s) { return CacheService.getScriptCache().get('up_' + s) || PropertiesService.getScriptProperties().getProperty('up_' + s); }
 function upChunk_(b) {
@@ -223,19 +231,14 @@ function upChunk_(b) {
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
   if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} const C = CacheService.getScriptCache(), rc = C.get('upc_' + b.s); C.remove('up_' + b.s); PropertiesService.getScriptProperties().deleteProperty('up_' + b.s);
-    /* الملف يتفتح لأي حد معاه لينك المجموعة (من المكتبة) */
-    /* الفيديو والسبورة بس بيتفتحوا باللينك (الملخص والتفريغ بيفضلوا خاصين بالإدارة) */
-    if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
-    if (rc) C.remove('lib_' + rc);
-    return out_({ ok: true, done: 1, id: id }); }
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} upDone_(b.s, id); return out_({ ok: true, done: 1, id: id }); }
   return out_({ ok: false, e: 'chunk ' + c + ' ' + r.getContentText().slice(0, 80) });
 }
 function upStatus_(b) {
   const loc = upLoc_(b.s); if (!loc) return out_({ ok: false, e: 'session' });
   const r = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true });
   /* لو الملف خلص رفع فعلًا (والرد الأخير ضاع في النت) Drive بيرد 200 — نقول للموقع إنه خلص بدل ما يفضل يعيد */
-  const code = r.getResponseCode(); if (code == 200 || code == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} return out_({ ok: true, done: 1, id: id }); }
+  const code = r.getResponseCode(); if (code == 200 || code == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} upDone_(b.s, id); return out_({ ok: true, done: 1, id: id }); }
   const g = (r.getHeaders()['Range'] || r.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(g);
   return out_({ ok: true, r: m ? +m[1] + 1 : 0, code: code });
 }
@@ -243,6 +246,12 @@ function upStatus_(b) {
 function authDrive() { folder_(''); UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } }); Logger.log('تمام — فولدر «' + ROOT + '» جاهز'); }
 
 /* اختبار المكتبة من المحرر: شغّلها وشوف النتيجة في Execution log */
+/* تشغيل مرة واحدة (اختياري): يفتح باللينك كل فيديوهات وسبورات الحصص القديمة اللي اترفعت قبل كده، ويمسح نسخ المكتبة */
+function shareAll() { const P = PropertiesService.getScriptProperties().getProperties(); let n = 0;
+  Object.keys(P).filter(k => k.indexOf('gf_') === 0).forEach(k => { try { CacheService.getScriptCache().remove('lb2_' + k.slice(3)); const it = DriveApp.getFolderById(P[k]).getFolders();
+    while (it.hasNext()) { const fi = it.next().getFiles(); while (fi.hasNext()) { const x = fi.next(), mt = x.getMimeType(), nm = x.getName();
+      if ((/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) && x.getSharingAccess() != DriveApp.Access.ANYONE_WITH_LINK) { x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); n++; } } } } catch (e) {} });
+  Logger.log('اتفتح ' + n + ' ملف'); }
 function testLib() { Logger.log(doGet({ parameter: { a: 'lib', c: 'hhe8' } }).getContent()); }
 
 /* ===== 📝 الواجب التلقائي من السبورة (Gemini) — المفتاح في Script Properties باسم GEMINI_KEY، مابيوصلش لأي جهاز =====
@@ -358,7 +367,7 @@ function hwPub_(b) {
   const hw = { st: b.pub ? 'pub' : 'draft', at: Date.now(), title: String(h.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
   if (b.pub) { const t = '📝 ' + (hw.title || 'الواجب') + ' — الإجابات النموذجية\n\n' + qs.map((q, i) => (i + 1) + ') ' + q.q + (q.options ? '\n   [' + q.options.join(' / ') + ']' : '') + '\n   ✅ ' + q.answer + (q.explain ? '\n   💡 ' + q.explain : '')).join('\n\n');
     const x = fileIn_(f, /الإجابات_النموذجية\.txt$/); if (x) x.setContent('﻿' + t); else f.createFile(f.getName() + '_الإجابات_النموذجية.txt', '﻿' + t, MimeType.PLAIN_TEXT); }
-  CacheService.getScriptCache().remove('lib_' + b.c);
+  CacheService.getScriptCache().remove('lb2_' + b.c);
   return out_({ ok: true, hw: hw });
 }
 function hwSub_(b) {
@@ -430,7 +439,7 @@ function linkOld_(go) {
     const s = g.getFoldersByName(m[2]), d = s.hasNext() ? s.next() : g.createFolder(m[2]);
     x.moveTo(d); if (/^video\//.test(x.getMimeType()) || /السبورة/.test(nm)) try { x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
   }
-  Object.keys(rooms).concat(Object.keys(S)).forEach(c => CacheService.getScriptCache().remove('lib_' + c));
+  Object.keys(rooms).concat(Object.keys(S)).forEach(c => CacheService.getScriptCache().remove('lb2_' + c));
   Logger.log((go ? '✅ اتنفّذ' : '🔎 تجربة بس (مفيش حاجة اتغيّرت)') + ' — ملفات: ' + moved + ' · ملفات مالقيتلهاش مجموعة: ' + skip + (it.hasNext() ? ' · الوقت خلص، شغّلها تاني تكمّل' : '') + '\n' + log.slice(0, 300).join('\n'));
 }
 
