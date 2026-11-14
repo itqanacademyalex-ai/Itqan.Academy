@@ -3579,12 +3579,8 @@ function recUi(){const el=$('#recs');if(!el)return;if(role=='c'||!RUPS.length){e
 function recRefresh(){recUi();rcStatus();try{upChip()}catch(e){}}
 setInterval(()=>{if(typeof SXS!=='undefined'&&sxAll().some(X=>X.rec))rcStatus()},1000);
 addEventListener('beforeunload',e=>{if(recBusy()&&!window.NOWARN){e.preventDefault();e.returnValue=''}});
-/* ☁️ شريط صغير تحت في الرئيسية: الرفع شغّال في الخلفية وفاضل كام */
-function upChip(){let c=$('#upchip');let ed=false;try{ed=!!endDone}catch(e){}let ro='';try{ro=role}catch(e){}const busy=RUPS.length&&(!ro||ro=='c'||ed);if(!busy){if(c)c.remove();return}
- if(!c){c=document.createElement('div');c.id='upchip';c.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:400;background:#14283fee;border:1px solid #35607f;color:#e8eef5;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 8px 24px #0006;direction:rtl;white-space:nowrap;pointer-events:none';document.body.append(c)}
- const left=RUPS.reduce((a,u)=>a+u.q.reduce((x,k)=>x+(k.blob?k.blob.size:0),0),0),stuck=RUPS.every(u=>Date.now()-(u.ok||0)>180000);
- c.style.pointerEvents='auto';c.style.cursor='pointer';c.onclick=()=>{const d=RUPS.map(u=>'• '+u.meta.name+'\n   اترفع '+recMB(u.meta.off)+' ميجا · فاضل '+recMB(u.q.reduce((a,k)=>a+(k.blob?k.blob.size:0),0))+' ميجا'+(u.err?'\n   آخر مشكلة: '+u.err+' (محاولة '+u.fails+')':'')).join('\n\n');if(confirm('☁️ الرفع:\n\n'+d+'\n\nOK = ابدأ الرفع من جديد دلوقتي'))upKick(1)};
- c.textContent=(stuck?'⚠️ الرفع واقف — اضغط هنا يكمّل ':RUPS.some(u=>u.err)?'⚠️ الرفع بيعيد المحاولة… ':'☁️ ملفات الحصة بتترفع… ')+(left?(left/1048576).toFixed(1)+' ميجا':'')}
+/* شريط حالة الرفع اتشال نهائيًا — الرفع لسه شغّال في الخلفية من غير ما يظهر حاجة */
+function upChip(){const c=$('#upchip');if(c)c.remove()}
 /* لو الرفع وقف (أو النت رجع): نكمّل. الضغط على الشريط بيبدأ من جديد من الأجزاء المحفوظة على الجهاز */
 function upKick(force){if(force){window.NOWARN=1;location.reload();return}RUPS.forEach(u=>{try{u.pump()}catch(e){}})}
 addEventListener('online',()=>upKick());document.addEventListener('visibilitychange',()=>{if(!document.hidden)upKick()});
