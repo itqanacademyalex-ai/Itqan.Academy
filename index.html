@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.16-a';
+const VER='2026.11.16-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -553,6 +553,12 @@ async function audioReset(){if(role!='t'&&role!='s')return;window.auInt=0;
   if(!(await prepMic(0)))return;if(on)sendMic()}
  window.acUnlock&&acUnlock();if(!window._quietReset)sys('🔄 الصوت اتظبط تاني بعد المكالمة');try{role=='t'?(H.t.reset++,hEv('📞 المعلم رجع من مكالمة/مقاطعة — الصوت اتظبط تاني')):dg('reset')}catch(e){}}
 setInterval(()=>{if(window.auInt&&!document.hidden&&(role=='t'||role=='s'&&admitted))audioReset()},3000);
+/* 🎤 المايك منوّر بس مش بيلقط (برنامج تاني ماسكه — زووم/تيمز/واتساب — أو الجهاز اتغيّر): لو المايك مفتوح وبيسجّل صمت تام 4 ثواني
+   أو مكتوم من النظام، بنشغّله من جديد لوحدنا — ولو لسه برضه بنقول للمستخدم يقفل البرنامج التاني */
+let mzFix=0,mzT=0;setInterval(()=>{try{if(document.hidden)return;const t=role=='t'?(typeof micT!='undefined'?micT:null):role=='s'&&admitted?micS:null;if(!t||t.readyState!='live'||!t.enabled)return;
+ const dead=(window.MZ||0)>=4||t.muted;if(!dead){if(mzFix&&Date.now()-mzT>20000)mzFix=0;return}if(Date.now()-mzT<15000)return;mzT=Date.now();
+ if(mzFix<2){mzFix++;window._quietReset=1;toast('🎤','المايك مكانش بيلقط صوت — بنشغّله من جديد…');try{role=='t'?hEv('🎤 مايك المعلم كان صامت تمامًا — اتشغّل من جديد'):dg('mic','silent')}catch(e){}audioReset().finally(()=>{window._quietReset=0})}
+ else if(!window._mzAlert){window._mzAlert=1;mzFix=0;alert('🎤 المايك مش بيلقط صوت.\n\nغالبًا برنامج تاني ماسك المايك (زووم، تيمز، واتساب، مسجّل صوت، مكالمة).\nاقفل البرنامج ده خالص، وبعدين دوس 🎤 مرتين (اقفله وافتحه).\n\nلو بتستخدم سماعة بلوتوث أو مايك خارجي: اتأكد إنه متوصّل.')}}catch(e){}},3000);
 /* الآيفون بيقفل المايك خالص لما المعلم/الطالب يخرج من التطبيق (مفيش مايك في الخلفية لتطبيقات الويب) —
    لو كان فاتح المايك قبل ما يخرج، نرجّعه لوحده أول ما يرجع، من غير ما يدوس 🎤 */
 let mwT=0;
@@ -1241,7 +1247,7 @@ async function tData(c,d){
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'&&o.dir){pmGot(c.peer,{m:d.m,ts:Date.now()});return}
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m||'').slice(0,500),ts:Date.now()};if(typeof d.img=='string'&&d.img.length<700000&&CIMG.test(d.img))m.img=d.img;if(!m.m&&!m.img)return;chat.push(m);bc({t:'chat',...m});render()}
- else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;o.me=typeof d.e=='string'?d.e.slice(0,20):'';render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='dc'){dirRun(o,d)}else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;o.me=typeof d.e=='string'?d.e.slice(0,20):'';render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
  else if(d.t=='pbg?'&&o.adm&&WPG){const bg=WPG[pi]&&WPG[pi].bg;if(bg){o.pgs&&o.pgs.delete(pgId(bg));pbgTo(o,bg)}}
@@ -1548,7 +1554,7 @@ function sData(d){
  else if(d.t=='sb'){cur=d.s;strokes.push(cur);penSeg(lx,cur,0);redraw()}
  else if(d.t=='sp'&&cur){d.p.forEach(q=>{cur.p.push(q);penSeg(lx,cur,cur.p.length-1)});redrawSoon()}
  else if(d.t=='se'&&cur){tail(lx,cur);redraw()}
- else if(d.t=='sh'){if(d.s&&d.s.id){const i=SWP.findIndex(x=>x.s.id===d.s.id);if(i>-1)SWP.splice(i,1)}strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}else if(d.t=='zm'){if(window.zSetRemote)zSetRemote(d)}else if(d.t=='lz'&&Array.isArray(d.p)&&isFinite(d.p[0])&&isFinite(d.p[1])){lzAdd([+d.p[0],+d.p[1]],!!d.n)}
+ else if(d.t=='sh'){if(d.s&&d.s.id){const i=SWP.findIndex(x=>x.s.id===d.s.id);if(i>-1)SWP.splice(i,1)}strokes.push(d.s);paint(d.s);redraw()}else if(d.t=='lp'){lpSet(d.id,d.off?null:d)}else if(d.t=='zm'){if(window.zSetRemote)zSetRemote(d)}else if(d.t=='dl'){if(DIRM&&typeof d.h=='string'&&d.h.length<400000){window.DLH=d.h;if(tab=='stu')render()}}else if(d.t=='lz'&&Array.isArray(d.p)&&isFinite(d.p[0])&&isFinite(d.p[1])){lzAdd([+d.p[0],+d.p[1]],!!d.n)}
  else if(d.t=='undo'){strokes.pop();rebuild()}
  else if(d.t=='sdel'&&typeof d.id=='string'){strokes=strokes.filter(x=>x.id!==d.id);rebuild()}
  else if(d.t=='wbclear'){strokes=[];rebuild()}
@@ -1608,19 +1614,11 @@ function send(){
 }
 $('#ci').onkeydown=e=>{if(e.key=='Enter')send()};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
-function render(){
- const L=$('#list');
- const stu=roster.s,hd=roster.h,wn=role=='t'?Object.values(conns).filter(x=>!x.adm).length:0;
- const [a,b,c]=document.querySelectorAll('.tabs button');
- a.textContent='الشات ('+chat.filter(x=>!x.sys).length+')';
- b.textContent='الطلاب ('+stu.length+')'+(wn?' 🔔'+wn:'');c.textContent='اليد المرفوعة ('+hd.length+')';
- document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('a',x.dataset.t==tab));
- $('#cnt').textContent=stu.length;
- if(tab=='chat')L.innerHTML=chat.map(x=>x.sys?'<div class="m s">'+esc(x.m)+'</div>':'<div class="m"><b>'+U(x.n)+'</b>'+U(x.m||'')+(x.img&&CIMG.test(x.img)?'<img src="'+x.img+'" onclick="imgView(this)" style="display:block;max-width:100%;max-height:220px;border-radius:10px;margin-top:4px;cursor:zoom-in" alt="">':'')+'</div>').join('')||'<div class="m s">لا توجد رسائل بعد</div>';
- else if(role=='t'&&tab=='stu'){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
+/* قايمة الطلاب بأزرار المعلم (بتتعرض عند المعلم، وبتتبعت للمدير بنفس الأزرار) */
+function stuHTML(){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
   E=Object.entries(conns),W=E.filter(([k,x])=>!x.adm),A=E.filter(([k,x])=>x.adm),
   row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span>'+i+U(n)+'</span><span style="display:flex;gap:5px;flex-wrap:wrap">'+b+'</span></div>';
-  L.innerHTML='<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
+  return '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
   (W.length?'<div class="m s">⏳ في غرفة الانتظار ('+W.length+')</div><button class="m" '+B('#1a9486')+' onclick="admitAll()">قبول الجميع</button>'+W.map(([k,x])=>row('⏳ ',x.name,'<button '+B('#1a9486')+' onclick="admit(\''+k+'\')">قبول</button><button '+B('#d4605a')+' onclick="deny(\''+k+'\')">رفض</button>')).join(''):'')+
   '<button class="m" style="background:#1a9486;color:#fff;text-align:center" onclick="tMuteAll()">'+(allMuted?'🎤 إلغاء كتم الجميع':'🔇 كتم صوت جميع الطلاب')+'</button>'+
   '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="tCamBan()">'+(camBanAll?'📷 السماح بكاميرات الطلاب':'🚫 منع كاميرات الطلاب')+'</button>'+
@@ -1633,6 +1631,24 @@ function render(){
   ib('#e3c08d','🔔','تنبيه','nudge(\''+k+'\')')+
   ib('#1a9486','⭐','استيكر','stkPick(\''+k+'\')')+
   ib('#e5484d','🚪','طرد','deny(\''+k+'\',1)'))).join('')||'<div class="m s">لا يوجد طلاب متصلون</div>')}
+/* 👔 المدير بنفس صلاحيات المعلم: جهاز المعلم بيبعتله القايمة، وأي زرار المدير يدوسه بيتنفّذ على جهاز المعلم */
+const DIRF={admit:1,deny:1,allow:1,camAllow:1,ssp:1,swOne:1,nudge:1,admitAll:1,tMuteAll:1,tCamBan:1,cycleGm:1,tLock:1,tSw:1};
+function dirHTML(){const h='<div class="m" style="display:flex;gap:6px;flex-wrap:wrap"><button class="m" style="flex:1;background:#27496b;color:#fff;text-align:center" onclick="tLock()">'+(st.lock?'💬 فتح رسايل الطلاب':'🔇 قفل رسايل الطلاب')+'</button><button class="m" style="flex:1;background:#27496b;color:#fff;text-align:center" onclick="tSw()">'+(st.sw&&!st.swp?'✍️ قفل الكتابة للطلاب':'✍️ السماح للطلاب بالكتابة')+'</button></div>'+stuHTML();
+ return h.replace(/onclick="(\w+)\(([^)"]*)\)"/g,(m0,f,a)=>DIRF[f]?'onclick="dirCmd(\''+f+'\','+(a||'\'\'')+')"':'onclick=""')}
+let dirLast='';setInterval(()=>{try{if(role!='t')return;const D=Object.values(conns).filter(o=>o.dir&&o.adm&&o.c&&o.c.open);if(!D.length)return;const h=dirHTML();if(h===dirLast)return;dirLast=h;D.forEach(o=>{try{o.c.send({t:'dl',h})}catch(e){}})}catch(e){}},2500);
+function dirRun(o,d){if(!o||!o.dir||!DIRF[d.f])return;const k=String(d.k||'');if(k&&!conns[k]&&d.f!='tSw'&&d.f!='tLock')return;try{const f=window[d.f];if(typeof f!='function')return;k?f(k,d.a?1:undefined):f();hEv('👔 المدير: '+d.f+(k&&conns[k]?' — '+conns[k].name:''));dirLast=''}catch(e){}}
+function dirCmd(f,k,a){if(!DIRM||!conn||!conn.open)return;if(f=='deny'&&a&&!confirm('طرد الطالب ده من الحصة؟'))return;try{conn.send({t:'dc',f,k:k||'',a:a?1:0})}catch(e){}toast('👔','اتبعت للمعلم')}
+function render(){
+ const L=$('#list');
+ const stu=roster.s,hd=roster.h,wn=role=='t'?Object.values(conns).filter(x=>!x.adm).length:0;
+ const [a,b,c]=document.querySelectorAll('.tabs button');
+ a.textContent='الشات ('+chat.filter(x=>!x.sys).length+')';
+ b.textContent='الطلاب ('+stu.length+')'+(wn?' 🔔'+wn:'');c.textContent='اليد المرفوعة ('+hd.length+')';
+ document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('a',x.dataset.t==tab));
+ $('#cnt').textContent=stu.length;
+ if(tab=='chat')L.innerHTML=chat.map(x=>x.sys?'<div class="m s">'+esc(x.m)+'</div>':'<div class="m"><b>'+U(x.n)+'</b>'+U(x.m||'')+(x.img&&CIMG.test(x.img)?'<img src="'+x.img+'" onclick="imgView(this)" style="display:block;max-width:100%;max-height:220px;border-radius:10px;margin-top:4px;cursor:zoom-in" alt="">':'')+'</div>').join('')||'<div class="m s">لا توجد رسائل بعد</div>';
+ else if(role=='t'&&tab=='stu'){L.innerHTML=stuHTML()}
+ else if(role=='s'&&DIRM&&tab=='stu'&&window.DLH){L.innerHTML=window.DLH}
  else{const arr=tab=='stu'?stu:hd;L.innerHTML=arr.map(n=>'<div class="m">'+(tab=='hand'?'✋ ':'🟢 ')+U(n)+'</div>').join('')||'<div class="m s">'+(tab=='stu'?'لا يوجد طلاب متصلون':'لا توجد أيدٍ مرفوعة')+'</div>'}
  if(tab=='chat')L.scrollTop=L.scrollHeight;
  if(role=='t')pushCo();
