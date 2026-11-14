@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.16-c';
+const VER='2026.11.16-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3954,7 +3954,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
    الشاشة والسبورة يتكبّران معاً بنفس التحويل، فالكتابة تفضل على نفس مكانها وتتصغّر بنفس المعدل */
 (function(){
  const stg=$('#stage'),v=$('#v'),w=$('#wb');if(!stg||!v||!w)return;
- let z=1,tx=0,ty=0,hand=0,space=0,pd=0,pc=null,moved=0,tapT=0,tapX=0,tapY=0,rT=0,pinch=0;const P=new Map(),MAXZ=6;
+ let z=1,tx=0,ty=0,hand=0,space=0,pd=0,pc=null,moved=0,tapT=0,tapX=0,tapY=0,rT=0,pinch=0;const P=new Map(),MAXZ=8;
  const css=document.createElement('style');
  css.textContent='#zm{position:absolute;left:10px;bottom:10px;z-index:7;display:flex;gap:4px;align-items:center;background:#000c;color:#fff;border-radius:999px;padding:4px 6px;font-size:13px;direction:ltr;user-select:none;backdrop-filter:blur(4px)}#zm[hidden]{display:none}#zm button{min-width:34px;height:34px;border:0;border-radius:50%;background:#ffffff22;color:#fff;font-size:17px;cursor:pointer}#zm button.on{background:#1a9486}#zm button[hidden]{display:none}#zm span{min-width:46px;text-align:center;cursor:pointer}#stage.zmo{touch-action:pan-x pan-y}#stage.zmo.zmd{touch-action:none}#stage.zpan,#stage.zpan #wb{cursor:grab!important}#stage.zpan.zgr,#stage.zpan.zgr #wb{cursor:grabbing!important}';
  document.head.appendChild(css);
@@ -3971,18 +3971,19 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  function apply(){const W=stg.clientWidth,H=stg.clientHeight;z=Math.min(MAXZ,Math.max(1,z));tx=Math.min(0,Math.max(W-W*z,tx));ty=Math.min(0,Math.max(H-H*z,ty));
   const t=z==1?'':'translate('+tx+'px,'+ty+'px) scale('+z+')';[v,w].forEach(e=>{e.style.transformOrigin='0 0';e.style.transform=t});
   lab.textContent=Math.round(z*100)+'%';stg.classList.toggle('zmd',z>1);ui2();
-  clearTimeout(rT);rT=setTimeout(()=>{const k=Math.round(z*4)/4;if((window.ZMK||1)!==k){window.ZMK=k;if(!w.hidden){dirty=1;try{fit()}catch(e){}}}},220);if(!zRem)zmSend()}
+  clearTimeout(rT);rT=setTimeout(()=>{const k=Math.round(z*4)/4;if((window.ZMK||1)!==k){window.ZMK=k;if(!w.hidden){dirty=1;try{fit()}catch(e){}}}},220);if(!zRem){zmSend();if(typeof role!='undefined'&&role=='s'&&!zOwnSkip){if(!zOwn&&zLastT){zOwn=1;try{toast('🔍','كبّرت لوحدك — دوس ⟲ عشان ترجع لعرض المعلم')}catch(e){}}else zOwn=1}}}
  /* 🔍 تكبير المعلم بيظهر عند كل الطلاب: بنبعت نسبة التكبير + النقطة اللي في نص شاشته (بإحداثيات السبورة)، وكل طالب بيكبّر على نفس النقطة مهما كان مقاس شاشته */
- let zRem=0,zsT=0;
+ /* الطالب يقدر يكبّر لوحده (أكتر من المعلم كمان): أول ما يكبّر بإيده بنوقّف متابعة تكبير المعلم، ولما يدوس ⟲ يرجع لعرض المعلم */
+ let zRem=0,zsT=0,zOwn=0,zOwnSkip=0,zLastT=null;
  function zmSend(){if(typeof role=='undefined'||role!='t')return;clearTimeout(zsT);zsT=setTimeout(()=>{try{const W=stg.clientWidth,H=stg.clientHeight,d=(w.width/(w.clientWidth||1))||1,cx=(W/2-tx)/z,cy=(H/2-ty)/z;
    bc({t:'zm',z:+z.toFixed(3),bx:S?+((cx*d-OX)/S).toFixed(1):0,by:S?+((cy*d-OY)/S).toFixed(1):0,fx:+(cx/(W||1)).toFixed(4),fy:+(cy/(H||1)).toFixed(4)})}catch(e){}},90)}
- window.zSetRemote=(o)=>{try{const W=stg.clientWidth,H=stg.clientHeight,d=(w.width/(w.clientWidth||1))||1,nz=Math.min(MAXZ,Math.max(1,+o.z||1));let sx,sy;
+ window.zSetRemote=(o)=>{zLastT=o;if(zOwn)return;try{const W=stg.clientWidth,H=stg.clientHeight,d=(w.width/(w.clientWidth||1))||1,nz=Math.min(MAXZ,Math.max(1,+o.z||1));let sx,sy;
    if(!w.hidden&&S&&isFinite(+o.bx)){sx=(+o.bx*S+OX)/d;sy=(+o.by*S+OY)/d}else{sx=(+o.fx||.5)*W;sy=(+o.fy||.5)*H}
    z=nz;tx=W/2-sx*z;ty=H/2-sy*z;zRem=1;apply()}finally{zRem=0}};
  /* الطالب اللي يدخل متأخر بياخد تكبير المعلم الحالي */
  setInterval(()=>{try{if(typeof role!='undefined'&&role=='t'&&z>1)zmSend()}catch(e){}},5000);
  function zoomAt(f,cx,cy){const nz=Math.min(MAXZ,Math.max(1,z*f)),k=nz/z;tx=cx-(cx-tx)*k;ty=cy-(cy-ty)*k;z=nz;apply()}
- function reset(){z=1;tx=ty=0;apply()}
+ function reset(){z=1;tx=ty=0;zOwnSkip=1;apply();zOwnSkip=0;if(zOwn||zLastT){zOwn=0;if(zLastT&&typeof role!='undefined'&&role=='s')window.zSetRemote(zLastT)}}
  /* ملء الشاشة: نكبّر لوحدنا على المحتوى نفسه (صفحة الـ PDF أو الشاشة المشاركة) بدل ما يفضل صغير في النص وحواليه فاضي */
  function cBounds(src,sw,sh){try{if(!sw||!sh)return null;const k=Math.min(1,160/Math.max(sw,sh)),cw=Math.max(2,Math.round(sw*k)),ch=Math.max(2,Math.round(sh*k)),c=document.createElement('canvas');c.width=cw;c.height=ch;
   const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,cw,ch);const D=g.getImageData(0,0,cw,ch).data,b0=[D[0],D[1],D[2]];let x0=cw,y0=ch,x1=-1,y1=-1;
