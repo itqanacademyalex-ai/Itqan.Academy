@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.15-z';
+const VER='2026.11.16-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1241,7 +1241,7 @@ async function tData(c,d){
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'&&o.dir){pmGot(c.peer,{m:d.m,ts:Date.now()});return}
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m||'').slice(0,500),ts:Date.now()};if(typeof d.img=='string'&&d.img.length<700000&&CIMG.test(d.img))m.img=d.img;if(!m.m&&!m.img)return;chat.push(m);bc({t:'chat',...m});render()}
- else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;o.me=typeof d.e=='string'?d.e.slice(0,20):'';render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
  else if(d.t=='pbg?'&&o.adm&&WPG){const bg=WPG[pi]&&WPG[pi].bg;if(bg){o.pgs&&o.pgs.delete(pgId(bg));pbgTo(o,bg)}}
@@ -1312,7 +1312,7 @@ setInterval(async()=>{if(role!='t'||!peer||peer.destroyed)return;
  for(const o of Object.values(conns)){if(!o.adm||!o.can||!o.mic||!o.c||!o.c.open){o.mb=0;continue}
   const pc=o.mc&&o.mc.peerConnection,q=pcSt(o.mc);let bad=!pc||q=='failed'||q=='closed';
   if(!bad)try{let b=-1;(await pc.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio')b=r.bytesReceived});if(b>=0&&b===o.mbl)bad=1;o.mbl=b}catch(e){}
-  o.mb=bad?(o.mb||0)+1:0;
+  o.mb=bad?(o.mb||0)+1:0;{const au=o.mb>=2?0:1;if(o.au!==au){o.au=au;try{render()}catch(e){}}}
   if(o.mb>=3&&Date.now()-(o.mrT||0)>12000){o.mb=0;o.mrT=Date.now();hS(o.name).remic++;hEv('🎤 صوت '+o.name+' مش واصل للمعلم — اتطلب منه يبعته تاني');try{o.c.send({t:'remic'})}catch(e){}}}},5000);
 setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)return;const q=pcSt(myCall);
  if(!myCall||q=='failed'||q=='closed'){if(Date.now()-(window._mrS||0)>8000){window._mrS=Date.now();micResend()}}},4000);
@@ -2092,10 +2092,13 @@ function pmGotS(d){const m=String(d.m).slice(0,500);pmS.push({f:0,m,ts:Date.now(
 $('#pmi').addEventListener('keydown',e=>{e.stopPropagation();if(e.key=='Enter'){e.preventDefault();pmSend()}});
 Object.assign(I18.ar,{micOn:'الميكروفون مفتوح',micOff:'الميكروفون مقفول',micLock:'مكتوم من المعلم',camOn:'الكاميرا مفتوحة',camOff:'الكاميرا مقفولة',rec:'تسجيل الحصة على جهازك',recWarn:'سيتم تسجيل ما يظهر لك من بث المعلم وصوت الحصة والسبورة وحفظه على جهازك فقط. لن يُسجَّل ميكروفونك أو كاميرتك. قد يتضمن التسجيل صوت من يتحدث في الحصة. هل تريد البدء؟',recNo:'متصفحك لا يدعم التسجيل. جرّب Chrome أو Edge على الكمبيوتر.',desmos:'حاسبة Desmos البيانية',dsmNoKey:'لتفعيل Desmos: احصل على مفتاح API مجاني من desmos.com/my-api ثم ضعه في المتغير DESMOS_KEY في أول الكود.',dsmLoading:'جارٍ تحميل Desmos...',dsmFail:'تعذر تحميل Desmos — تأكد من الإنترنت ومن صحة مفتاح API.'});
 Object.assign(I18.en,{micOn:'Microphone on',micOff:'Microphone off',micLock:'Muted by teacher',camOn:'Camera on',camOff:'Camera off',rec:'Record the lesson on your device',recWarn:'This records what you see of the teacher’s stream, the lesson audio and the whiteboard, saved only on your device. Your own microphone and camera are not recorded. The recording may include anyone speaking in the lesson. Start recording?',recNo:'Your browser does not support recording. Try Chrome or Edge on a computer.',desmos:'Desmos graphing calculator',dsmNoKey:'To enable Desmos: get a free API key from desmos.com/my-api and put it in the DESMOS_KEY variable at the top of the code.',dsmLoading:'Loading Desmos...',dsmFail:'Could not load Desmos — check your connection and API key.'});
+/* حالة مايك الطالب قدام المعلم: 🎤 صوته واصل · 📶 المايك شغّال بس الصوت مش واصل · 🎤🚫 المتصفح/الموبايل قافل المايك · 🔇 المعلم كاتمه · 🎤 باهتة = الطالب قافل المايك */
 function stIc(x){const mo=x.can&&x.mic,co=x.cp!==0&&x.cam;
- return '<span class="ic'+(mo?' lt':'')+'" title="'+(!x.can?T('micLock'):mo?T('micOn'):T('micOff'))+'">🎤</span><span class="ic'+(co?' lt':'')+'" title="'+(co?T('camOn'):T('camOff'))+'">📷</span> '}
+ const ms=!x.can?['🔇','المعلم كاتمه',0]:x.mic&&x.au===0?['📶','المايك شغّال بس صوته مش واصل (النت/الاتصال عنده)',1]:x.mic?['🎤','صوته واصل',1]:x.me?['🎤🚫','المايك مقفول عند الطالب ('+({blocked:'إذن المتصفح أو الرقابة الأبوية',NotAllowedError:'رفض الإذن',ended:'تطبيق تاني ماسك المايك',NotFoundError:'مفيش مايك',NotReadableError:'المايك مشغول'}[x.me]||x.me)+')',1]:['🎤','الطالب قافل المايك',0];
+ return '<span class="ic'+(ms[2]&&mo?' lt':'')+'" title="'+esc(ms[1])+'" style="'+(ms[0]!='🎤'?'filter:none;opacity:1':'')+'">'+ms[0]+'</span>'+(ms[0]=='📶'?'<small style="color:#fca5a5"> صوته مش واصل </small>':ms[0]=='🎤🚫'?'<small style="color:#fca5a5"> المايك مقفول عنده </small>':'')+'<span class="ic'+(co?' lt':'')+'" title="'+(co?T('camOn'):T('camOff'))+'">📷</span> '}
 let lastMs='',lastMsC=null;
-function sendMs(){if(role!='s'||!admitted||!conn||!conn.open)return;const m=(micS&&micS.enabled&&myCall&&canTalk)?1:0,c=camS?1:0,k=m+''+c;if(k===lastMs&&conn===lastMsC)return;lastMs=k;lastMsC=conn;try{conn.send({t:'ms',m,c})}catch(e){}}
+function sendMs(){if(role!='s'||!admitted||!conn||!conn.open)return;const m=(micS&&micS.enabled&&myCall&&canTalk)?1:0,c=camS?1:0,e=!(micS&&micS.readyState=='live')&&window.MERR?String(window.MERR).slice(0,20):'',k=m+''+c+e;if(k===lastMs&&conn===lastMsC)return;lastMs=k;lastMsC=conn;try{conn.send({t:'ms',m,c,e})}catch(x){}}
+setInterval(()=>{try{sendMs()}catch(e){}},4000);
 setInterval(()=>{const b=[$('#tr'),$('#brc')];if(rec){rec.t0=rec.t0||Date.now();const q=Math.floor((Date.now()-rec.t0)/1000),t='⏺ '+String(Math.floor(q/60)).padStart(2,'0')+':'+String(q%60).padStart(2,'0');b.forEach(x=>{if(x){x.textContent=t;x.classList.add('on')}})}else b.forEach(x=>{if(x){x.textContent='⏺';x.classList.remove('on')}})},1000);
 window.addEventListener('beforeunload',e=>{if(rec){e.preventDefault();e.returnValue=''}});
 /* ===== Desmos الرسمي (يحتاج مفتاح API من desmos.com/my-api) ===== */
