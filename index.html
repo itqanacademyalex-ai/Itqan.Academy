@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.16-d';
+const VER='2026.11.16-e';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -928,7 +928,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    Object.values(G).sort((p,q)=>p.k-q.k).forEach(g=>{const x=g.x,a=hm2(x.h),when=(x.d===D&&g.k<1440?'النهارده':'يوم '+DN2[x.d])+' '+t12b(x.h),soon=!g.live&&g.k<=60;
     const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#1a9486,#137a6f)':soon?'#22405f':'#1d3652')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
     const xp=xpGet(g.c),st=g.live&&x.ex?'⚡ حصة استثنائية — اضغط وادخل':xp&&!(x.d===D&&n>=a-10&&n<a+x.m)?'⚡ حصة استثنائية — متاحة لحد '+t12b(String(new Date(xp.e).getHours()).padStart(2,'0')+':'+String(new Date(xp.e).getMinutes()).padStart(2,'0')):g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
-    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'18px')+'">'+(g.live?'▶ ادخل':'🔒')+'</b>';
+    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#a9bccd')+'">'+st+'</small></div><b style="flex:none;font-size:'+(g.live?'15px':'14px')+';'+(g.live?'':'color:#9fd8cf')+'">'+(g.live?'▶ ادخل':'▶ افتح')+'</b>';
     r.onclick=()=>start(g.c);w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
