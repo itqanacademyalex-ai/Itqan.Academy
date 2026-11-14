@@ -440,7 +440,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.16-d';
+const VER='2026.11.17-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3333,7 +3333,7 @@ async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#lib
 /* مكتبة المجموعة: طلب واحد للسجل بيتشارك بين كل التابات، ونسخة على الجهاز للعرض الفوري */
 const LIBP={};
 function libCache(c){try{const o=JSON.parse(localStorage.getItem('itqan_lib_'+c));return o&&o.ok?o:null}catch(e){return null}}
-function libFetch(c){if(LIBP[c]&&Date.now()-LIBP[c].t<120000)return LIBP[c].p;
+function libFetch(c){if(LIBP[c]&&Date.now()-LIBP[c].t<20000)return LIBP[c].p;
  const p=(async()=>{const u=regUrl();let j=null,net=0,slow=0;const go=async(url,o)=>{const ac=new AbortController(),t=setTimeout(()=>{slow=1;ac.abort()},30000);try{const r=await fetch(url,{...o,signal:ac.signal});net=1;return JSON.parse(await r.text())}finally{clearTimeout(t)}};
   /* POST الأول (أضمن)، ولو السكربت المنشور لسه مايعرفهوش نجرّب GET */
   try{j=await go(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lib',c})});if(j&&!j.ok&&(!j.e||j.e=='key'))j=null}catch(e){}
@@ -3733,7 +3733,7 @@ async function endFlowT(forced){if(endBusy)return;endBusy=1;lastDel();try{liveOf
  try{await Promise.race([Promise.resolve(mailEnd(1,sum,why)),new Promise(r=>setTimeout(r,10000))])}catch(e){}
  /* مابنستناش الرفع: الأجزاء كلها بتتحفظ على الجهاز، والرفع بيكمل في الخلفية وهو على الرئيسية (أو أول ما الموقع يتفتح تاني) */
  try{await recP;$('#gt').textContent='💾 بنحفظ الملفات على الجهاز…';await new Promise(r=>setTimeout(r,1500))}catch(e){}
- /* مسودة الواجب بتتعمل في الخلفية من السبورة — المعلم بيراجعها من «📝 الواجبات» */
+ /* مسودة الواجب بتتعمل لوحدها على السيرفر أول ما السبورة تخلص رفع (ده طلب احتياطي) — المعلم بيراجعها من «📝 الواجبات» */
  try{const pin=tpGet(room),d=String(window.RF||'').split('/')[1];if(pin&&d&&regUrl()){const h=await hwH(room,pin);fetch(regUrl(),{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'hwgen',c:room,d,h})}).catch(()=>{})}}catch(e){}
  try{stream.getTracks().forEach(t=>t.stop());peer.destroy()}catch(e){}
  /* من غير نافذة الملخص: رسالة قصيرة وبعدين الرئيسية */
