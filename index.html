@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.19-b';
+const VER='2026.11.19-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -690,12 +690,15 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  const load=async()=>{if(m.hidden||!document.body.contains(lv)){clearInterval(m._lv);return}const pw=$('#dpw').value;if(!pw||busy)return;busy=1;
   const t0=performance.now();try{/* الطلب وفك كلمة السر في نفس الوقت (مش ورا بعض) */
    const u=regUrl(),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),25000);
-   const rq=dirH(pw).then(h=>fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal})).then(r=>r.text()).then(t=>JSON.parse(t)).catch(()=>null).finally(()=>clearTimeout(tm));
+   /* POST الأول، ولو فشل (شبكة الموبايل ساعات بتقطع تحويلة جوجل) نجرّب GET — وبنحتفظ بسبب الفشل عشان يبان */
+   let why='';const tryJ=(o)=>fetch(u+(o?'':''),o).then(async r=>{const t=await r.text();try{return JSON.parse(t)}catch(e){why='HTTP '+r.status+' — '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,90);return null}}).catch(e=>{why=String(e&&e.name=='AbortError'?'السجل ماردّش في 25 ثانية':e&&e.message||e).slice(0,90);return null});
+   const rq=dirH(pw).then(async h=>{let j=await tryJ({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal});
+    if(!j&&!ac.signal.aborted)j=await fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null);return j}).finally(()=>clearTimeout(tm));
    const ok=DIRK?Promise.resolve(1):dirUnlock(pw).then(()=>1,()=>0);
    const [j,good]=await Promise.all([rq,ok]);if(!good){lv.innerHTML='';busy=0;return}
    if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];draw(L);{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
    else if(j&&j.e=='auth')lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>';
-   else if(!lv.dataset.ok)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.')+'</small>'}catch(e){}busy=0};
+   else if(!lv.dataset.ok)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.'+(why?'<br><span style="color:#a9bccd;font-size:11px;direction:ltr;display:inline-block">'+esc(why)+'</span>':''))+'</small><button class="w dre" style="margin-top:4px;background:#27496b;font-size:13px">🔄 حاول تاني</button>';{const b=lv.querySelector('.dre');if(b)b.onclick=()=>{lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';busy=0;load()}}}catch(e){}busy=0};
  if(!lv.innerHTML&&dpwGet())lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';
  clearInterval(m._lv);load();m._lv=setInterval(load,15000);/* أول ما كلمة السر تتكتب القايمة بتتجاب على طول (مش لما تسيب الخانة أو بعد 15 ثانية) */
  let dt=0;const re=()=>{DIRK=null;delete lv.dataset.ok;clearTimeout(dt);dt=setTimeout(()=>{if($('#dpw').value.length>=4){lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';load()}},500)};

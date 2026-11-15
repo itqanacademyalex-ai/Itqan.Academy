@@ -66,6 +66,8 @@ function doGet(e) { try { return doGet_(e); } catch (x) { return out_({ ok: fals
 function doPost(e) { try { return doPost_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
 function doGet_(e) {
   const p = (e && e.parameter) || {};
+  /* قايمة المدير بـ GET كمان (احتياطي لو طلب POST اتقطع) */
+  if (p.a === 'lvl') return doPost_({ postData: { contents: JSON.stringify({ a: 'lvl', h: String(p.h || '') }) } });
   if (p.a === 'chk') {
     const c = String(p.c || '').toLowerCase(), r = load_()[c] || {};
     let S = null; try { S = sheet_()[c] || null; } catch (x) { S = null; }
