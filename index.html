@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.19-c';
+const VER='2026.11.19-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -689,11 +689,13 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  try{const c=JSON.parse(localStorage.getItem('itqan_dlv')||'null');if(c&&Date.now()-c.at<6*3600e3&&dpwGet())draw(c.L.filter(x=>Date.now()-x.at<150000+(Date.now()-c.at)),1)}catch(e){}
  const load=async()=>{if(m.hidden||!document.body.contains(lv)){clearInterval(m._lv);return}const pw=$('#dpw').value;if(!pw||busy)return;busy=1;
   const t0=performance.now();try{/* الطلب وفك كلمة السر في نفس الوقت (مش ورا بعض) */
-   const u=regUrl(),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),25000);
+   const u=regUrl(),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),60000);
    /* POST الأول، ولو فشل (شبكة الموبايل ساعات بتقطع تحويلة جوجل) نجرّب GET — وبنحتفظ بسبب الفشل عشان يبان */
-   let why='';const tryJ=(o)=>fetch(u+(o?'':''),o).then(async r=>{const t=await r.text();try{return JSON.parse(t)}catch(e){why='HTTP '+r.status+' — '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,90);return null}}).catch(e=>{why=String(e&&e.name=='AbortError'?'السجل ماردّش في 25 ثانية':e&&e.message||e).slice(0,90);return null});
-   const rq=dirH(pw).then(async h=>{let j=await tryJ({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal});
-    if(!j&&!ac.signal.aborted)j=await fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null);return j}).finally(()=>clearTimeout(tm));
+   let why='';const tryJ=(o)=>fetch(u+(o?'':''),o).then(async r=>{const t=await r.text();try{return JSON.parse(t)}catch(e){why='HTTP '+r.status+' — '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,90);return null}}).catch(e=>{why=String(e&&e.name=='AbortError'?'السجل ماردّش في دقيقة':e&&e.message||e).slice(0,90);return null});
+   /* POST وبعد 8 ثواني GET كمان بالتوازي — أول رد سليم بيكسب */
+   const rq=dirH(pw).then(h=>new Promise(res=>{let n=0,done=0;const fin=j=>{if(done)return;if(j){done=1;res(j)}else if(++n>=2){done=1;res(null)}};
+    tryJ({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal}).then(fin);
+    setTimeout(()=>{if(done)return;fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null).then(fin)},8000)})).finally(()=>clearTimeout(tm));
    const ok=DIRK?Promise.resolve(1):dirUnlock(pw).then(()=>1,()=>0);
    const [j,good]=await Promise.all([rq,ok]);if(!good){lv.innerHTML='';busy=0;return}
    if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];draw(L);{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
