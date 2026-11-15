@@ -294,8 +294,10 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.on('open-url', (e, url) => { e.preventDefault(); const u = inviteUrl(url); if (app.isReady()) createWindow(u); else app.once('ready', () => createWindow(u)); });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     setupSession(); buildMenu(); keepAwake();
+    /* أول ما البرنامج يفتح بنمسح نسخة الموقع المخزّنة (من غير ما نلمس الحسابات المحفوظة) — عشان آخر تحديث للموقع يظهر على طول */
+    try { await session.defaultSession.clearCache(); } catch (e) {}
     createWindow(fromArgv(process.argv));
     setTimeout(() => checkUpdate(false), 8000);
     app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
