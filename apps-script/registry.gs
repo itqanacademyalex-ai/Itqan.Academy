@@ -545,8 +545,7 @@ function hwList_(b) {
     let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
-    /* حصة من آخر 3 أيام عندها سبورة ومالهاش واجب (اتسجّلت قبل التحديث) ← تتعمل لوحدها */
-    if (has && !hw && !S && AIK_()) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(f.getName()); if (m && Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime() < 3 * 864e5) { try { hwEnq_(b.c, f.getName(), 0); S = { s: 'run', t: Date.now() }; } catch (x) {} } }
+    /* الحصص الجديدة اللي مالهاش واجب: صفحة المعلم بتطلب عملها على طول أول ما يفتح «الواجبات» (من غير طابور) */
     const run2 = S && S.s == 'run' && Date.now() - S.t < 600000;
     if (has || hw) out.push({ d: f.getName(), st: run2 ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
   out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: AIK_() });
