@@ -84,8 +84,9 @@ function doGet_(e) {
   if (p.a === 'tl') {
     const all = load_(); let n = String(p.n || '').trim(); const c = String(p.c || '').toLowerCase();
     if (!n && c && all[c]) n = all[c].t || '';
-    const R = {}; if (n) Object.keys(all).forEach(k => { const r = all[k]; if (r.t === n && (r.s || []).length) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s }; });
-    return out_({ ok: true, rooms: R });
+    /* كل حصص المعلم (حتى اللي لسه مالهاش مواعيد)، والاسم بيتقارن بعد توحيد الكتابة (أ/ا، ى/ي، ة/ه، المسافات، «أ/»…) عشان مايتوهش حصص بسبب حرف */
+    const N = tnN_(n), R = {}; if (N) Object.keys(all).forEach(k => { const r = all[k]; if (tnN_(r.t) === N) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s || [] }; });
+    return out_({ ok: true, rooms: R, n: n });
   }
   /* غرف السكرتارية المتشفّرة (بكلمة سر السكرتارية) — للمزامنة بين أجهزة السكرتارية */
   if (p.a === 'fxget') {
@@ -318,6 +319,7 @@ function gem_(parts, temp, again) {
   }
   throw new Error(last + ' — جوجل عليها ضغط دلوقتي، جرّب كمان شوية');
 }
+function tnN_(x) { return String(x || '').replace(/[\u064B-\u065F\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^\s*(ا|م|د|الاستاذ|الاستاذه|استاذ|استاذه|مس|مستر|Mr|Ms|Mrs|Miss)(\s*[\/.]\s*|\s+)/i, '').replace(/[\/.]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
 function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
 function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
