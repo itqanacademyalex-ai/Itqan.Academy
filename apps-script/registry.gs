@@ -247,6 +247,8 @@ function upDone_(s, id) {
   const C = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties(), rc = C.get('upc_' + s) || P.getProperty('upc_' + s);
   C.remove('up_' + s); P.deleteProperty('up_' + s); P.deleteProperty('upc_' + s); C.remove('upc_' + s);
   if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
+  /* نفس الحصة اتفتحت تاني ورفعت سبورة جديدة (فيها كل الصفحات): النسخة القديمة بنفس الاسم تتشال، فيفضل ملف سبورة واحد */
+  if (id) { try { const fl = DriveApp.getFileById(id), nm = fl.getName(); if (/السبورة\.pdf$/.test(nm)) { const ps = fl.getParents(); if (ps.hasNext()) { const it = ps.next().getFilesByName(nm); while (it.hasNext()) { const x = it.next(); if (x.getId() !== id && !x.isTrashed()) x.setTrashed(true); } } } } catch (x) {} }
   if (rc) C.remove('lb2_' + rc);
   if (rc && id) hwAuto_(rc, id);
 }
