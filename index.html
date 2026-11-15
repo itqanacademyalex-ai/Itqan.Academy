@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.18-d';
+const VER='2026.11.19-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -688,16 +688,21 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  /* آخر قايمة بتظهر على طول (من الجهاز)، والجديدة بتتجاب في الخلفية */
  try{const c=JSON.parse(localStorage.getItem('itqan_dlv')||'null');if(c&&Date.now()-c.at<6*3600e3&&dpwGet())draw(c.L.filter(x=>Date.now()-x.at<150000+(Date.now()-c.at)),1)}catch(e){}
  const load=async()=>{if(m.hidden||!document.body.contains(lv)){clearInterval(m._lv);return}const pw=$('#dpw').value;if(!pw||busy)return;busy=1;
-  try{/* الطلب وفك كلمة السر في نفس الوقت (مش ورا بعض) */
+  const t0=performance.now();try{/* الطلب وفك كلمة السر في نفس الوقت (مش ورا بعض) */
    const u=regUrl(),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),25000);
-   const rq=dirH(pw).then(h=>fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal})).then(r=>r.text()).then(t=>JSON.parse(t)).catch(()=>null).finally(()=>clearTimeout(tm));
+   /* POST الأول، ولو فشل (شبكة الموبايل ساعات بتقطع تحويلة جوجل) نجرّب GET — وبنحتفظ بسبب الفشل عشان يبان */
+   let why='';const tryJ=(o)=>fetch(u+(o?'':''),o).then(async r=>{const t=await r.text();try{return JSON.parse(t)}catch(e){why='HTTP '+r.status+' — '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,90);return null}}).catch(e=>{why=String(e&&e.name=='AbortError'?'السجل ماردّش في 25 ثانية':e&&e.message||e).slice(0,90);return null});
+   const rq=dirH(pw).then(async h=>{let j=await tryJ({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'lvl',h}),signal:ac.signal});
+    if(!j&&!ac.signal.aborted)j=await fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null);return j}).finally(()=>clearTimeout(tm));
    const ok=DIRK?Promise.resolve(1):dirUnlock(pw).then(()=>1,()=>0);
    const [j,good]=await Promise.all([rq,ok]);if(!good){lv.innerHTML='';busy=0;return}
-   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];draw(L);try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
+   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];draw(L);{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
    else if(j&&j.e=='auth')lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>';
-   else if(!lv.dataset.ok)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.')+'</small>'}catch(e){}busy=0};
+   else if(!lv.dataset.ok)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.'+(why?'<br><span style="color:#a9bccd;font-size:11px;direction:ltr;display:inline-block">'+esc(why)+'</span>':''))+'</small><button class="w dre" style="margin-top:4px;background:#27496b;font-size:13px">🔄 حاول تاني</button>';{const b=lv.querySelector('.dre');if(b)b.onclick=()=>{lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';busy=0;load()}}}catch(e){}busy=0};
  if(!lv.innerHTML&&dpwGet())lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';
- clearInterval(m._lv);load();m._lv=setInterval(load,15000);$('#dpw').addEventListener('change',()=>{DIRK=null;delete lv.dataset.ok;load()})}
+ clearInterval(m._lv);load();m._lv=setInterval(load,15000);/* أول ما كلمة السر تتكتب القايمة بتتجاب على طول (مش لما تسيب الخانة أو بعد 15 ثانية) */
+ let dt=0;const re=()=>{DIRK=null;delete lv.dataset.ok;clearTimeout(dt);dt=setTimeout(()=>{if($('#dpw').value.length>=4){lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';load()}},500)};
+ $('#dpw').addEventListener('input',re);$('#dpw').addEventListener('keydown',e=>{if(e.key=='Enter'){clearTimeout(dt);DIRK=null;load()}})}
 /* ===== مفتاح الغرفة الثابتة من «كود الحصة + كود المعلم» =====
    أي جهاز عليه الكودين بيطلّع نفس المفتاح بالظبط ← المعلم يفتح حصته بالكودين بس من أي جهاز، من غير لينك خاص ومن غير السكرتارية.
    (حساب المفتاح العام من الخاص على منحنى P-256 لأن WebCrypto محتاج الاتنين) */
@@ -3465,7 +3470,7 @@ const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';
 async function hwWait(x,d,h,tick){const t0=Date.now();while(Date.now()-t0<480000){await new Promise(r=>setTimeout(r,6000));tick&&tick();
   let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){continue}const it=j&&j.ok&&(j.items||[]).find(y=>y.d==d);if(!it)continue;
   if(it.st=='err')return{ok:false,e:it.e};if(it.hw&&it.st!='run')return{ok:true,hw:it.hw}}return{ok:false,e:'الذكاء الاصطناعي اتأخر — جرّب تاني'}}
-async function hwGenRun(x,d,h,re,tick){const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0}).catch(()=>({ok:false}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
+async function hwGenRun(x,d,h,re,tick){/* now: الواجب بيتعمل جوه الطلب نفسه — ولو الاتصال اتقطع بنتابع من hwlist */const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0,now:1}).catch(()=>({ok:true,pending:1}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
 /* السكرتارية: الواجبات لكل الغرف (أكواد المعلمين عندها) */
 function hwSx(){hwPanel(fxList().map(x=>({c:x.room,t:x.title||'',p:String(x.pin||'')})))}
 async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
@@ -3489,11 +3494,15 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
    if(!it.st||it.st=='err'||it.st=='run')r.append(hwBtn('✨ اعمل الواجب','#1a9486',async function(){this.disabled=true;const btn=this,t0=Date.now(),tk=()=>{const q=Math.round((Date.now()-t0)/1000);btn.textContent='⏳ بيتعمل… '+Math.floor(q/60)+':'+String(q%60).padStart(2,'0')};tk();const iv=setInterval(tk,1000);
     /* الواجب بيكمل على السيرفر حتى لو النافذة اتقفلت — بيظهر «مسودة» لما تفتحها تاني */
     if(!r.querySelector('.hwnote'))r.append(Object.assign(document.createElement('small'),{className:'hwnote',textContent:'بياخد من نص دقيقة لدقيقتين. تقدر تقفل النافذة — الواجب هيكمل لوحده ويظهر «مسودة» لما ترجع.',style:'flex-basis:100%;color:#a9bccd'}));
-    const g=await hwGenRun(x,it.d,h,0);clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
+    /* لو بيتعمل أصلًا في الخلفية: بنتابع بس (مانبدأش طلب تاني يصرف من حصة الذكاء الاصطناعي المجانية) */
+    const g=r.dataset.poll?await hwWait(x,it.d,h):await hwGenRun(x,it.d,h,0);delete r.dataset.poll;clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
    else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#27496b':'#1a9486',()=>hwEdit(x,it.d,h,it.hw)));
    if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>{const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(it.d)));R.innerHTML=it.subs.slice().sort((a,b)=>b.score-a.score).map(s=>'<div class="sxr" style="background:#1d3652;border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between"><b translate="no">'+esc(s.n)+'</b><span>'+(+s.score).toFixed(1).replace('.0','')+' / '+s.total+'</span></div>').join('')}));
    /* لو الواجب بيتعمل في الخلفية: نكمّل المتابعة لوحدنا */
-   if(it.st=='run'){const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));gb&&setTimeout(()=>gb.click(),50)}
+   const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));
+   if(it.st=='run'&&gb){r.dataset.poll=1;setTimeout(()=>gb.click(),50)}
+   /* أحدث حصة (من آخر 3 أيام) لسه مالهاش واجب: بيبدأ يتعمل لوحده أول ما تفتح «الواجبات» */
+   else if(!it.st&&gb&&!sec.dataset.auto){const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(it.d);if(m&&Date.now()-new Date(+m[1],+m[2]-1,+m[3]).getTime()<3*864e5){sec.dataset.auto=1;setTimeout(()=>gb.click(),300)}}
    sec.append(r)})}}
 /* مراجعة الواجب: كل سؤال يتعدّل (السؤال، الاختيارات، الإجابة) ← ✅ انشر / 💾 احفظ / 🔄 اعمل تاني */
 function hwEdit(x,d,h,hw){const B=hwModal('hwe','✏️ واجب '+esc(x.t||'')+' — '+esc(hwNice(d)));B.innerHTML='';

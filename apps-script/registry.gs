@@ -66,6 +66,8 @@ function doGet(e) { try { return doGet_(e); } catch (x) { return out_({ ok: fals
 function doPost(e) { try { return doPost_(e); } catch (x) { return out_({ ok: false, e: 'server: ' + (x && x.message || x) }); } }
 function doGet_(e) {
   const p = (e && e.parameter) || {};
+  /* قايمة المدير بـ GET كمان (احتياطي لو طلب POST اتقطع) */
+  if (p.a === 'lvl') return doPost_({ postData: { contents: JSON.stringify({ a: 'lvl', h: String(p.h || '') }) } });
   if (p.a === 'chk') {
     const c = String(p.c || '').toLowerCase(), r = load_()[c] || {};
     let S = null; try { S = sheet_()[c] || null; } catch (x) { S = null; }
@@ -134,13 +136,18 @@ function doPost_(e) {
   /* 🟢 المعلم فاتح الحصة: جهازه بيبلّغ كل دقيقة (بكوده أو ببصمة مفتاح الغرفة) */
   if (b.a === 'live') { const c = String(b.c || '').toLowerCase(), r = load_()[c]; if (!r) return out_({ ok: false });
     if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
-    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now())); return out_({ ok: true }); }
+    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now()));
+    /* نسخة سريعة لقايمة المدير (من غير ما يقرا كل الإعدادات): الحصص المفتوحة واسمها */
+    try { const C = CacheService.getScriptCache(); let m = {}; try { m = JSON.parse(C.get('lvx') || '{}'); } catch (x) {} if (b.off) delete m[c]; else m[c] = { at: Date.now(), n: r.n || '', t: r.t || '' };
+      Object.keys(m).forEach(k => { if (Date.now() - m[k].at > 150000) delete m[k]; }); C.put('lvx', JSON.stringify(m), 900); } catch (x) {}
+    return out_({ ok: true }); }
   /* 👔 المدير: الحصص المفتوحة دلوقتي (المعلم بلّغ إنه فاتح من أقل من دقيقتين ونص) — ببصمة كلمة سر المدير.
      أول مرة المدير يفتح القايمة بصمته بتتسجّل، وبعد كده لازم نفس البصمة (dirReset من المحرر بيمسحها لو اتغيّرت كلمة السر) */
   if (b.a === 'lvl') { const h = String(b.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false, e: 'auth' });
     const P = PropertiesService.getScriptProperties(), cur = P.getProperty('dir_h'); if (!cur) P.setProperty('dir_h', h); else if (cur !== h) return out_({ ok: false, e: 'auth' });
-    const all = load_(), A = P.getProperties(), now = Date.now(), L = [];
-    Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); });
+    const now = Date.now(); let L = [], X = null; try { X = JSON.parse(CacheService.getScriptCache().get('lvx') || 'null'); } catch (x) {}
+    if (X) Object.keys(X).forEach(c => { if (now - X[c].at < 150000) L.push({ c: c, n: X[c].n, t: X[c].t, at: X[c].at }); });
+    else { const all = load_(), A = P.getProperties(); Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); }); }
     L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n)); return out_({ ok: true, live: L }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
@@ -280,6 +287,48 @@ function testLib() { Logger.log(doGet({ parameter: { a: 'lib', c: 'hhe8' } }).ge
 /* الموديل: GEMINI_MODEL في Script Properties لو حابب تحدده بنفسك، وإلا السكربت بيختار لوحده أحدث موديل «flash» متاح لمفتاحك
    (جوجل بتقفل الموديلات القديمة للحسابات الجديدة — زي gemini-2.5-flash — فلو الموديل رجّع 404 بنختار غيره ونحفظه) */
 const GEM_ = () => PropertiesService.getScriptProperties().getProperty('GEMINI_KEY') || '';
+/* 🤖 Claude (Anthropic): لو مفتاحه متسجّل في Script properties باسم CLAUDE_KEY، الواجبات والتصحيح بيتعملوا بيه بدل Gemini */
+const CLA_ = () => { const P = PropertiesService.getScriptProperties(); return P.getProperty('CLAUDE_KEY') || P.getProperty('ANTHROPIC_API_KEY') || ''; };
+const AIK_ = () => !!(CLA_() || GEM_());
+/* أجزاء الطلب (بصيغة Gemini: نص + PDF) ← محتوى Claude: الملفات الأول وبعدين النص */
+function claBody_(parts) {
+  const docs = [], txt = [];
+  parts.forEach(p => { if (p.inline_data) docs.push({ type: 'document', source: { type: 'base64', media_type: p.inline_data.mime_type, data: p.inline_data.data } }); else if (p.text) txt.push({ type: 'text', text: p.text }); });
+  txt.push({ type: 'text', text: 'رجّع JSON صالح بس، من غير أي كلام قبله أو بعده ومن غير ```.' });
+  const P = PropertiesService.getScriptProperties(), m = P.getProperty('CLAUDE_MODEL') || 'claude-opus-5-5', o = { model: m, max_tokens: 16000,
+    output_config: { effort: P.getProperty('CLAUDE_EFFORT') || 'low' }, messages: [{ role: 'user', content: docs.concat(txt) }] };
+  /* لو الطلب اترفض لأسباب أمان، Anthropic بتعيده على موديل تاني لوحدها (للموديلات اللي بتدعم ده) */
+  if (/^claude-(opus-5-5|fable-5-[12]|sonnet-5-5)$/.test(m)) o.fallbacks = 'default';
+  return JSON.stringify(o);
+}
+function claReq_(parts) { return { url: 'https://api.anthropic.com/v1/messages', method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+  headers: { 'x-api-key': CLA_(), 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01' }, payload: claBody_(parts) }; }
+function claTxt_(txt) {
+  const j = JSON.parse(txt); if (j.stop_reason === 'refusal') throw new Error('Claude رفض الطلب');
+  let t = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''); const a = t.indexOf('{'), z = t.lastIndexOf('}'); if (a >= 0 && z > a) t = t.slice(a, z + 1);
+  return JSON.parse(t);
+}
+function cla_(parts) {
+  let last = '';
+  for (let t = 0; t < 4; t++) {
+    const q = claReq_(parts), r = UrlFetchApp.fetch(q.url, q), code = r.getResponseCode(), txt = r.getContentText();
+    if (code == 200) return claTxt_(txt);
+    last = 'Claude ' + code + ': ' + txt.slice(0, 200);
+    if (code == 429 || code == 529 || code >= 500) { Utilities.sleep([3000, 8000, 15000, 0][t]); continue; }
+    throw new Error(last);
+  }
+  throw new Error(last + ' — عليه ضغط دلوقتي، جرّب كمان شوية');
+}
+function claAll_(list) {
+  let rs = []; try { rs = UrlFetchApp.fetchAll(list.map(claReq_)); } catch (e) {}
+  return list.map((parts, i) => { const r = rs[i]; if (r && r.getResponseCode() == 200) { try { return claTxt_(r.getContentText()); } catch (e) {} } return cla_(parts); });
+}
+/* الذكاء الاصطناعي المستخدم: Claude لو مفتاحه موجود، وإلا Gemini */
+function ai_(parts, temp) { return CLA_() ? cla_(parts) : gem_(parts, temp); }
+function aiAll_(list, temp) { return CLA_() ? claAll_(list) : gemAll_(list, temp); }
+/* ▶ Run من المحرر: تجربة مفتاح Claude — النتيجة في Execution log */
+function testClaude() { Logger.log(JSON.stringify(cla_([{ text: 'رجّع JSON: {"ok":true}' }]))); }
 function gemModel_() { const P = PropertiesService.getScriptProperties(); return P.getProperty('GEMINI_MODEL') || P.getProperty('gem_model') || gemPick_(); }
 function gemPick_() {
   const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(GEM_()), { muteHttpExceptions: true });
@@ -395,10 +444,15 @@ function fig_(v) { if (typeof v == 'string' && /^\s*\[/.test(v)) { try { v = JSO
 /* الواجب بيتعمل في الخلفية (Gemini ممكن ياخد دقايق والمتصفح بيقطع الاتصال): hwgen بيحط الطلب في طابور ويرجع على طول،
    وتريجر hwJob بيعمله، والصفحة بتتابع من hwlist لحد ما المسودة تظهر */
 function hwGen_(b) {
-  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!GEM_()) return out_({ ok: false, e: 'nokey' });
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!AIK_()) return out_({ ok: false, e: 'nokey' });
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
   if (!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
+  /* المعلم داس «اعمل الواجب»: بيتعمل على طول جوه الطلب نفسه (من غير طابور ولا تريجر) — والصفحة بتتابع من hwlist لو الاتصال اتقطع */
+  if (b.now) { const P = PropertiesService.getScriptProperties(), K = 'hws_' + b.c + '|' + b.d; P.setProperty(K, JSON.stringify({ s: 'run', t: Date.now() }));
+    let r; try { r = hwMake_(b.c, b.d, b.re); } catch (x) { r = { ok: false, e: String(x && x.message || x) }; }
+    if (r.ok) P.deleteProperty(K); else P.setProperty(K, JSON.stringify({ s: 'err', e: String(r.e).slice(0, 300), t: Date.now() }));
+    return out_(r.ok ? { ok: true, hw: r.hw } : { ok: false, e: r.e }); }
   hwEnq_(b.c, b.d, b.re); return out_({ ok: true, pending: 1 });
 }
 /* يحط الحصة في طابور الواجبات (الذكاء الاصطناعي بيعمل المسودة في الخلفية، والمعلم يراجعها وينشرها) */
@@ -412,7 +466,7 @@ function hwEnq_(c, d, re) {
 }
 /* أوتوماتيك: أول ما سبورة الحصة تخلص رفع ← مسودة الواجب تتعمل لوحدها (من غير ما المعلم يدوس حاجة) */
 function hwAuto_(c, id) {
-  try { if (!/^[a-z0-9]{4,6}$/.test(c || '') || !id || !GEM_()) return; const fl = DriveApp.getFileById(id); if (!/السبورة\.pdf$/.test(fl.getName())) return;
+  try { if (!/^[a-z0-9]{4,6}$/.test(c || '') || !id || !AIK_()) return; const fl = DriveApp.getFileById(id); if (!/السبورة\.pdf$/.test(fl.getName())) return;
     const ps = fl.getParents(); if (!ps.hasNext()) return; const f = ps.next(); if (jget_(f, 'hw.json')) return; hwEnq_(c, f.getName(), 0); } catch (x) {}
 }
 function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
@@ -449,7 +503,7 @@ function hwMake_(c, d, re) {
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
   /* الواجب نصين بيتعملوا في نفس الوقت (كل نص 5 أسئلة) = تقريبًا نص الوقت */
   const half = t => parts.map((p, i) => i ? p : { text: p.text + '\n\nمهم: المرة دي اكتب ' + t + ' بس (مش الـ 10).' });
-  let o; try { const R = gemAll_([half('5 أسئلة: 4 اختيار من متعدد (4 اختيارات) + 1 صح وغلط'), half('5 أسئلة: 1 صح وغلط + 2 أكمل + 2 سؤال مقالي/مسألة قصيرة')]);
+  let o; try { const R = aiAll_([half('5 أسئلة: 4 اختيار من متعدد (4 اختيارات) + 1 صح وغلط'), half('5 أسئلة: 1 صح وغلط + 2 أكمل + 2 سؤال مقالي/مسألة قصيرة')]);
     o = { title: (R[0] && R[0].title) || (R[1] && R[1].title) || '', questions: [].concat((R[0] && R[0].questions) || [], (R[1] && R[1].questions) || []) }; } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
   const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400), fig: fig_(q.fig) }));
   if (!qs.length) return ({ ok: false, e: 'gen' });
@@ -475,8 +529,8 @@ function hwSub_(b) {
     if (q.type == 'mcq' || q.type == 'tf') { const ok = nrm_(a) == nrm_(q.answer) || (q.type == 'tf' && /^(صح|صحيح|true|t)$/.test(nrm_(a)) == /^(صح|صحيح|true|t)$/.test(nrm_(q.answer))); res[i] = { s: ok ? 1 : 0, fb: ok ? '✔' : 'الصح: ' + q.answer }; return; }
     if (nrm_(a) == nrm_(q.answer)) { res[i] = { s: 1, fb: '✔' }; return; }
     ai.push(i); });
-  if (ai.length && GEM_()) { try {
-    const o = gem_([{ text: 'صحّح إجابات الطالب دي مقارنةً بالإجابة النموذجية. اقبل الإجابة لو المعنى صح حتى لو الصياغة مختلفة أو فيها أخطاء إملائية بسيطة. لكل سؤال اديله درجة 0 أو 0.5 أو 1، وملاحظة قصيرة بنفس لغة السؤال (لو السؤال إنجليزي الملاحظة بالإنجليزي) بتشرح الغلط لو فيه.\nرجّع JSON: {"r":[{"i":رقم,"s":درجة,"fb":"ملاحظة"}]}\n\n' +
+  if (ai.length && AIK_()) { try {
+    const o = ai_([{ text: 'صحّح إجابات الطالب دي مقارنةً بالإجابة النموذجية. اقبل الإجابة لو المعنى صح حتى لو الصياغة مختلفة أو فيها أخطاء إملائية بسيطة. لكل سؤال اديله درجة 0 أو 0.5 أو 1، وملاحظة قصيرة بنفس لغة السؤال (لو السؤال إنجليزي الملاحظة بالإنجليزي) بتشرح الغلط لو فيه.\nرجّع JSON: {"r":[{"i":رقم,"s":درجة,"fb":"ملاحظة"}]}\n\n' +
       ai.map(i => '#' + i + '\nالسؤال: ' + hw.qs[i].q + '\nالنموذجية: ' + hw.qs[i].answer + '\nالطالب: ' + ans[i]).join('\n\n') }], 0);
     (o.r || []).forEach(x => { if (ai.indexOf(+x.i) > -1) res[+x.i] = { s: Math.max(0, Math.min(1, +x.s || 0)), fb: String(x.fb || '').slice(0, 300) }; });
   } catch (e) {} }
@@ -487,17 +541,16 @@ function hwSub_(b) {
   return out_({ ok: true, score: score, total: total, res: res, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
 }
 function hwList_(b) {
-  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: !!GEM_() });
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
   const out = [], it = DriveApp.getFolderById(id).getFolders();
   while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
     let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
-    /* حصة من آخر 3 أيام عندها سبورة ومالهاش واجب (اتسجّلت قبل التحديث) ← تتعمل لوحدها */
-    if (has && !hw && !S && GEM_()) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(f.getName()); if (m && Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime() < 3 * 864e5) { try { hwEnq_(b.c, f.getName(), 0); S = { s: 'run', t: Date.now() }; } catch (x) {} } }
+    /* الحصص الجديدة اللي مالهاش واجب: صفحة المعلم بتطلب عملها على طول أول ما يفتح «الواجبات» (من غير طابور) */
     const run2 = S && S.s == 'run' && Date.now() - S.t < 600000;
     if (has || hw) out.push({ d: f.getName(), st: run2 ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
-  out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: !!GEM_() });
+  out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: AIK_() });
 }
 
 /* ===== 📚 ربط الحصص القديمة بالمكتبة =====
