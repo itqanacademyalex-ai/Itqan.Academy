@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.18-e';
+const VER='2026.11.19-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3467,7 +3467,7 @@ const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';
 async function hwWait(x,d,h,tick){const t0=Date.now();while(Date.now()-t0<480000){await new Promise(r=>setTimeout(r,6000));tick&&tick();
   let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){continue}const it=j&&j.ok&&(j.items||[]).find(y=>y.d==d);if(!it)continue;
   if(it.st=='err')return{ok:false,e:it.e};if(it.hw&&it.st!='run')return{ok:true,hw:it.hw}}return{ok:false,e:'الذكاء الاصطناعي اتأخر — جرّب تاني'}}
-async function hwGenRun(x,d,h,re,tick){const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0}).catch(()=>({ok:false}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
+async function hwGenRun(x,d,h,re,tick){/* now: الواجب بيتعمل جوه الطلب نفسه — ولو الاتصال اتقطع بنتابع من hwlist */const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0,now:1}).catch(()=>({ok:true,pending:1}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
 /* السكرتارية: الواجبات لكل الغرف (أكواد المعلمين عندها) */
 function hwSx(){hwPanel(fxList().map(x=>({c:x.room,t:x.title||'',p:String(x.pin||'')})))}
 async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
