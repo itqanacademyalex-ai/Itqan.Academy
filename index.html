@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.18-b';
+const VER='2026.11.18-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -687,7 +687,8 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
   try{if(!lv.dataset.ok)lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';const j=await regQ({a:'lvl',h:await dirH(pw)},20000);
    if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];lv.innerHTML='<small style="color:#9fe0c9;font-weight:700">🟢 الحصص المفتوحة دلوقتي ('+L.length+')</small>'+(L.length?L.map(x=>'<button class="w" style="background:linear-gradient(135deg,#1a9486,#137a6f);text-align:start;display:flex;justify-content:space-between;align-items:center;gap:8px" data-c="'+x.c+'"><span style="display:flex;flex-direction:column;line-height:1.5"><b>'+esc(x.n||'حصة')+'</b><small style="color:#d6f5ee">'+(x.t?'👩‍🏫 '+esc(x.t)+' · ':'')+fmtCode(x.c)+'</small></span><b style="flex:none">👁 ادخل</b></button>').join(''):'<small style="color:#a9bccd">مفيش حصص مفتوحة دلوقتي — القايمة بتتحدّث لوحدها.</small>');
     lv.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c))}
-   else if(j&&j.e=='auth')lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>'}catch(e){}busy=0};
+   else if(j&&j.e=='auth')lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>';
+   else if(!lv.dataset.ok)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.')+'</small>'}catch(e){}busy=0};
  clearInterval(m._lv);load();m._lv=setInterval(load,15000);$('#dpw').addEventListener('change',()=>{DIRK=null;delete lv.dataset.ok;load()})}
 /* ===== مفتاح الغرفة الثابتة من «كود الحصة + كود المعلم» =====
    أي جهاز عليه الكودين بيطلّع نفس المفتاح بالظبط ← المعلم يفتح حصته بالكودين بس من أي جهاز، من غير لينك خاص ومن غير السكرتارية.
@@ -1049,7 +1050,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  window.__ln={fill:(c,r)=>{pick(r,RB[r]);inp.value=fmtCode(c);enter()},open:()=>!f.hidden,reset:()=>{clearTimeout(wT);role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>{sec.textContent='⏳ جارٍ فتح لوحة السكرتارية…';setTimeout(()=>{secOpen();setTimeout(()=>{sec.textContent='🗂️ دخول السكرتارية'},1500)},30)};
  const dir=document.createElement('button');dir.className='w';dir.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px';dir.textContent='👔 دخول المدير';dir.onclick=()=>dirOpen();
- if(!TM()&&(dpwGet()||new URLSearchParams(location.search).get('dirhome')=='1'))setTimeout(()=>{try{if(!$('#join').hidden)dirOpen()}catch(e){}},300);
+ if((!TM()&&dpwGet())||new URLSearchParams(location.search).get('dirhome')=='1')setTimeout(()=>{try{if(!$('#join').hidden)dirOpen()}catch(e){}},300);
  /* مفيش اختيار «معلم/طالب» ولا كتابة أكواد: اللينك هو اللي بيحدد كل حاجة. لو حد فتح التطبيق من غير لينك: يلصق اللينك */
  row.style.display='none';f.style.display='none';
  const hint=document.createElement('div');hint.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%;background:rgba(29,54,82,.6);border:1px dashed rgba(227,192,141,.35);border-radius:16px;padding:12px;text-align:center';
