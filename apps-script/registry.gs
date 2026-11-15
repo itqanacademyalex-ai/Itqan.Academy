@@ -84,8 +84,9 @@ function doGet_(e) {
   if (p.a === 'tl') {
     const all = load_(); let n = String(p.n || '').trim(); const c = String(p.c || '').toLowerCase();
     if (!n && c && all[c]) n = all[c].t || '';
-    const R = {}; if (n) Object.keys(all).forEach(k => { const r = all[k]; if (r.t === n && (r.s || []).length) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s }; });
-    return out_({ ok: true, rooms: R });
+    /* كل حصص المعلم (حتى اللي لسه مالهاش مواعيد)، والاسم بيتقارن بعد توحيد الكتابة (أ/ا، ى/ي، ة/ه، المسافات، «أ/»…) عشان مايتوهش حصص بسبب حرف */
+    const N = tnN_(n), R = {}; if (N) Object.keys(all).forEach(k => { const r = all[k]; if (tnN_(r.t) === N) R[k] = { t: r.t, n: r.n || '', v: r.v || '', s: r.s || [] }; });
+    return out_({ ok: true, rooms: R, n: n });
   }
   /* غرف السكرتارية المتشفّرة (بكلمة سر السكرتارية) — للمزامنة بين أجهزة السكرتارية */
   if (p.a === 'fxget') {
@@ -134,6 +135,13 @@ function doPost_(e) {
   if (b.a === 'live') { const c = String(b.c || '').toLowerCase(), r = load_()[c]; if (!r) return out_({ ok: false });
     if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
     const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now())); return out_({ ok: true }); }
+  /* 👔 المدير: الحصص المفتوحة دلوقتي (المعلم بلّغ إنه فاتح من أقل من دقيقتين ونص) — ببصمة كلمة سر المدير.
+     أول مرة المدير يفتح القايمة بصمته بتتسجّل، وبعد كده لازم نفس البصمة (dirReset من المحرر بيمسحها لو اتغيّرت كلمة السر) */
+  if (b.a === 'lvl') { const h = String(b.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false, e: 'auth' });
+    const P = PropertiesService.getScriptProperties(), cur = P.getProperty('dir_h'); if (!cur) P.setProperty('dir_h', h); else if (cur !== h) return out_({ ok: false, e: 'auth' });
+    const all = load_(), A = P.getProperties(), now = Date.now(), L = [];
+    Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); });
+    L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n)); return out_({ ok: true, live: L }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
@@ -318,6 +326,9 @@ function gem_(parts, temp, again) {
   }
   throw new Error(last + ' — جوجل عليها ضغط دلوقتي، جرّب كمان شوية');
 }
+function tnN_(x) { return String(x || '').replace(/[\u064B-\u065F\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^\s*(ا|م|د|الاستاذ|الاستاذه|استاذ|استاذه|مس|مستر|Mr|Ms|Mrs|Miss)(\s*[\/.]\s*|\s+)/i, '').replace(/[\/.]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
+/* ▶ Run لو كلمة سر المدير اتغيّرت: بيمسح بصمتها، وأول دخول للمدير بعد كده بيسجّل الجديدة */
+function dirReset() { PropertiesService.getScriptProperties().deleteProperty('dir_h'); Logger.log('تمام'); }
 function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
 function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
