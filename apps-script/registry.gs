@@ -134,13 +134,18 @@ function doPost_(e) {
   /* 🟢 المعلم فاتح الحصة: جهازه بيبلّغ كل دقيقة (بكوده أو ببصمة مفتاح الغرفة) */
   if (b.a === 'live') { const c = String(b.c || '').toLowerCase(), r = load_()[c]; if (!r) return out_({ ok: false });
     if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
-    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now())); return out_({ ok: true }); }
+    const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now()));
+    /* نسخة سريعة لقايمة المدير (من غير ما يقرا كل الإعدادات): الحصص المفتوحة واسمها */
+    try { const C = CacheService.getScriptCache(); let m = {}; try { m = JSON.parse(C.get('lvx') || '{}'); } catch (x) {} if (b.off) delete m[c]; else m[c] = { at: Date.now(), n: r.n || '', t: r.t || '' };
+      Object.keys(m).forEach(k => { if (Date.now() - m[k].at > 150000) delete m[k]; }); C.put('lvx', JSON.stringify(m), 900); } catch (x) {}
+    return out_({ ok: true }); }
   /* 👔 المدير: الحصص المفتوحة دلوقتي (المعلم بلّغ إنه فاتح من أقل من دقيقتين ونص) — ببصمة كلمة سر المدير.
      أول مرة المدير يفتح القايمة بصمته بتتسجّل، وبعد كده لازم نفس البصمة (dirReset من المحرر بيمسحها لو اتغيّرت كلمة السر) */
   if (b.a === 'lvl') { const h = String(b.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false, e: 'auth' });
     const P = PropertiesService.getScriptProperties(), cur = P.getProperty('dir_h'); if (!cur) P.setProperty('dir_h', h); else if (cur !== h) return out_({ ok: false, e: 'auth' });
-    const all = load_(), A = P.getProperties(), now = Date.now(), L = [];
-    Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); });
+    const now = Date.now(); let L = [], X = null; try { X = JSON.parse(CacheService.getScriptCache().get('lvx') || 'null'); } catch (x) {}
+    if (X) Object.keys(X).forEach(c => { if (now - X[c].at < 150000) L.push({ c: c, n: X[c].n, t: X[c].t, at: X[c].at }); });
+    else { const all = load_(), A = P.getProperties(); Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); }); }
     L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n)); return out_({ ok: true, live: L }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
