@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.18-a';
+const VER='2026.11.18-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -663,19 +663,32 @@ async function tkOpen(room,pin,tk,pub){const a=ub64(tk),d=new Uint8Array(await c
    يوقّع على دخوله ← المعلم يتحقق بالمفتاح العام (DIR_PUB) ويدخّله على طول. من غير كلمة السر الصح مايقدرش حد يدخل كمدير */
 const DIR_PUB='BFmrjWspYn3ZJYzEpO1HDwr-1QIsxDRS0CKE2LICTi70W4XovTYhqlT2tYEyOQi7f2C8f9vI6B66o9xpJa5X_oo',DIR_BLOB='PQ_MKFu2uo1YIeu6wWpJfnp3bAoTSp2cHffncA5uP0U7F0AlewVthc9AOJTaZB0g5bkh0xJTGKiI-radm0W5PDR5feoCIKnEH6bXrA';
 let DIRK=null;
-async function dirUnlock(pw){const rk=await tkOpen('director',pw,DIR_BLOB,DIR_PUB);try{sessionStorage.setItem('itqan_dpw',pw)}catch(e){}DIRK=rk;return rk}
-async function dirKey(){if(DIRK)return DIRK;let pw='';try{pw=sessionStorage.getItem('itqan_dpw')||''}catch(e){}if(!pw)return null;try{return await dirUnlock(pw)}catch(e){return null}}
+/* كلمة سر المدير بتتحفظ على الجهاز اللي دخل منه (مش بيطلبها تاني) — وزرار «خروج المدير» بيمسحها */
+const dpwGet=()=>{try{return localStorage.getItem('itqan_dpw')||sessionStorage.getItem('itqan_dpw')||''}catch(e){return''}};
+async function dirUnlock(pw){const rk=await tkOpen('director',pw,DIR_BLOB,DIR_PUB);try{localStorage.setItem('itqan_dpw',pw);sessionStorage.setItem('itqan_dpw',pw)}catch(e){}DIRK=rk;return rk}
+function dirOut(){try{localStorage.removeItem('itqan_dpw');sessionStorage.removeItem('itqan_dpw')}catch(e){}DIRK=null}
+async function dirH(pw){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-dir|'+pw));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function dirKey(){if(DIRK)return DIRK;let pw=dpwGet();if(!pw)return null;try{return await dirUnlock(pw)}catch(e){return null}}
 const DIRM=new URLSearchParams(location.search).get('dir')=='1';
 function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id='dirm';m.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:14px';document.body.append(m)}
- m.innerHTML='<div class="card" style="gap:10px"><h2>👔 دخول المدير</h2><input id="dpw" type="password" placeholder="كلمة سر المدير" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button></div>';
- m.hidden=false;try{const pw=sessionStorage.getItem('itqan_dpw');if(pw)$('#dpw').value=pw}catch(e){}
+ m.innerHTML='<div class="card" style="gap:10px"><h2>👔 دخول المدير</h2><input id="dpw" type="password" placeholder="كلمة سر المدير" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dlv" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto"></div><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button><button class="w" id="dout" style="background:transparent;border:1px solid #27496b;font-size:13px">🚪 خروج المدير من الجهاز ده</button></div>';
+ m.hidden=false;{const pw=dpwGet();if(pw)$('#dpw').value=pw}
  const er=$('#der'),go=async(code)=>{const pw=$('#dpw').value;if(!pw){er.textContent='اكتب كلمة سر المدير';return}const c=parseCode(code||$('#dcd').value);if(!c){er.textContent='اكتب كود الحصة (4 حروف وأرقام)';return}
   er.style.color='#e3c08d';er.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(e){er.style.color='#fca5a5';er.textContent='كلمة السر غير صحيحة';return}
   er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';resolveCode(c).then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'الحصة '+fmtCode(c)+' مش مفتوحة دلوقتي.':String(e)})};
  $('#dgo').onclick=()=>go();$('#dcd').addEventListener('keydown',e=>{if(e.key=='Enter')go()});
  /* لو المدير استرجع ملف الغرف الثابتة على جهازه: أزرار دخول سريعة لكل غرفة */
  const L=fxList();if(L.length)$('#dfx').innerHTML='<small style="color:#a9bccd">الغرف الثابتة:</small>'+L.map(x=>'<button class="w" style="background:#27496b;text-align:start" data-c="'+x.room+'">👁 '+esc(x.title||'غرفة')+(x.tn?' — '+esc(x.tn):'')+' <small style="direction:ltr">('+fmtCode(x.room)+')</small></button>').join('');
- $('#dfx').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c));setTimeout(()=>$('#dpw').value?$('#dcd').focus():$('#dpw').focus(),50)}
+ $('#dfx').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c));setTimeout(()=>$('#dpw').value?$('#dcd').focus():$('#dpw').focus(),50);
+ $('#dout').onclick=()=>{if(!confirm('تمسح كلمة سر المدير من الجهاز ده؟'))return;dirOut();$('#dpw').value='';$('#dlv').innerHTML='';toast('🚪','اتمسحت من الجهاز ده')};
+ /* 🟢 الحصص المفتوحة دلوقتي — بتتحدّث كل 15 ثانية وانت فاتح الشاشة، ودوسة واحدة تدخلك أي حصة */
+ const lv=$('#dlv');let busy=0;const load=async()=>{if(m.hidden||!document.body.contains(lv)){clearInterval(m._lv);return}const pw=$('#dpw').value;if(!pw||busy)return;busy=1;
+  try{if(!DIRK)await dirUnlock(pw)}catch(e){busy=0;lv.innerHTML='';return}
+  try{if(!lv.dataset.ok)lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';const j=await regQ({a:'lvl',h:await dirH(pw)},20000);
+   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];lv.innerHTML='<small style="color:#9fe0c9;font-weight:700">🟢 الحصص المفتوحة دلوقتي ('+L.length+')</small>'+(L.length?L.map(x=>'<button class="w" style="background:linear-gradient(135deg,#1a9486,#137a6f);text-align:start;display:flex;justify-content:space-between;align-items:center;gap:8px" data-c="'+x.c+'"><span style="display:flex;flex-direction:column;line-height:1.5"><b>'+esc(x.n||'حصة')+'</b><small style="color:#d6f5ee">'+(x.t?'👩‍🏫 '+esc(x.t)+' · ':'')+fmtCode(x.c)+'</small></span><b style="flex:none">👁 ادخل</b></button>').join(''):'<small style="color:#a9bccd">مفيش حصص مفتوحة دلوقتي — القايمة بتتحدّث لوحدها.</small>');
+    lv.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c))}
+   else if(j&&j.e=='auth')lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>'}catch(e){}busy=0};
+ clearInterval(m._lv);load();m._lv=setInterval(load,15000);$('#dpw').addEventListener('change',()=>{DIRK=null;delete lv.dataset.ok;load()})}
 /* ===== مفتاح الغرفة الثابتة من «كود الحصة + كود المعلم» =====
    أي جهاز عليه الكودين بيطلّع نفس المفتاح بالظبط ← المعلم يفتح حصته بالكودين بس من أي جهاز، من غير لينك خاص ومن غير السكرتارية.
    (حساب المفتاح العام من الخاص على منحنى P-256 لأن WebCrypto محتاج الاتنين) */
@@ -1036,6 +1049,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  window.__ln={fill:(c,r)=>{pick(r,RB[r]);inp.value=fmtCode(c);enter()},open:()=>!f.hidden,reset:()=>{clearTimeout(wT);role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>{sec.textContent='⏳ جارٍ فتح لوحة السكرتارية…';setTimeout(()=>{secOpen();setTimeout(()=>{sec.textContent='🗂️ دخول السكرتارية'},1500)},30)};
  const dir=document.createElement('button');dir.className='w';dir.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px';dir.textContent='👔 دخول المدير';dir.onclick=()=>dirOpen();
+ if(!TM()&&(dpwGet()||new URLSearchParams(location.search).get('dirhome')=='1'))setTimeout(()=>{try{if(!$('#join').hidden)dirOpen()}catch(e){}},300);
  /* مفيش اختيار «معلم/طالب» ولا كتابة أكواد: اللينك هو اللي بيحدد كل حاجة. لو حد فتح التطبيق من غير لينك: يلصق اللينك */
  row.style.display='none';f.style.display='none';
  const hint=document.createElement('div');hint.style.cssText='display:flex;flex-direction:column;gap:8px;width:100%;background:rgba(29,54,82,.6);border:1px dashed rgba(227,192,141,.35);border-radius:16px;padding:12px;text-align:center';
