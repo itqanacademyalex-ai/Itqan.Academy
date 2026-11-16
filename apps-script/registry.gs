@@ -148,7 +148,10 @@ function doPost_(e) {
     const now = Date.now(); let L = [], X = null; try { X = JSON.parse(CacheService.getScriptCache().get('lvx') || 'null'); } catch (x) {}
     if (X) Object.keys(X).forEach(c => { if (now - X[c].at < 150000) L.push({ c: c, n: X[c].n, t: X[c].t, at: X[c].at }); });
     else { const all = load_(), A = P.getProperties(); Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); }); }
-    L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n)); return out_({ ok: true, live: L }); }
+    L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n));
+    /* all: كمان أسماء كل الغرف — جهاز المشرف بيحفظها ويسأل الغرف مباشرة (أسرع بكتير من السجل) */
+    let rooms = null; if (b.all) { rooms = {}; try { const A2 = load_(); Object.keys(A2).forEach(c => { rooms[c] = { n: A2[c].n || '', t: A2[c].t || '' }; }); } catch (x) {} }
+    return out_(rooms ? { ok: true, live: L, rooms: rooms } : { ok: true, live: L }); }
   if (b.a === 'pdf') return pdf_(b);
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
