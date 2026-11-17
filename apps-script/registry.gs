@@ -157,6 +157,10 @@ function doPost_(e) {
   if (b.a === 'hwpub') return hwPub_(b);
   if (b.a === 'hwsub') return hwSub_(b);
   if (b.a === 'hwlist') return hwList_(b);
+  /* حالة واجب حصة واحدة (خفيفة) — الصفحة بتسأل عليها وهي مستنية المسودة، بدل ما تقرا كل فولدرات المجموعة كل كام ثانية */
+  if (b.a === 'hwst') { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + b.d) || 'null'); } catch (x) {}
+    const f = cls_(b.c, b.d), hw = f ? jget_(f, 'hw.json') : null, run = S && S.s == 'run' && Date.now() - S.t < 600000;
+    return out_({ ok: true, st: run ? 'run' : hw ? hw.st : S && S.s == 'err' ? 'err' : '', e: S && S.e || '', hw: hw }); }
   if (b.a === 'start') return upStart_(b);
   if (b.a === 'chunk') return upChunk_(b);
   if (b.a === 'status') return upStatus_(b);
@@ -476,7 +480,8 @@ function hwAuto_(c, id) {
 }
 function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
 function hwJob() {
-  const P = PropertiesService.getScriptProperties(), t0 = Date.now(), L = LockService.getScriptLock(); if (!L.tryLock(1000)) return;
+  /* علامة «شغّال» في الكاش بدل قفل السكربت كله: الواجب ممكن ياخد دقايق، وقفل السكربت كان بيعطّل تسليم الواجبات والرفع وقايمة الحصص */
+  const P = PropertiesService.getScriptProperties(), t0 = Date.now(), C = CacheService.getScriptCache(); if (C.get('hwjob_run')) return; C.put('hwjob_run', '1', 300);
   try {
     ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwJob') ScriptApp.deleteTrigger(t); });
     while (Date.now() - t0 < 240000) {
@@ -486,7 +491,7 @@ function hwJob() {
       if (r.ok) P.deleteProperty('hws_' + j.c + '|' + j.d); else P.setProperty('hws_' + j.c + '|' + j.d, JSON.stringify({ s: 'err', e: String(r.e).slice(0, 300), t: Date.now() }));
     }
     if (JSON.parse(P.getProperty('hwq') || '[]').length) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create();
-  } finally { L.releaseLock(); }
+  } finally { C.remove('hwjob_run'); }
 }
 /* ▶ Run مرة واحدة بعد التحديث: بتدّي السكربت صلاحية «يشتغل في الخلفية» (عشان الواجب يتعمل من غير ما المتصفح يستنى) */
 function authHw() { ScriptApp.getProjectTriggers(); Logger.log('تمام — الواجبات هتشتغل في الخلفية'); }
@@ -541,8 +546,8 @@ function hwSub_(b) {
   } catch (e) {} }
   ai.forEach(i => { if (!res[i]) res[i] = { s: 0, fb: 'هيتصحح من المعلم', p: 1 }; });
   const score = res.reduce((a, x) => a + (x ? x.s : 0), 0), total = hw.qs.length;
-  const L = LockService.getScriptLock(); L.waitLock(20000);
-  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { L.releaseLock(); }
+  const L = LockService.getUserLock(); let got = false; try { got = L.tryLock(10000); } catch (x) {}
+  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { if (got) L.releaseLock(); }
   return out_({ ok: true, score: score, total: total, res: res, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
 }
 function hwList_(b) {
