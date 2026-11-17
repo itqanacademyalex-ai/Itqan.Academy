@@ -493,7 +493,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.23-a';
+const VER='2026.11.24-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1093,7 +1093,8 @@ var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();in
 /* أندرويد من المتصفح: زرار ثابت فوق شاشة الدخول «تحميل التطبيق على الجهاز» — بيثبّت تطبيق إتقان من Chrome بضغطة،
    ولو Chrome مش جاهز للتثبيت بيشرح الخطوة من القايمة */
 var ANDB=/Android/i.test(navigator.userAgent)&&!/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent);
-function andTab(){if(TM()||!ANDB||PWA||window.itqanApp||$('#atab'))return;const c=$('#join .card');if(!c)return;
+/* زرار «تحميل التطبيق» على أندرويد — للمعلم كمان (التطبيق بيفتح على «حصصي» بتاعته على طول، لأنه بيشارك بيانات Chrome) */
+function andTab(){if(!ANDB||PWA||window.itqanApp||$('#atab'))return;try{if(Date.now()-(+localStorage.getItem('itqan_atab_x')||0)<3*864e5)return}catch(e){}const c=$('#join .card');if(!c)return;
  const w=document.createElement('div');w.id='atab';w.style.cssText='position:fixed;z-index:55;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px;background:#14283ff2;border:1px solid rgba(227,192,141,.4);border-radius:18px;padding:8px;box-shadow:0 -6px 24px #0008';
  const b=document.createElement('button');b.className='w';b.textContent='📲 تحميل التطبيق على الجهاز';b.style.cssText='background:#e3c08d;color:#0e1a2b;font-weight:700;font-size:16px;padding:12px;border-radius:14px;width:100%';
  /* خطوات التثبيت حسب المتصفح — بتظهر لو Chrome مش جاهز يثبّت بضغطة، أو لما يضغط «خطوات التثبيت» */
@@ -1114,7 +1115,9 @@ function andTab(){if(TM()||!ANDB||PWA||window.itqanApp||$('#atab'))return;const 
    const k=document.createElement('style');k.textContent='@keyframes andB{50%{transform:translateY(12px)}}';document.head.appendChild(k);document.body.appendChild(a);setTimeout(()=>a.remove(),12000)}};
  tip.onclick=()=>{h.hidden?showSteps():(h.hidden=true)};
  b.onclick=async()=>{if(instEv){const e=instEv;instEv=null;try{e.prompt();const r=await e.userChoice;if(r&&r.outcome=='accepted'){w.remove();$('#join').style.paddingBottom='';return}}catch(x){}}showSteps()};
- w.append(h,b,tip);$('#join').append(w);$('#join').style.paddingBottom='120px'}
+ /* ✕ يقفل الشريط 3 أيام */const xx=document.createElement('button');xx.textContent='✕';xx.title='إخفاء';xx.style.cssText='position:absolute;top:-12px;left:-6px;width:30px;height:30px;border-radius:50%;background:#27496b;color:#fff;font-size:14px;padding:0';
+ xx.onclick=()=>{try{localStorage.setItem('itqan_atab_x',String(Date.now()))}catch(e){}w.remove();$('#join').style.paddingBottom=''};
+ w.append(h,b,tip,xx);$('#join').append(w);$('#join').style.paddingBottom='120px'}
 addEventListener('appinstalled',()=>{const w=$('#atab');if(w){w.remove();$('#join').style.paddingBottom=''}const d=$('#inst');if(d)d.remove();try{toast('✅','اتثبّت التطبيق — افتحه من أيقونة إتقان على الشاشة')}catch(e){}});
 function pwaInstall(){if(TM()||PWA||window.itqanApp||$('#inst'))return;if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|Telegram|GSA|; wv\)/i.test(navigator.userAgent))return;
  try{if(Date.now()-(+localStorage.getItem('itqan_inst_x')||0)<7*864e5)return}catch(e){}
