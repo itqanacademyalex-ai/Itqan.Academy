@@ -493,7 +493,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.25-a';
+const VER='2026.11.25-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1297,13 +1297,18 @@ async function startTPeer(){
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
+  /* 🛡 الغرفة كانت مفتوحة وخادم الغرف فصل لحظة: وهو بيرجع ممكن يقول «الرقم محجوز» (لسه فاكر الاتصال القديم).
+     زمان كنا بنهدم الغرفة ونفتحها من جديد — وده كان بيطرد المعلم وكل الطلاب. دلوقتي بنسيب الغرفة والطلاب زي ما هم ونعيد ربطها بالخادم بس */
+  if(e.type=='unavailable-id'&&opened&&peer===p&&!p.destroyed){try{H.t.peer++;hEv('🌐 خادم الغرف لسه فاكر الاتصال القديم — بنعيد الربط من غير ما حد يخرج')}catch(x){}
+   setTimeout(()=>{try{if(!p.destroyed&&p.disconnected)p.reconnect()}catch(x){}},5000);return}
   if(e.type=='unavailable-id'){
    /* رقم الغرفة لسه محجوز من المرة اللي فاتت (التطبيق اتقفل فجأة، أو الحصة مفتوحة في تبويب/جهاز تاني) — الخادم بيفكّه لوحده خلال دقيقة */
    tTries++;try{p.destroy()}catch(x){}
    if(tTries==1)sys('⏳ الغرفة لسه محجوزة من آخر مرة اتفتحت — بنحاول نفتحها تاني لوحدنا (ممكن تاخد لحد دقيقة). سيب الصفحة مفتوحة.');
    if(tTries==14)sys('⚠️ الغرفة لسه مفتوحة في مكان تاني — لو الحصة مفتوحة على جهاز أو تبويب تاني اقفلها، وهنا هتفتح لوحدها.');
    try{H.t.peer++}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
-  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');if(!opened||p.destroyed)setTimeout(()=>{if(peer===p){try{p.destroy()}catch(x){}startTPeer()}},4000);return}
+  if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){if(opened&&!p.destroyed){try{H.t.peer++}catch(x){}return}sys('⚠️ مشكلة في الوصول لخادم الغرف ('+e.type+') — سنعيد المحاولة تلقائياً');if(!opened||p.destroyed)setTimeout(()=>{if(peer===p){try{p.destroy()}catch(x){}startTPeer()}},4000);return}
+  if(opened&&e.type=='peer-unavailable')return;
   sys('خطأ في الاتصال: '+e.type)});
  peer.on('connection',c=>{
   c.on('data',d=>tData(c,d));
