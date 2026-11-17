@@ -493,7 +493,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.24-b';
+const VER='2026.11.25-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3490,7 +3490,12 @@ let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.s
  if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1)){o.textContent='▶ تشغيل في Drive';o.style.cssText='color:#0e1a2b;background:#e3c08d;font-weight:700;font-size:13px;padding:6px 12px;border-radius:10px;text-decoration:none'}}
 /* ===== 📝 الواجب التلقائي: بصمة المعلم للغرفة (من كوده) — السجل بيقارنها بالبصمة اللي السكرتارية رفعتها ===== */
 async function hwH(r,p){if(!r||!p)return'';const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-hw|'+r+'|'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-async function hwApi(o){const u=regUrl();if(!u)throw new Error('مفيش سجل حصص');const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});return r.json()}
+/* طلبات الواجبات: مهلة دقيقتين، ولو الرد مش JSON (صفحة خطأ من جوجل) بنرجّع السبب بدل «تعذّر الاتصال»، ولو النت قطع بنعيد مرة */
+async function hwApi(o,again){const u=regUrl();if(!u)throw new Error('مفيش سجل حصص');const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),120000);
+ try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:ac.signal});const t=await r.text();
+  try{return JSON.parse(t)}catch(e){return{ok:false,e:'السجل رد بخطأ ('+r.status+') — جرّب تاني بعد دقيقة'}}}
+ catch(e){if(!again&&!ac.signal.aborted){await new Promise(z=>setTimeout(z,2500));return hwApi(o,1)}return{ok:false,e:ac.signal.aborted?'السجل ماردّش في دقيقتين — جرّب تاني':'النت قطع — اتأكد من الاتصال وجرّب تاني'}}
+ finally{clearTimeout(tm)}}
 const HWE={auth:'كود المعلم مش متسجّل في السجل لسه — السكرتارية تفتح اللوحة مرة عشان يترفع',nokey:'مفتاح Gemini مش متحط في السكربت (Script Properties ← GEMINI_KEY)',class:'الحصة دي مش لاقيها على Drive',empty:'الحصة دي مفيهاش سبورة ولا تفريغ',gen:'الذكاء الاصطناعي مارجّعش أسئلة — جرّب تاني',nohw:'الواجب لسه مااتنشرش'};
 const hwErr=j=>HWE[j&&j.e]||String(j&&j.e||'تعذّر الاتصال');
 const hwTy={mcq:'اختيار من متعدد',tf:'صح وغلط',fill:'أكمل',short:'سؤال مقالي'};
@@ -3501,8 +3506,9 @@ function hwModal(id,title){let m=$('#'+id);if(m)m.remove();m=document.createElem
 const hwBtn=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;return b};
 /* المعلم: «📝 الواجبات» — كل حصة: اعمل الواجب / راجع / منشور + النتايج */
 /* الواجب بيتعمل في الخلفية على السيرفر: بنسأل كل كام ثانية لحد ما المسودة تظهر (أو يرجع سبب الفشل) */
-async function hwWait(x,d,h,tick){const t0=Date.now();while(Date.now()-t0<480000){await new Promise(r=>setTimeout(r,6000));tick&&tick();
-  let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){continue}const it=j&&j.ok&&(j.items||[]).find(y=>y.d==d);if(!it)continue;
+async function hwWait(x,d,h,tick){const t0=Date.now();while(Date.now()-t0<480000){await new Promise(r=>setTimeout(r,8000));tick&&tick();
+  /* حالة الحصة دي بس (خفيفة)، ولو السكربت قديم مايعرفهاش نرجع للقايمة الكاملة */
+  let j;try{j=await hwApi({a:'hwst',c:x.c,d,h});if(j&&j.ok===false&&!j.e)j=null;if(!j||!j.ok)j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){continue}const it=j&&j.ok&&(j.items?(j.items||[]).find(y=>y.d==d):j);if(!it)continue;
   if(it.st=='err')return{ok:false,e:it.e};if(it.hw&&it.st!='run')return{ok:true,hw:it.hw}}return{ok:false,e:'الذكاء الاصطناعي اتأخر — جرّب تاني'}}
 async function hwGenRun(x,d,h,re,tick){/* now: الواجب بيتعمل جوه الطلب نفسه — ولو الاتصال اتقطع بنتابع من hwlist */const g=await hwApi({a:'hwgen',c:x.c,d,h,re:re?1:0,now:1}).catch(()=>({ok:true,pending:1}));if(g.ok&&g.hw)return g;if(g.ok&&g.pending)return hwWait(x,d,h,tick);return g}
 /* السكرتارية: الواجبات لكل الغرف (أكواد المعلمين عندها) */
@@ -3575,7 +3581,7 @@ function hwSolve(c,d,hw){const EN=hwEn(hw),L=(a,e)=>EN?e:a;const B=hwModal('hws'
   const fb=document.createElement('small');c.append(fb);B.append(c);return{fn,fb,c}});
  const go=hwBtn(L('📤 سلّم الواجب','📤 Submit'),'#1a9486',async function(){const n=ni.value.trim();if(!n)return alert(L('اكتب اسمك','Write your name'));const ans=get.map(g=>g.fn());if(ans.filter(a=>String(a).trim()).length<ans.length&&!confirm(L('فيه أسئلة ماحلّيتهاش — تسلّم كده؟','Some questions are unanswered — submit anyway?')))return;
   this.disabled=true;this.textContent=L('⏳ بيتصحح…','⏳ Grading…');try{localStorage.setItem('itqan_nm',n)}catch(e){}
-  const j=await hwApi({a:'hwsub',c,d,n,ans}).catch(()=>({ok:false}));if(!j.ok){this.disabled=false;this.textContent=L('📤 سلّم الواجب','📤 Submit');return alert('❌ '+hwErr(j))}
+  const j=await hwApi({a:'hwsub',c,d,n,ans}).catch(()=>({ok:false}));if(!j.ok){this.disabled=false;this.textContent=L('📤 سلّم الواجب','📤 Submit');return alert('❌ '+hwErr(j)+'\n\n'+L('إجاباتك لسه موجودة — دوس «سلّم الواجب» تاني.','Your answers are still here — tap Submit again.'))}
   get.forEach((g,i)=>{const r=j.res[i]||{s:0},k=j.key[i]||{};g.c.style.borderRight='4px solid '+(r.s>=1?'#1f8f5f':r.s>0?'#e3c08d':'#b5473f');g.fb.style.color=r.s>=1?'#9ee6c4':r.s>0?'#e3c08d':'#fca5a5';
    g.fb.innerHTML=esc(r.s>=1?L('✔ صح','✔ Correct'):r.s>0?L('◐ نص الدرجة','◐ Half mark'):'✖ ')+(r.fb&&r.fb!=='✔'?' — '+fracH(r.fb):'')+(r.s<1&&k.answer?' · '+L('الإجابة: ','Answer: ')+fracH(k.answer):'')+(k.explain&&r.s<1?' · '+fracH(k.explain):'')});
   this.remove();const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:22px;font-weight:800;color:#e3c08d;padding:8px';sc.textContent=L('🎯 درجتك: ','🎯 Your score: ')+(+j.score).toFixed(1).replace('.0','')+' / '+j.total;B.prepend(sc);B.parentNode.scrollTop=0});
