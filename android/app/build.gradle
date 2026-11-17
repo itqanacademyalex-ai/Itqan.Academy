@@ -1,0 +1,24 @@
+// تطبيق أندرويد لأكاديمية إتقان: بيفتح الموقع جوه Chrome (Trusted Web Activity) — كل مميزات الموقع، وأي تحديث للموقع بيوصل لوحده
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.itqanacademy.app'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.itqanacademy.app'
+        minSdk 21
+        targetSdk 35
+        versionCode((System.getenv('VCODE') ?: '1') as Integer)
+        versionName(System.getenv('VNAME') ?: '1.0')
+    }
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('KS_PATH') ?: 'release.jks')
+            storePassword System.getenv('KS_PASS')
+            keyAlias 'itqan'
+            keyPassword System.getenv('KS_PASS')
+        }
+    }
+    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0' }
