@@ -1,0 +1,11 @@
+# نشر خادم الربط الخاص بإتقان على Render بضغطة واحدة (الخطة المجانية)
+services:
+  - type: web
+    name: itqan-peer
+    runtime: node
+    plan: free
+    rootDir: peer-server
+    buildCommand: npm install --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /
+    autoDeploy: true

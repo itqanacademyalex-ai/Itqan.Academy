@@ -617,3 +617,10 @@ function pdf_(b) {
   if (x.getSize() > 35e6) return out_({ ok: false, e: 'big' });
   return out_({ ok: true, d: Utilities.base64Encode(x.getBlob().getBytes()) });
 }
+
+/* 🔗 خادم الربط الخاص (Render المجاني بينام بعد 15 دقيقة من غير طلبات): السكربت بيصحّيه كل 10 دقايق.
+   مرة واحدة: Script properties ← PEER_HOST = اسم الخادم (زي itqan-peer.onrender.com) ← ▶ Run «peerKeepAlive» */
+function peerKeepAlive() { ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'peerPing') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('peerPing').timeBased().everyMinutes(10).create(); peerPing(); Logger.log('تمام — الخادم هيفضل صاحي'); }
+function peerPing() { const h = PropertiesService.getScriptProperties().getProperty('PEER_HOST'); if (!h) return;
+  try { const r = UrlFetchApp.fetch('https://' + h.replace(/^https?:\/\//, '').replace(/\/.*$/, '') + '/', { muteHttpExceptions: true }); Logger.log(r.getResponseCode() + ' ' + r.getContentText().slice(0, 60)); } catch (e) { Logger.log(String(e)); } }

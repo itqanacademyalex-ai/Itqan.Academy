@@ -493,7 +493,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.25-b';
+const VER='2026.11.26-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -512,7 +512,16 @@ async function metIce(){if(MET_APP&&MET_KEY){if(metC&&Date.now()-metT<30*60000)r
   try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),3500);const r=await fetch('https://'+MET_APP+'.metered.live/api/v1/turn/credentials?apiKey='+encodeURIComponent(MET_KEY),{signal:ac.signal});clearTimeout(tm);
    const a=await r.json();if(Array.isArray(a)&&a.length){metC=a.filter(x=>JSON.stringify(x.urls||'').indexOf('turn')>-1);metT=Date.now();return metC}}catch(e){}}
  return MET_STATIC}
+/* ===== 🔗 خادم الربط الخاص بإتقان (PeerJS) =====
+   الخادم العام المجاني بتاع PeerJS عليه ضغط من العالم كله وساعات بيفصل. لو PEER_HOST متحط، المعلم والطلاب بيستخدموا خادم إتقان الخاص،
+   ولو مش بيرد (واقع أو لسه بيصحى أكتر من 25 ثانية) الكل بيرجع للخادم العام لوحده — فالحصص مابتقفش أبدًا */
+const PEER_HOST='';
+let PSOK=null;const psReady=(async()=>{if(!PEER_HOST)return false;try{const c=sessionStorage.getItem('itqan_ps');if(c)return PSOK=(c==='1')}catch(e){}
+ try{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),25000);const r=await fetch('https://'+PEER_HOST+'/peerjs/peerjs/id?ts='+Date.now(),{signal:ac.signal,cache:'no-store'});clearTimeout(tm);PSOK=r.ok}catch(e){PSOK=false}
+ try{sessionStorage.setItem('itqan_ps',PSOK?'1':'0')}catch(e){}return PSOK})();
+const PSO=o=>PSOK?Object.assign({host:PEER_HOST,port:443,secure:true,path:'/peerjs',key:'peerjs'},o):o;
 async function getIce(){
+ try{await psReady}catch(e){}
  const tu=TURN_STATIC.concat(await metIce());iceWhy=tu.length?'':'لا توجد بيانات TURN';
  hasTurn=tu.some(x=>JSON.stringify(x.urls||'').indexOf('turn')>-1);
  ICE={iceServers:STUN.concat(tu)};return ICE}
@@ -691,7 +700,7 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  const merge=old=>{const R=RMS(),M={};(SRV||[]).forEach(x=>M[x.c]=x);Object.values(PR).forEach(x=>{if(Date.now()-x.at<100000&&!M[x.c])M[x.c]={c:x.c,n:(R[x.c]||{}).n||'',t:(R[x.c]||{}).t||''}});const L=Object.values(M).sort((a,b)=>(a.t+a.n).localeCompare(b.t+b.n));if(L.length||SRV||PRN)draw(L,old&&!SRV&&!PRN)};let PRN=0;
  const probe=async()=>{if(typeof Peer==='undefined'||m.hidden||!document.body.contains(lv))return;if(!window.SCHR){try{window.SCHR=(await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json()).rooms||{}}catch(e){window.SCHR={}}}
   const codes=Object.keys(RMS()).filter(c=>/^[a-z0-9]{4,6}$/.test(c));if(!codes.length)return;
-  try{if(!window.DPR||DPR.destroyed||DPR.disconnected){let ice;try{ice=await getIce()}catch(e){}window.DPR=new Peer(undefined,{config:ice});DPR.on('error',()=>{});await new Promise(ok=>{DPR.on('open',ok);setTimeout(ok,8000)})}
+  try{if(!window.DPR||DPR.destroyed||DPR.disconnected){let ice;try{ice=await getIce()}catch(e){}window.DPR=new Peer(undefined,PSO({config:ice}));DPR.on('error',()=>{});await new Promise(ok=>{DPR.on('open',ok);setTimeout(ok,8000)})}
    /* بعد 9 ثواني من السؤال: اللي ماردّش يبقى مقفول — والقايمة بتتعرض حتى لو فاضية (من غير ما نستنى السجل) */
    setTimeout(()=>{PRN=codes.length;merge()},9500);
    codes.forEach(c=>{let cn;try{cn=DPR.connect('itqan-'+c,{reliable:true})}catch(e){return}if(!cn)return;const t=setTimeout(()=>{try{cn.close()}catch(e){}},9000);
@@ -950,7 +959,7 @@ function resolveCode(code){return new Promise(async(ok,no)=>{
  const end=(k,e)=>{if(done)return;done=1;clearTimeout(tm);try{p.destroy()}catch(x){}k?ok({room,k}):no(e)};
  const tm=setTimeout(()=>end(null,'مش لاقي الحصة دي — اتأكد من الكود، أو إن السكرتارية فاتحة الحصة.'),15000);
  let ice;try{ice=await getIce()}catch(x){}
- p=new Peer(undefined,{config:ice});
+ p=new Peer(undefined,PSO({config:ice}));
  p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{const c=p.connect(id,{reliable:true});
   c.on('open',()=>{try{c.send({t:'pk?'})}catch(x){}});
   c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k))end(d.k)})}));
@@ -1235,7 +1244,7 @@ async function tReq(pin){
  showGate('⏳','جارٍ الاتصال بالسكرتارية...');
  const ice=await getIce();
  let p=null,c=null,got=0,gt=0;
- const mkP=()=>{try{p&&p.destroy()}catch(e){}c=null;const q=p=new Peer(undefined,{config:ice});
+ const mkP=()=>{try{p&&p.destroy()}catch(e){}c=null;const q=p=new Peer(undefined,PSO({config:ice}));
   q.on('open',()=>{if(p===q)go()});
   q.on('error',e=>{if(got||p!==q)return;
    if(e.type=='peer-unavailable'){showGate('🔒','السكرتارية لم تفتح الجلسة بعد — سيُرسل طلبك تلقائياً عند فتحها.');later(4000)}
@@ -1293,7 +1302,7 @@ function forceEnd(){lastDel();Object.values(conns).forEach(o=>{try{o.c.send({t:'
 async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
- const p=peer=new Peer('itqan-'+room,{config:ice});let opened=0;
+ const p=peer=new Peer('itqan-'+room,PSO({config:ice}));let opened=0;
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
@@ -1625,7 +1634,7 @@ async function initS(){
   if(R.live!==false)return;const nx='';
   window.SCLOSED='👩‍🏫 المعلم لسه مادخلش الحصة'+(nx?' — ميعادها '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}catch(e){}})();
  const ice=await getIce();
- const p=peer=new Peer(undefined,{config:ice});let up=0;
+ const p=peer=new Peer(undefined,PSO({config:ice}));let up=0;
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
  p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED);clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
@@ -2933,7 +2942,7 @@ function sxStart(s,priv){if(SXS[s.room])return;
 const sxLive=X=>SXS[X.room]===X;
 async function sxPeer(X){
  const ice=await getIce();if(!sxLive(X))return;
- const p=X.peer=new Peer('itqan-reg-'+X.room,{config:ice});
+ const p=X.peer=new Peer('itqan-reg-'+X.room,PSO({config:ice}));
  p.on('open',()=>{X.regOk=1;X.err='';sxRender();sxHub(X)});
  p.on('disconnected',()=>{if(p.destroyed)return;X.regOk=0;const re=()=>{if(p.destroyed||!p.disconnected||!sxLive(X)||X.peer!==p)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1500)});
  p.on('error',e=>{
