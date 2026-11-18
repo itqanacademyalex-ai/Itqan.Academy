@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.30-b';
+const VER='2026.12.01-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3665,9 +3665,14 @@ function hwSolve(c,d,hw){const EN=hwEn(hw),L=(a,e)=>EN?e:a;const B=hwModal('hws'
  const go=hwBtn(L('📤 سلّم الواجب','📤 Submit'),'#1a9486',async function(){const n=ni.value.trim();if(!n)return alert(L('اكتب اسمك','Write your name'));const ans=get.map(g=>g.fn());if(ans.filter(a=>String(a).trim()).length<ans.length&&!confirm(L('فيه أسئلة ماحلّيتهاش — تسلّم كده؟','Some questions are unanswered — submit anyway?')))return;
   this.disabled=true;this.textContent=L('⏳ بيتصحح…','⏳ Grading…');try{localStorage.setItem('itqan_nm',n)}catch(e){}
   const j=await hwApi({a:'hwsub',c,d,n,ans}).catch(()=>({ok:false}));if(!j.ok){this.disabled=false;this.textContent=L('📤 سلّم الواجب','📤 Submit');return alert('❌ '+hwErr(j)+'\n\n'+L('إجاباتك لسه موجودة — دوس «سلّم الواجب» تاني.','Your answers are still here — tap Submit again.'))}
-  get.forEach((g,i)=>{const r=j.res[i]||{s:0},k=j.key[i]||{};g.c.style.borderRight='4px solid '+(r.s>=1?'#1f8f5f':r.s>0?'#e3c08d':'#b5473f');g.fb.style.color=r.s>=1?'#9ee6c4':r.s>0?'#e3c08d':'#fca5a5';
+  /* الدرجة بتظهر على طول — والأسئلة الكتابي بتتصحح في الخلفية وبتتحدّث لوحدها هنا لما تخلص */
+  const paint=J=>{get.forEach((g,i)=>{const r=J.res[i]||{s:0},k=j.key[i]||{};if(r.p&&J.pend){g.c.style.borderRight='4px solid #6c8cd5';g.fb.style.color='#a9c4f5';g.fb.textContent=L('⏳ بيتصحح…','⏳ Grading…');return}
+   g.c.style.borderRight='4px solid '+(r.s>=1?'#1f8f5f':r.s>0?'#e3c08d':'#b5473f');g.fb.style.color=r.s>=1?'#9ee6c4':r.s>0?'#e3c08d':'#fca5a5';
    g.fb.innerHTML=esc(r.s>=1?L('✔ صح','✔ Correct'):r.s>0?L('◐ نص الدرجة','◐ Half mark'):'✖ ')+(r.fb&&r.fb!=='✔'?' — '+fracH(r.fb):'')+(r.s<1&&k.answer?' · '+L('الإجابة: ','Answer: ')+fracH(k.answer):'')+(k.explain&&r.s<1?' · '+fracH(k.explain):'')});
-  this.remove();const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:22px;font-weight:800;color:#e3c08d;padding:8px';sc.textContent=L('🎯 درجتك: ','🎯 Your score: ')+(+j.score).toFixed(1).replace('.0','')+' / '+j.total;B.prepend(sc);B.parentNode.scrollTop=0});
+   sc.innerHTML='';const t=document.createElement('div');t.textContent=L('🎯 درجتك: ','🎯 Your score: ')+(+J.score).toFixed(1).replace('.0','')+' / '+J.total;sc.append(t);
+   if(J.pend){const n=document.createElement('small');n.style.cssText='display:block;font-size:13px;font-weight:600;color:#a9c4f5;margin-top:4px';n.textContent=L('✅ اتسلّم الواجب — تقدر تقفل الصفحة. ⏳ '+J.pend+' سؤال كتابي بيتصحح، والدرجة النهائية هتوصل للمعلم لوحدها (ولو فضلت هنا هتشوفها كمان)','✅ Submitted — you can close this page. ⏳ '+J.pend+' written answer(s) are being graded; the final score goes to your teacher automatically');sc.append(n)}};
+  this.remove();const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:22px;font-weight:800;color:#e3c08d;padding:8px';B.prepend(sc);paint(j);B.parentNode.scrollTop=0;
+  if(j.pend&&j.id){const t0=Date.now();const poll=async()=>{if(!sc.isConnected||Date.now()-t0>240000)return;const m=await hwApi({a:'hwmy',c,d,id:j.id}).catch(()=>null);if(m&&m.ok&&!m.pend){paint(m);try{chime&&chime()}catch(e){}return}setTimeout(poll,7000)};setTimeout(poll,8000)}});
  go.classList.add('hgo');go.style.width='100%';
  B.append(go)}
 function driveUp(blob,name,mime){if(!RC||!blob||!blob.size)return false;recBase();const meta={id:'f'+Date.now()+Math.random().toString(36).slice(2,6),u:RC.u,k:RC.k,name,mime,sid:'',off:0,n:0,f:window.RF||'',c:room};
