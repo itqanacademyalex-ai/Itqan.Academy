@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.30-a';
+const VER='2026.11.30-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -723,7 +723,9 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  m.hidden=false;{const pw=dpwGet();if(pw)$('#dpw').value=pw}
  const er=$('#der'),go=async(code)=>{const pw=$('#dpw').value;if(!pw){er.textContent='اكتب كلمة سر Academic Supervisor';return}const c=parseCode(code||$('#dcd').value);if(!c){er.textContent='اكتب كود الحصة (4 حروف وأرقام)';return}
   er.style.color='#e3c08d';er.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(e){er.style.color='#fca5a5';er.textContent='كلمة السر غير صحيحة';return}
-  er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';(window.DKN&&DKN[c]?Promise.resolve({room:c,k:DKN[c]}):resolveCode(c)).then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'الحصة '+fmtCode(c)+' مش مفتوحة دلوقتي.':String(e)})};
+  er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';/* لو المعلم لسه بيعيد الاتصال بالخادم (بيحصل ثواني) بنحاول تاني لحد 45 ثانية بدل ما نقول «مش مفتوحة» على طول */
+  const t0=Date.now(),tryR=()=>(window.DKN&&DKN[c]?Promise.resolve({room:c,k:DKN[c]}):resolveCode(c)).catch(e=>{if(/مفيش حصة مفتوحة|مش لاقي/.test(String(e))&&Date.now()-t0<45000){er.textContent='⏳ الحصة '+fmtCode(c)+' بتعيد الاتصال — بنحاول تاني ('+Math.round((Date.now()-t0)/1000)+' ث)…';return new Promise(z=>setTimeout(z,3000)).then(tryR)}throw e});
+  tryR().then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'الحصة '+fmtCode(c)+' مش مفتوحة دلوقتي (المعلم قفلها أو النت فصل عنده).':String(e)})};
  $('#dgo').onclick=()=>go();$('#dcd').addEventListener('keydown',e=>{if(e.key=='Enter')go()});
  /* لو المدير استرجع ملف الغرف الثابتة على جهازه: أزرار دخول سريعة لكل غرفة */
  const L=fxList();if(L.length)$('#dfx').innerHTML='<small style="color:#a9bccd">الغرف الثابتة:</small>'+L.map(x=>'<button class="w" style="background:#27496b;text-align:start" data-c="'+x.room+'">👁 '+esc(x.title||'غرفة')+(x.tn?' — '+esc(x.tn):'')+' <small style="direction:ltr">('+fmtCode(x.room)+')</small></button>').join('');
@@ -735,10 +737,12 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
     وبترجّع مفتاح الدخول كمان (فالدخول بقى فوري). وقايمة السجل بتكمّل الصورة لو وصلت */
  window.DKN=window.DKN||{};let SRV=null,PR={};
  const RMS=()=>{const R={};try{Object.assign(R,JSON.parse(localStorage.getItem('itqan_drooms')||'{}'))}catch(e){}try{fxList().forEach(x=>{if(x.room&&!R[x.room])R[x.room]={n:x.title||'',t:x.tn||''}})}catch(e){}try{Object.entries(window.SCHR||{}).forEach(([c,y])=>{if(!R[c])R[c]={n:y.n||'',t:y.t||''}})}catch(e){}return R};
- const merge=old=>{const R=RMS(),M={};(SRV||[]).forEach(x=>M[x.c]=x);Object.values(PR).forEach(x=>{if(Date.now()-x.at<100000&&!M[x.c])M[x.c]={c:x.c,n:(R[x.c]||{}).n||'',t:(R[x.c]||{}).t||''}});const L=Object.values(M).sort((a,b)=>(a.t+a.n).localeCompare(b.t+b.n));if(L.length||SRV||PRN)draw(L,old&&!SRV&&!PRN)};let PRN=0;
+ /* بعد ما السؤال المباشر يخلص بنجاح: الغرف اللي ماردّتش بتتشال حتى لو السجل لسه فاكرها (المعلم قفل الصفحة من غير «إنهاء» — السجل بيفضل فاكرها دقيقتين ونص) */
+ const merge=old=>{const R=RMS(),M={};(SRV||[]).forEach(x=>{if(PRN&&window.PROK&&!(PR[x.c]&&Date.now()-PR[x.c].at<100000))return;M[x.c]=x});Object.values(PR).forEach(x=>{if(Date.now()-x.at<100000&&!M[x.c])M[x.c]={c:x.c,n:(R[x.c]||{}).n||'',t:(R[x.c]||{}).t||''}});const L=Object.values(M).sort((a,b)=>(a.t+a.n).localeCompare(b.t+b.n));if(L.length||SRV||PRN)draw(L,old&&!SRV&&!PRN)};let PRN=0;
  const probe=async()=>{if(typeof Peer==='undefined'||m.hidden||!document.body.contains(lv))return;if(!window.SCHR){try{window.SCHR=(await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json()).rooms||{}}catch(e){window.SCHR={}}}
   const codes=Object.keys(RMS()).filter(c=>/^[a-z0-9]{4,6}$/.test(c));if(!codes.length)return;
   try{if(!window.DPR||DPR.destroyed||DPR.disconnected){let ice;try{ice=await getIce()}catch(e){}window.DPR=new Peer(undefined,PSO({config:ice}));DPR.on('error',()=>{});await new Promise(ok=>{DPR.on('open',ok);setTimeout(ok,8000)})}
+   window.PROK=!!(DPR.open&&!DPR.disconnected);
    /* بعد 9 ثواني من السؤال: اللي ماردّش يبقى مقفول — والقايمة بتتعرض حتى لو فاضية (من غير ما نستنى السجل) */
    setTimeout(()=>{PRN=codes.length;merge()},9500);
    codes.forEach(c=>{let cn;try{cn=DPR.connect('itqan-'+c,{reliable:true})}catch(e){return}if(!cn)return;const t=setTimeout(()=>{try{cn.close()}catch(e){}},9000);
