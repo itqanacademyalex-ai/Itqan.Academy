@@ -157,6 +157,8 @@ function doPost_(e) {
   if (b.a === 'hwpub') return hwPub_(b);
   if (b.a === 'hwsub') return hwSub_(b);
   if (b.a === 'hwmy') return hwMy_(b);
+  if (b.a === 'hwsubs') return hwSubs_(b);
+  if (b.a === 'hwgrade') return hwGrade_(b);
   if (b.a === 'hwlist') return hwList_(b);
   /* حالة واجب حصة واحدة (خفيفة) — الصفحة بتسأل عليها وهي مستنية المسودة، بدل ما تقرا كل فولدرات المجموعة كل كام ثانية */
   if (b.a === 'hwst') { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + b.d) || 'null'); } catch (x) {}
@@ -569,6 +571,18 @@ function hwSub_(b) {
 function hwMy_(b) { const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
   const x = (jget_(f, 'hw_sub.json') || []).find(s => s.id && s.id === String(b.id || '')); if (!x) return out_({ ok: false, e: 'nosub' });
   return out_({ ok: true, score: x.score, total: x.total, res: x.res, pend: x.pend ? x.pend.length : 0 }); }
+/* 👀 المعلم: إجابات كل طالب في واجب حصة (بكود المعلم) */
+function hwSubs_(b) { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [];
+  return out_({ ok: true, qs: hw ? hw.qs.map(q => ({ type: q.type, q: q.q, options: q.options || null, answer: q.answer, fig: q.fig || '' })) : [],
+    subs: subs.map((x, i) => ({ id: x.id || ('i' + i), n: x.n, at: x.at, score: x.score, total: x.total, ans: x.ans || [], res: x.res || [], pend: x.pend ? x.pend.length : 0 })) }); }
+/* ✍️ المعلم بيعدّل درجة سؤال لطالب (صح / نص / غلط) — والمجموع بيتحسب تاني */
+function hwGrade_(b) { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const L = LockService.getUserLock(); let got = false; try { got = L.tryLock(10000); } catch (x) {}
+  try { const subs = jget_(f, 'hw_sub.json') || [], id = String(b.id || ''), x = subs.find((y, i) => (y.id || ('i' + i)) === id); if (!x) return out_({ ok: false, e: 'nosub' });
+    const i = +b.i, sc = Math.max(0, Math.min(1, +b.s || 0)); if (!(i >= 0 && i < (x.total || 99))) return out_({ ok: false });
+    x.res = x.res || []; x.res[i] = { s: sc, fb: sc >= 1 ? '✔ (المعلم)' : sc > 0 ? '◐ (المعلم)' : '✖ (المعلم)', t: 1 }; if (x.pend) { x.pend = x.pend.filter(k => k !== i); if (!x.pend.length) delete x.pend; }
+    x.score = x.res.reduce((a, r) => a + (r ? r.s : 0), 0); jput_(f, 'hw_sub.json', subs); return out_({ ok: true, score: x.score, total: x.total }); } finally { if (got) L.releaseLock(); } }
 function hwGradeJob() {
   const C = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties(), t0 = Date.now(); if (C.get('hg_run')) return; C.put('hg_run', '1', 330);
   try { ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwGradeJob') ScriptApp.deleteTrigger(t); });
