@@ -174,23 +174,35 @@ function doPost_(e) {
     return out_({ ok: true, n: parts.length });
   }
   if (b.a === 'put') {
-    const R = {};
+    /* 🧩 دمج مش استبدال: زمان أي جهاز سكرتارية بيرفع قايمته كانت بتمسح أي غرفة مش عنده (جهاز تاني أو نسخة قديمة) ← الحصص كانت بتختفي من لينكات المعلمين.
+       دلوقتي الغرف اللي اترفعت بتتحدّث، واللي مش موجودة بتفضل زي ما هي، وبيتمسح بس اللي في قايمة الحذف (del) */
+    const R = load_(), DEL = {}; (Array.isArray(b.del) ? b.del : []).slice(0, 500).forEach(c => { DEL[String(c || '').toLowerCase()] = 1; });
+    Object.keys(DEL).forEach(c => { delete R[c]; });
     (b.rooms || []).slice(0, 300).forEach(r => {
       const c = String(r.c || '').toLowerCase();
       if (!/^[a-z0-9]{4,6}$/.test(c)) return;
       R[c] = { v: String(r.v || '').slice(0, 20), h: /^[a-f0-9]{64}$/.test(r.h || '') ? r.h : '', t: String(r.t || '').slice(0, 40), n: String(r.n || '').slice(0, 60), s: (r.s || []).filter(q => Array.isArray(q) && q[0] >= 0 && q[0] <= 6 && /^\d{1,2}:\d{2}$/.test(q[1])).slice(0, 30).map(q => /^\d{4}-\d{2}-\d{2}$/.test(q[3] || '') ? [+q[0], q[1], +q[2] || DUR, q[3]] : [+q[0], q[1], +q[2] || DUR]) };
     });
+    Object.keys(DEL).forEach(c => { delete R[c]; });
+    /* الحصص الاستثنائية اللي ميعادها عدّى (كل مواعيدها بتاريخ قديم) بتتشال لوحدها */
+    const old2 = Utilities.formatDate(new Date(Date.now() - 2 * 864e5), TZ, 'yyyy-MM-dd');
+    Object.keys(R).forEach(c => { const s2 = R[c].s || []; if (s2.length && s2.every(q => q[3] && q[3] < old2)) delete R[c]; });
     save_(R);
     /* لينك المعلم الثابت: أكواد حصص كل معلم (متشفّرة بكوده) — بتتحفظ باسم بصمة (اسمه + كوده)، فمحدش ياخدها من غير الكود */
     if (Array.isArray(b.teachers)) { const P = PropertiesService.getScriptProperties(), keep = {}, o = {};
       b.teachers.slice(0, 200).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.b || ''); if (/^[a-f0-9]{64}$/.test(h) && /^[A-Za-z0-9_-]{40,8000}$/.test(x)) { o['tb_' + h] = x; keep['tb_' + h] = 1; } });
       let old = []; try { old = JSON.parse(P.getProperty('tb_keys') || '[]'); } catch (e) {}
-      o.tb_keys = JSON.stringify(Object.keys(keep)); P.setProperties(o); old.forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
+      /* دمج: المفاتيح القديمة بتفضل، وبيتمسح بس اللي الجهاز طلب يمسحه (كود معلم اتجدّد) */
+      const drop = {}; (Array.isArray(b.tbdrop) ? b.tbdrop : []).forEach(h => { if (/^[a-f0-9]{64}$/.test(String(h))) drop['tb_' + h] = 1; });
+      const all = {}; old.concat(Object.keys(keep)).forEach(k => { if (!drop[k]) all[k] = 1; });
+      o.tb_keys = JSON.stringify(Object.keys(all)); P.setProperties(o); Object.keys(drop).forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
     /* كود المعلم الموحّد ← كود كل غرفة من غرفه (بالبصمة بتاعة «الغرفة + الكود الموحّد») */
     if (Array.isArray(b.tpins)) { const P = PropertiesService.getScriptProperties(), keep = {}, o = {};
       b.tpins.slice(0, 400).forEach(t => { const h = String(t && t.h || ''), x = String(t && t.p || ''); if (/^[a-f0-9]{64}$/.test(h) && /^\d{4,6}$/.test(x)) { o['tr_' + h] = x; keep['tr_' + h] = 1; } });
       let old = []; try { old = JSON.parse(P.getProperty('tr_keys') || '[]'); } catch (e) {}
-      o.tr_keys = JSON.stringify(Object.keys(keep)); P.setProperties(o); old.forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
+      const drop = {}; (Array.isArray(b.trdrop) ? b.trdrop : []).forEach(h => { if (/^[a-f0-9]{64}$/.test(String(h))) drop['tr_' + h] = 1; });
+      const all = {}; old.concat(Object.keys(keep)).forEach(k => { if (!drop[k]) all[k] = 1; });
+      o.tr_keys = JSON.stringify(Object.keys(all)); P.setProperties(o); Object.keys(drop).forEach(k => { if (!keep[k]) P.deleteProperty(k); }); }
     return out_({ ok: true, n: Object.keys(R).length });
   }
   return out_({ ok: false });
