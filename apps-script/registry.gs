@@ -270,7 +270,7 @@ function upDone_(s, id) {
   C.remove('up_' + s); P.deleteProperty('up_' + s); P.deleteProperty('upc_' + s); C.remove('upc_' + s);
   if (id) { try { const fl = DriveApp.getFileById(id), mt = fl.getMimeType(), nm = fl.getName(); if (/^video\//.test(mt) || (/السبورة/.test(nm) && /pdf/.test(mt))) fl.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (x) {} }
   /* نفس الحصة اتفتحت تاني ورفعت سبورة جديدة (فيها كل الصفحات): النسخة القديمة بنفس الاسم تتشال، فيفضل ملف سبورة واحد */
-  if (id) { try { const fl = DriveApp.getFileById(id), nm = fl.getName(); if (/السبورة\.pdf$/.test(nm)) { const ps = fl.getParents(); if (ps.hasNext()) { const it = ps.next().getFilesByName(nm); while (it.hasNext()) { const x = it.next(); if (x.getId() !== id && !x.isTrashed()) x.setTrashed(true); } } } } catch (x) {} }
+  if (id) { try { const fl = DriveApp.getFileById(id), nm = fl.getName(); if (/(السبورة|مصدر-الواجب)\.pdf$/.test(nm)) { const ps = fl.getParents(); if (ps.hasNext()) { const it = ps.next().getFilesByName(nm); while (it.hasNext()) { const x = it.next(); if (x.getId() !== id && !x.isTrashed()) x.setTrashed(true); } } } } catch (x) {} }
   if (rc) C.remove('lb2_' + rc);
   if (rc && id) hwAuto_(rc, id);
 }
@@ -471,7 +471,7 @@ function hwGen_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); if (!AIK_()) return out_({ ok: false, e: 'nokey' });
   const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const old = jget_(f, 'hw.json'); if (old && !b.re) return out_({ ok: true, hw: old });
-  if (!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
+  if (!fileIn_(f, /(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/)) return out_({ ok: false, e: 'empty' });
   /* المعلم داس «اعمل الواجب»: بيتعمل على طول جوه الطلب نفسه (من غير طابور ولا تريجر) — والصفحة بتتابع من hwlist لو الاتصال اتقطع */
   if (b.now) { const P = PropertiesService.getScriptProperties(), K = 'hws_' + b.c + '|' + b.d; P.setProperty(K, JSON.stringify({ s: 'run', t: Date.now() }));
     let r; try { r = hwMake_(b.c, b.d, b.re); } catch (x) { r = { ok: false, e: String(x && x.message || x) }; }
@@ -490,7 +490,7 @@ function hwEnq_(c, d, re) {
 }
 /* أوتوماتيك: أول ما سبورة الحصة تخلص رفع ← مسودة الواجب تتعمل لوحدها (من غير ما المعلم يدوس حاجة) */
 function hwAuto_(c, id) {
-  try { if (!/^[a-z0-9]{4,6}$/.test(c || '') || !id || !AIK_()) return; const fl = DriveApp.getFileById(id); if (!/السبورة\.pdf$/.test(fl.getName())) return;
+  try { if (!/^[a-z0-9]{4,6}$/.test(c || '') || !id || !AIK_()) return; const fl = DriveApp.getFileById(id); if (!/(السبورة|مصدر-الواجب)\.pdf$/.test(fl.getName())) return;
     const ps = fl.getParents(); if (!ps.hasNext()) return; const f = ps.next(); if (jget_(f, 'hw.json')) return; hwEnq_(c, f.getName(), 0); } catch (x) {}
 }
 function hwKick_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwJob')) ScriptApp.newTrigger('hwJob').timeBased().after(1000).create(); }
@@ -514,7 +514,8 @@ function hwMake_(c, d, re) {
   const f = cls_(c, d); if (!f) return { ok: false, e: 'class' };
   const old = jget_(f, 'hw.json'); if (old && !re) return { ok: true, hw: old };
   const b = { c: c, d: d };
-  const pdf = fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return ({ ok: false, e: 'empty' });
+  /* ⚡ النسخة الخفيفة من السبورة (صور صغيرة) أسرع بكتير في القراية — ولو مش موجودة السبورة الكاملة */
+  const pdf = fileIn_(f, /مصدر-الواجب\.pdf$/) || fileIn_(f, /السبورة\.pdf$/), tr = fileIn_(f, /التفريغ\.txt$/); if (!pdf && !tr) return ({ ok: false, e: 'empty' });
   const room = load_()[b.c] || {};
   const parts = [{ text: 'أنت مدرس شاطر. ده محتوى حصة «' + (room.n || '') + '» (السبورة PDF وتفريغ الكلام لو موجود). اكتب واجب منزلي على نفس الدرس بالظبط ونفس المستوى والأمثلة، وبنفس لغة المادة اللي على السبورة (لو إنجليزي يبقى بالإنجليزي، لو عربي يبقى بالعربي).\n' +
     'لو المادة بالإنجليزي (أو أي لغة غير العربي): اكتب كل حاجة بلغة المادة — العنوان ونص كل سؤال وتعليماته (Choose the correct answer / True or False / Complete …) والإجابة والشرح — من غير ولا كلمة عربي.\n' +
@@ -528,8 +529,9 @@ function hwMake_(c, d, re) {
   if (tr) parts.push({ text: 'تفريغ كلام الحصة:\n' + tr.getBlob().getDataAsString().slice(0, 30000) });
   /* الواجب نصين بيتعملوا في نفس الوقت (كل نص 5 أسئلة) = تقريبًا نص الوقت */
   const half = t => parts.map((p, i) => i ? p : { text: p.text + '\n\nمهم: المرة دي اكتب ' + t + ' بس (مش الـ 10).' });
-  let o; try { const R = aiAll_([half('5 أسئلة: 4 اختيار من متعدد (4 اختيارات) + 1 صح وغلط'), half('5 أسئلة: 1 صح وغلط + 2 أكمل + 2 سؤال مقالي/مسألة قصيرة')]);
-    o = { title: (R[0] && R[0].title) || (R[1] && R[1].title) || '', questions: [].concat((R[0] && R[0].questions) || [], (R[1] && R[1].questions) || []) }; } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
+  /* ⚡ 3 طلبات في نفس الوقت (كل واحد بيكتب أسئلة أقل = أسرع) */
+  let o; try { const R = aiAll_([half('4 أسئلة اختيار من متعدد (4 اختيارات)'), half('4 أسئلة: 2 صح وغلط + 2 أكمل'), half('2 سؤال مقالي/مسألة قصيرة')]);
+    o = { title: (R.find(x => x && x.title) || {}).title || '', questions: [].concat(...R.map(x => (x && x.questions) || [])) }; } catch (e) { return ({ ok: false, e: String(e.message || e) }); }
   const qs = (o.questions || []).filter(q => q && q.q).slice(0, 10).map(q => ({ type: /^(mcq|tf|fill|short)$/.test(q.type) ? q.type : 'short', q: String(q.q).slice(0, 600), options: Array.isArray(q.options) ? q.options.slice(0, 6).map(String) : null, answer: String(q.answer || '').slice(0, 600), explain: String(q.explain || '').slice(0, 400), fig: fig_(q.fig) }));
   if (!qs.length) return ({ ok: false, e: 'gen' });
   const hw = { st: 'draft', at: Date.now(), title: String(o.title || '').slice(0, 120), qs: qs }; jput_(f, 'hw.json', hw);
@@ -604,7 +606,7 @@ function hwGradeJob() {
 function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
   const out = [], it = DriveApp.getFolderById(id).getFolders();
-  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|التفريغ\.txt)$/);
+  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/);
     let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';

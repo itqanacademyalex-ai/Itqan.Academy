@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.01-b';
+const VER='2026.12.02-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -2795,7 +2795,7 @@ const SPG={};function spSave(){if(role!='s')return;SPG[st.pg|0]={s:strokes,bg:PB
 async function saveBlob(blob,name){const f=window.File?new File([blob],name,{type:blob.type}):null;
  if(f&&IOS&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e&&e.name=='AbortError')return}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000);try{toast('📥','اتحفظ «'+name+'» في التنزيلات')}catch(e){}}
-async function pgPdf(noSave){let L;if(role=='t'){pgSave();pgDwell();
+async function pgPdf(noSave,lite){let L;if(role=='t'){pgSave();pgDwell();
   /* بس الصفحات اللي المعلم اشتغل عليها: فيها كتابة أو ورقة، أو صفحة ملف وقف عندها 20 ثانية أو أكتر (بيشرح من غير ما يكتب) */
   const W=WPG.filter(p=>(p.s&&p.s.length)||(p.n&&p.n.length)||(p.bg&&(p.tv||0)>=20000)||(p.shot&&!p.bg));
   L=SHOTS.concat((W.length?W:WPG.slice(pi,pi+1)).map(p=>({s:p.s,bg:p.bg||p.shot,n:p.n||[],bt:p.shot&&!p.bg?'blank':p.bt})))}else{spSave();L=Object.keys(SPG).map(Number).sort((a,b)=>a-b).map(k=>SPG[k])}
@@ -2812,12 +2812,12 @@ async function pgPdf(noSave){let L;if(role=='t'){pgSave();pgDwell();
  const sv={w:lay.width,h:lay.height,S,OX,OY};
  const hiEnd=()=>{lay.width=lay2.width=sv.w;lay.height=lay2.height=sv.h;S=sv.S;OX=sv.OX;OY=sv.OY;dirty=1;try{fit()}catch(e){rebuild()}};
  for(let i=0;i<L.length;i++){window._xN=L[i].n||[];strokes=L[i].s;st.bt=L[i].bt||keep[2]||'blank';PBG=L[i].bg?await new Promise(ok=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=L[i].bg}):null;
-  const [bx,by,bw,bh]=box(L[i].s,L[i].n),EK=Math.min(2,Math.sqrt(6e6/(bw*bh)));
+  if(lite&&i>=14)break;const [bx,by,bw,bh]=box(L[i].s,L[i].n),EK=lite?Math.min(1,Math.sqrt(9e5/(bw*bh))):Math.min(2,Math.sqrt(6e6/(bw*bh)));
   /* جودة عالية: الصفحة بتترسم من جديد (مش صورة الشاشة الصغيرة) */
   lay.width=lay2.width=Math.round(bw*EK);lay.height=lay2.height=Math.round(bh*EK);S=EK;OX=-bx*EK;OY=-by*EK;rebuild();
   const c=wbCanvas(),ori=bw>=bh?'landscape':'portrait';
   if(!doc)doc=new jsPDF({orientation:ori,unit:'px',format:[bw,bh],hotfixes:['px_scaling']});else doc.addPage([bw,bh],ori);
-  doc.addImage(c.toDataURL('image/jpeg',.85),'JPEG',0,0,bw,bh,undefined,'FAST')}
+  doc.addImage(c.toDataURL('image/jpeg',lite?.6:.85),'JPEG',0,0,bw,bh,undefined,'FAST')}
  window._xN=null;strokes=keep[0];PBG=keep[1];st.bt=keep[2];st.wb=wasWb;hiEnd();if(noSave)return doc.output('blob');await saveBlob(doc.output('blob'),'itqan-board-'+new Date().toISOString().slice(0,10)+'.pdf')}
 /* ===== 📖 المصحف على السبورة =====
    المعلم بيختار السورة والآيات ← بتتكتب بالرسم العثماني (خط Amiri Quran) في صفحات السبورة كخلفية ←
@@ -3708,7 +3708,10 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
  try{const L=(LOG.tr||[]).slice().sort((a,b)=>a.ts-b.ts),hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
   {const why=L.length?'':'لم يتم تفريغ أي كلام في الحصة دي.\n— التفريغ بالـ API: '+(TR.cfg||TR.on?'كان مفعّل':'مش مفعّل')+' · مقاطع اتفرّغت: '+(TR.ok||0)+' · أخطاء: '+(TR.err||0)+(TR.last?' · آخر مشكلة: '+TR.last:'')+'\n— تفريغ المتصفح: '+(typeof srOn!='undefined'&&srOn?'كان شغّال':'مش شغّال')+'\n(فعّل التفريغ من «ملخص الحصة» ← التفريغ التلقائي)\n\n';const txt='\ufeff'+'تفريغ الحصة — '+(RC.n||'')+' — '+new Date().toLocaleDateString('ar-EG')+'\n\n'+(sum?'📝 الملخص:\n'+sum+'\n\n────────────\n\n':'')+why+L.map(x=>'['+hm(x.ts)+'] '+(x.n||'')+': '+x.t).join('\n');
    if(!TR_OFF)driveUp(new Blob([txt],{type:'text/plain;charset=utf-8'}),base+'_التفريغ.txt','text/plain')}}catch(e){}
- try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
+ try{pgSave();const has=SHOTS.length||(WPG&&WPG.some(p=>(p.s&&p.s.length)||p.bg||(p.n&&p.n.length)));if(has){
+   /* ⚡ نسخة خفيفة جدًا من السبورة (صور صغيرة) بتترفع الأول — الذكاء الاصطناعي بيقراها في ثواني ويبدأ يعمل الواجب على طول، قبل ما السبورة الكبيرة تخلص رفع */
+   try{const lb=await pgPdf(1,1);if(lb)driveUp(lb,base+'_مصدر-الواجب.pdf','application/pdf')}catch(e){}
+   const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
  [].forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
 function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recBase()+'_فيديو'+(window.RPART>1?' - الجزء '+window.RPART:'')+(suf||''),f:window.RF,c:room},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
