@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.28-a';
+const VER='2026.11.29-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1408,7 +1408,7 @@ async function tData(c,d){
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
  else if(d.t=='pbg?'&&o.adm&&WPG){const bg=WPG[pi]&&WPG[pi].bg;if(bg){o.pgs&&o.pgs.delete(pgId(bg));pbgTo(o,bg)}}
 }
-function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;if(!o.dir)try{tNote('✅ '+o.name+' دخل الحصة')}catch(e){}o.can=allMuted?0:1;o.cp=camBanAll?0:1;
+function admit(k){const o=conns[k];if(!o||o.adm)return;o.adm=1;setTimeout(()=>{try{Object.values(conns).filter(x=>x.adm).forEach(tune)}catch(e){}},1500);if(!o.dir)try{tNote('✅ '+o.name+' دخل الحصة')}catch(e){}o.can=allMuted?0:1;o.cp=camBanAll?0:1;
  if(!o.dir&&!(o.sid&&SEEN.has(o.sid)))mailStu(o.name);if(o.sid)SEEN.add(o.sid);if(TR.on)try{o.c.send({t:'trapi',on:1})}catch(e){}if(st.tm)st.tm.now=Date.now();if(WPG&&WPG[pi].bg)setTimeout(()=>{pbgTo(o,WPG[pi].bg);pbgPre()},300);if(WPG&&(WPG[pi].n||[]).length)setTimeout(()=>{try{o.c.send({t:'notes',n:WPG[pi].n.map(({id,x,y,w,h,t,c})=>({id,x,y,w,h,t,c}))})}catch(e){}},400);o.c.send({t:'init',chat:chat.filter(x=>!x.sys),st,strokes,ins,can:o.can});if(!o.can)o.c.send({t:'mic',on:0});if(!o.dir)LOG.att.push({ts:Date.now(),n:o.name,ev:'دخل'});sdNote('🎓 '+o.name+' دخل الحصة');callOne(o);callCam(o);if(!o.cp)o.c.send({t:'cam',on:0});roster2()}
 function admitAll(){Object.keys(conns).forEach(admit)}
 function deny(k,kick){const o=conns[k];if(!o||o.dir)return;if(kick&&o.sid)SEEN.delete(o.sid);if(o.adm)LOG.att.push({ts:Date.now(),n:o.name,ev:kick?'طُرد':'خرج'});try{o.c.send({t:kick?'kicked':'denied'})}catch(e){}dropMic(o);ssDrop(k);mxBusDel(k);delete conns[k];hands.delete(k);hideCam('s:'+k);setTimeout(()=>{try{o.c.close()}catch(e){}},300);roster2()}
@@ -1433,13 +1433,17 @@ function tuneCall(call,br,pref,fps){try{const pc=call&&call.peerConnection;if(!p
 /* المعلم بيبعت نسخة لكل طالب، فرفع النت عنده بيتقسم على الكل — لو الصورة أخدت كل الرفع الصوت بيتقطّع عند الجميع.
    BWF بيتظبط لوحده (تحت في الوضع الخفيف): ينزل بسرعة أول ما يبان ضغط، ويطلع بالراحة لما النت يستقر */
 window.BWF=1;
-function tuneBr(){const n=Object.values(conns).filter(x=>x.adm).length;return Math.max(1e5,(n<=1?1.5e6:n<=4?1e6:n<=10?6e5:3.5e5)*window.BWF)}
+/* 📶 رفع المعلم بيتقسم على كل الطلاب (كل طالب بياخد نسخة لوحده): بنحسب «ميزانية» رفع كلية وبنقسمها على العدد،
+   بدل ما كل طالب ياخد 1 ميجا ثابت (3 طلاب = 3 ميجا رفع — أكتر من نت أغلب البيوت فكان الصوت بيتقطّع عند الكل) */
+function tuneBr(){const n=Math.max(1,Object.values(conns).filter(x=>x.adm&&!x.dir).length);return Math.max(8e4,Math.min(1.5e6,(window.UPB||1.8e6)/n)*window.BWF)}
 /* مشاركة الشاشة/الصفحات: نفس النت بيتوزّع على فريمات أقل ← كل فريم بياخد بيانات أكتر فالكلام والصور بيبانوا واضحين بدل ما يبقوا مبكسلين.
    الفيديو المتشارك (S.__vid) بيفضل بحركة طبيعية */
 /* مشاركة ملف أو شرائح (مش فيديو): فريمات أقل = كل فريم بياخد بيانات أكتر = الكلام أوضح */
 function shareFps(lt){if(!(scrT||stuS))return lt?10:0;if(scrT&&scrT.__vid)return lt||MOB?10:15;if(scrT&&scrT.__st)return lt?3:4;return lt?4:6}
-function tune(o){const lt=window.LITE&&window.LITE(),doc=scrT&&!scrT.__vid?1.25:1;tuneCall(o.call,Math.max(8e4,tuneBr()*(o.wf||1)*doc)*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',shareFps(lt))}
-function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,4e5,'balanced'),900)}
+function tune(o){const lt=window.LITE&&window.LITE(),doc=scrT&&!scrT.__vid?1.25:1;try{o.cc&&tuneCall(o.cc,camBr()*(lt?.5:1),'balanced',lt?10:15)}catch(e){}tuneCall(o.call,Math.max(8e4,tuneBr()*(o.wf||1)*doc)*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',shareFps(lt))}
+/* كاميرا المعلم (الدايرة الصغيرة): جزء صغير من نصيب كل طالب — الصوت والسبورة أهم */
+function camBr(){return Math.max(6e4,Math.min(3e5,tuneBr()*.3))}
+function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,camBr(),'balanced',15),900)}
 /* ===== الصوت بيعلّق: اتصال الصوت/الفيديو منفصل عن اتصال الحصة، فلو وقع لوحده محدش كان بيلاحظ =====
    المعلم: كل 5 ثواني يشوف اتصال كل طالب — لو فشل أو اتقفل والطالب لسه في الحصة يتصل بيه تاني.
    الطالب: كل 3 ثواني يتأكد إن صوت المعلم واصل فعلاً — لو الاتصال فشل أو مفيش صوت بيوصل ~9 ثواني يطلب من المعلم يتصل تاني،
@@ -4140,6 +4144,8 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
    if(!!o.wk!==!!wk){o.wk=wk;rr=1;if(wk){hS(o.name).weak++;hEv('📶 نت ضعيف عند '+o.name+' (الصوت ممكن يتقطّع عنده)')}}}
   if(rr)try{render()}catch(e){}
   /* لو أغلب الطلاب بيفقدوا صوت مع بعض يبقى المشكلة في رفع المعلم نفسه */
+  /* الميزانية الكلية بتتعلّم من سرعة الرفع الفعلية اللي المتصفح بيقيسها */
+  if(minAv!==Infinity){const est=Math.max(6e5,Math.min(6e6,minAv*L.length*.85));window.UPB=window.UPB?window.UPB*.7+est*.3:Math.min(est,1.8e6)}
   const low=lim>0||aLoss>=Math.max(2,Math.ceil(L.length/2))||minAv<need*.6;
   if(low){good=0;if(window.BWF>.15){window.BWF=Math.max(.15,window.BWF*.6);H.t.bwf=Math.min(H.t.bwf,window.BWF);try{L.forEach(tune)}catch(e){}}if(!on&&++bad>=2){on=1;bad=0;apply();H.t.lite++;hEv('🐢 نت المعلم مش مكفّي — الجودة اتخفّضت تلقائياً')}}
   else{bad=0;if(window.BWF<1&&++good%8==0){window.BWF=Math.min(1,window.BWF*1.25);try{L.forEach(tune)}catch(e){}}
@@ -4306,7 +4312,8 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(stable>=2&&dif(s2,lastSentSig)>=4&&Date.now()-lastId>2500){busy=1;const k=Math.min(1,2560/cap.videoWidth),c=document.createElement('canvas');c.width=Math.round(cap.videoWidth*k);c.height=Math.round(cap.videoHeight*k);
    const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(cap,0,0,c.width,c.height);last=c.toDataURL('image/jpeg',.9);lastSentSig=s2;lastId=Date.now();busy=0}
   /* أي طالب (حتى اللي لسه داخل) ماوصلتوش الصورة الحالية ← تتبعتله */
-  if(last&&stable>=2){studs().forEach(x=>{if(x.shotId!==lastId){send(x,last);x.shotId=lastId}});shown=1}
+  /* الصورة الواضحة بتتبعت لطالب واحد كل 0.7 ثانية (مش للكل مرة واحدة)، وبتقف لو الطلاب أكتر من 8 عشان نت المعلم */
+  if(last&&stable>=2){const S2=studs();if(S2.length>8){if(shown){S2.forEach(x=>{send(x,'');x.shotId=0});shown=0}return}const nx=S2.find(x=>x.shotId!==lastId);if(nx){send(nx,last);nx.shotId=lastId}shown=1}
  }catch(e){busy=0}},700);
 })();
 </script>
