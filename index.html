@@ -266,6 +266,23 @@ body{background:radial-gradient(1200px 700px at 85% -10%,#1b3a5c 0%,transparent 
 #tcu{display:flex;flex-direction:column;gap:8px;background:linear-gradient(160deg,#1d4a46,#15353a);border:1px solid rgba(26,148,134,.6);border-radius:16px;padding:12px;text-align:center}
 #tcu input{background:#0f2a2e;border:1px solid #1a9486;letter-spacing:6px;font-size:20px;font-weight:700}
 #tcu button{background:#1a9486;border-radius:12px;padding:10px;font-weight:700}
+
+/* ===== ✨ نوافذ الأدوات: ظهور واختفاء ناعم + حجم أكبر يسهّل الاختيار (لون، سُمك، شكل…) ===== */
+@keyframes popIn{from{opacity:0;transform:translateY(-6px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-4px) scale(.94)}}
+#tbp:not([hidden]),#bgm:not([hidden]),#tlm:not([hidden]),#shm:not([hidden]){animation:popIn .22s cubic-bezier(.2,.9,.3,1.15) both;transform-origin:top center}
+#tbp.pout{animation:popOut .19s ease-in both;pointer-events:none}
+#tbp{padding:12px 14px;gap:9px;border-radius:18px;max-width:min(420px,96vw);box-shadow:0 16px 40px #000c,0 0 0 1px rgba(227,192,141,.15)}
+#tbp b{font-size:13.5px}
+#tbp .r{gap:9px}
+#tbp button{width:50px;height:50px;border-radius:13px;font-size:22px;transition:transform .12s ease,box-shadow .15s ease}
+#tbp button:active{transform:scale(.9)}
+#tbp .sw{width:44px;height:44px;border-width:3px}
+#tbp .sw.sq{border-radius:9px}
+#tbp button.on{outline:3px solid #e3c08d;outline-offset:2px;transform:scale(1.06)}
+#tbp .wide{height:auto;padding:12px 14px;font-size:15px}
+@media (prefers-reduced-motion:reduce){#tbp:not([hidden]),#bgm:not([hidden]),#tlm:not([hidden]),#shm:not([hidden]),#tbp.pout{animation:none}}
+
 </style>
 <style>
 /* ===== 🎓 واجهة الطالب: تابات زجاجية بـ gradient هادي ===== */
@@ -493,7 +510,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.26-a';
+const VER='2026.11.27-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1969,9 +1986,11 @@ function buildTb(){const t=$('#tb');t.innerHTML='';t.classList.add('tb2');
  B('📐','المسطرة والمنقلة والبرجل',function(){tbPop(this,'ins')},'dd').dataset.grp='ins';
  B('🗒️','ورقة ملاحظات مسطّرة — اضغط على أي مكان في السبورة أو الشاشة المشاركة، واكتب عليها بالقلم',()=>setTool('note')).dataset.tool='note';
  SP();B('↩','تراجع',undo);B('↪','إعادة',redo);SP();B('⋯','المزيد',function(){tbPop(this,'more')},'dd');refTb()}
-function tbPopX(){const m=$('#tbp');if(m)m.hidden=true}
-function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k){m.hidden=true;return}
- if(!m){m=document.createElement('div');m.id='tbp';document.body.append(m);document.addEventListener('pointerdown',e=>{const q=$('#tbp');if(q&&!q.hidden&&!q.contains(e.target)&&!e.target.closest('#tb .dd'))q.hidden=true},true)}
+/* ✨ نافذة الأداة بتختفي بشكل ناعم (fade + تصغير) بدل ما تختفي فجأة */
+function popHide(m){if(!m||m.hidden||m.classList.contains('pout'))return;m.classList.add('pout');clearTimeout(m._pt);m._pt=setTimeout(()=>{m.hidden=true;m.classList.remove('pout')},190)}
+function tbPopX(){popHide($('#tbp'))}
+function tbPop(btn,k){let m=$('#tbp');if(m&&!m.hidden&&m.dataset.k==k&&!m.classList.contains('pout')){popHide(m);return}if(m){clearTimeout(m._pt);m.classList.remove('pout')}
+ if(!m){m=document.createElement('div');m.id='tbp';document.body.append(m);document.addEventListener('pointerdown',e=>{const q=$('#tbp');if(q&&!q.hidden&&!q.contains(e.target)&&!e.target.closest('#tb .dd'))popHide(q)},true)}
  m.dataset.k=k;m.textContent='';
  const R=(lab)=>{const r=document.createElement('div');r.className='r';if(lab){const l=document.createElement('b');l.textContent=lab;m.append(l)}m.append(r);return r},
   I=(r,h,ti,f,on,cl)=>{const b=document.createElement('button');b.innerHTML=h;b.title=ti;if(cl)b.className=cl;if(on)b.classList.add('on');b.onclick=f;r.append(b);return b},
