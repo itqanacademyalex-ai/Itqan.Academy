@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.11.29-a';
+const VER='2026.11.29-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1435,14 +1435,16 @@ function tuneCall(call,br,pref,fps){try{const pc=call&&call.peerConnection;if(!p
 window.BWF=1;
 /* 📶 رفع المعلم بيتقسم على كل الطلاب (كل طالب بياخد نسخة لوحده): بنحسب «ميزانية» رفع كلية وبنقسمها على العدد،
    بدل ما كل طالب ياخد 1 ميجا ثابت (3 طلاب = 3 ميجا رفع — أكتر من نت أغلب البيوت فكان الصوت بيتقطّع عند الكل) */
-function tuneBr(){const n=Math.max(1,Object.values(conns).filter(x=>x.adm&&!x.dir).length);return Math.max(8e4,Math.min(1.5e6,(window.UPB||1.8e6)/n)*window.BWF)}
+/* الجودة كاملة طول ما نت المعلم مستحمل (1.5 ميجا لطالب واحد، 1 ميجا لكل طالب لو أكتر) — وبتقل بس لو البرنامج قاس إن النت مش مكفّي:
+   ساعتها بيقسم سرعة الرفع الحقيقية على الطلاب، ولما النت يتحسّن بيرجع للجودة الكاملة بالتدريج */
+function tuneBr(){const n=Math.max(1,Object.values(conns).filter(x=>x.adm&&!x.dir).length),full=n<=1?1.5e6:1e6,cap=window.UPB?window.UPB/n:Infinity;return Math.max(8e4,Math.min(full,cap)*window.BWF)}
 /* مشاركة الشاشة/الصفحات: نفس النت بيتوزّع على فريمات أقل ← كل فريم بياخد بيانات أكتر فالكلام والصور بيبانوا واضحين بدل ما يبقوا مبكسلين.
    الفيديو المتشارك (S.__vid) بيفضل بحركة طبيعية */
 /* مشاركة ملف أو شرائح (مش فيديو): فريمات أقل = كل فريم بياخد بيانات أكتر = الكلام أوضح */
 function shareFps(lt){if(!(scrT||stuS))return lt?10:0;if(scrT&&scrT.__vid)return lt||MOB?10:15;if(scrT&&scrT.__st)return lt?3:4;return lt?4:6}
 function tune(o){const lt=window.LITE&&window.LITE(),doc=scrT&&!scrT.__vid?1.25:1;try{o.cc&&tuneCall(o.cc,camBr()*(lt?.5:1),'balanced',lt?10:15)}catch(e){}tuneCall(o.call,Math.max(8e4,tuneBr()*(o.wf||1)*doc)*(lt?.5:1),(scrT||stuS)?'maintain-resolution':'balanced',shareFps(lt))}
 /* كاميرا المعلم (الدايرة الصغيرة): جزء صغير من نصيب كل طالب — الصوت والسبورة أهم */
-function camBr(){return Math.max(6e4,Math.min(3e5,tuneBr()*.3))}
+function camBr(){return Math.max(6e4,Math.min(4e5,tuneBr()*.4))}
 function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o.cc=peer.call(o.c.peer,new MediaStream([camT]),{metadata:{k:'cam'}});setTimeout(()=>tuneCall(o.cc,camBr(),'balanced',15),900)}
 /* ===== الصوت بيعلّق: اتصال الصوت/الفيديو منفصل عن اتصال الحصة، فلو وقع لوحده محدش كان بيلاحظ =====
    المعلم: كل 5 ثواني يشوف اتصال كل طالب — لو فشل أو اتقفل والطالب لسه في الحصة يتصل بيه تاني.
@@ -4145,8 +4147,10 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
   if(rr)try{render()}catch(e){}
   /* لو أغلب الطلاب بيفقدوا صوت مع بعض يبقى المشكلة في رفع المعلم نفسه */
   /* الميزانية الكلية بتتعلّم من سرعة الرفع الفعلية اللي المتصفح بيقيسها */
-  if(minAv!==Infinity){const est=Math.max(6e5,Math.min(6e6,minAv*L.length*.85));window.UPB=window.UPB?window.UPB*.7+est*.3:Math.min(est,1.8e6)}
   const low=lim>0||aLoss>=Math.max(2,Math.ceil(L.length/2))||minAv<need*.6;
+  /* النت مش مكفّي: سقف الرفع = اللي النت يقدر عليه فعلًا. النت كويس: السقف بيعلى 15% كل شوية لحد ما يتشال والجودة ترجع كاملة */
+  if(low&&minAv!==Infinity){const est=Math.max(4e5,minAv*L.length*.85);window.UPB=window.UPB?Math.min(window.UPB,est):est}
+  else if(!low&&window.UPB&&(window.UPG=(window.UPG||0)+1)%3==0){window.UPB*=1.15;if(window.UPB>L.length*1.5e6)window.UPB=0;try{L.forEach(tune)}catch(e){}}
   if(low){good=0;if(window.BWF>.15){window.BWF=Math.max(.15,window.BWF*.6);H.t.bwf=Math.min(H.t.bwf,window.BWF);try{L.forEach(tune)}catch(e){}}if(!on&&++bad>=2){on=1;bad=0;apply();H.t.lite++;hEv('🐢 نت المعلم مش مكفّي — الجودة اتخفّضت تلقائياً')}}
   else{bad=0;if(window.BWF<1&&++good%8==0){window.BWF=Math.min(1,window.BWF*1.25);try{L.forEach(tune)}catch(e){}}
    if(on&&window.BWF>=1&&minAv!==Infinity&&minAv>need*2&&good>=45){on=0;good=0;apply()}}
