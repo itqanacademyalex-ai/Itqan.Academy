@@ -156,6 +156,7 @@ function doPost_(e) {
   if (b.a === 'hwgen') return hwGen_(b);
   if (b.a === 'hwpub') return hwPub_(b);
   if (b.a === 'hwsub') return hwSub_(b);
+  if (b.a === 'hwmy') return hwMy_(b);
   if (b.a === 'hwlist') return hwList_(b);
   /* حالة واجب حصة واحدة (خفيفة) — الصفحة بتسأل عليها وهي مستنية المسودة، بدل ما تقرا كل فولدرات المجموعة كل كام ثانية */
   if (b.a === 'hwst') { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + b.d) || 'null'); } catch (x) {}
@@ -542,6 +543,11 @@ function hwPub_(b) {
   CacheService.getScriptCache().remove('lb2_' + b.c);
   return out_({ ok: true, hw: hw });
 }
+/* ✅ تسليم الواجب بيرجع على طول: الاختيارات والصح/غلط والإجابات اللي أرقامها مطابقة بتتصحح فورًا،
+   والكتابي اللي محتاج ذكاء اصطناعي بيتصحح في الخلفية (hwGradeJob) والطالب بيشوف درجته النهائية لما تخلص */
+const dig_ = s => String(s == null ? '' : s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/٫/g, '.');
+function nums_(s) { return (dig_(s).match(/-?\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?/g) || []).map(x => { const m = x.split('/'); return m.length == 2 ? (+m[0]) / (+m[1]) : +x; }).filter(isFinite); }
+function numEq_(a, k) { const A = nums_(a), K = nums_(k); if (!K.length || A.length != K.length) return false; return K.every((v, i) => Math.abs(v - A[i]) < 1e-6 * Math.max(1, Math.abs(v))); }
 function hwSub_(b) {
   const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
   const hw = jget_(f, 'hw.json'); if (!hw || hw.st != 'pub') return out_({ ok: false, e: 'nohw' });
@@ -549,18 +555,37 @@ function hwSub_(b) {
   hw.qs.forEach((q, i) => { const a = ans[i] || '';
     if (!a.trim()) { res[i] = { s: 0, fb: 'مفيش إجابة' }; return; }
     if (q.type == 'mcq' || q.type == 'tf') { const ok = nrm_(a) == nrm_(q.answer) || (q.type == 'tf' && /^(صح|صحيح|true|t)$/.test(nrm_(a)) == /^(صح|صحيح|true|t)$/.test(nrm_(q.answer))); res[i] = { s: ok ? 1 : 0, fb: ok ? '✔' : 'الصح: ' + q.answer }; return; }
-    if (nrm_(a) == nrm_(q.answer)) { res[i] = { s: 1, fb: '✔' }; return; }
-    ai.push(i); });
-  if (ai.length && AIK_()) { try {
-    const o = ai_([{ text: 'صحّح إجابات الطالب دي مقارنةً بالإجابة النموذجية. اقبل الإجابة لو المعنى صح حتى لو الصياغة مختلفة أو فيها أخطاء إملائية بسيطة. لكل سؤال اديله درجة 0 أو 0.5 أو 1، وملاحظة قصيرة بنفس لغة السؤال (لو السؤال إنجليزي الملاحظة بالإنجليزي) بتشرح الغلط لو فيه.\nرجّع JSON: {"r":[{"i":رقم,"s":درجة,"fb":"ملاحظة"}]}\n\n' +
-      ai.map(i => '#' + i + '\nالسؤال: ' + hw.qs[i].q + '\nالنموذجية: ' + hw.qs[i].answer + '\nالطالب: ' + ans[i]).join('\n\n') }], 0);
-    (o.r || []).forEach(x => { if (ai.indexOf(+x.i) > -1) res[+x.i] = { s: Math.max(0, Math.min(1, +x.s || 0)), fb: String(x.fb || '').slice(0, 300) }; });
-  } catch (e) {} }
-  ai.forEach(i => { if (!res[i]) res[i] = { s: 0, fb: 'هيتصحح من المعلم', p: 1 }; });
-  const score = res.reduce((a, x) => a + (x ? x.s : 0), 0), total = hw.qs.length;
+    if (nrm_(a) == nrm_(q.answer) || (q.type == 'fill' && numEq_(a, q.answer))) { res[i] = { s: 1, fb: '✔' }; return; }
+    ai.push(i); res[i] = { s: 0, fb: AIK_() ? 'بيتصحح…' : 'هيتصحح من المعلم', p: 1 }; });
+  const score = res.reduce((a, x) => a + (x ? x.s : 0), 0), total = hw.qs.length, id = Utilities.getUuid().slice(0, 12);
   const L = LockService.getUserLock(); let got = false; try { got = L.tryLock(10000); } catch (x) {}
-  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { if (got) L.releaseLock(); }
-  return out_({ ok: true, score: score, total: total, res: res, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
+  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ id: id, n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res, pend: ai.length && AIK_() ? ai : undefined }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { if (got) L.releaseLock(); }
+  if (ai.length && AIK_()) { try { const P = PropertiesService.getScriptProperties(); let q = []; try { q = JSON.parse(P.getProperty('hgq') || '[]'); } catch (x) {}
+    q.push({ c: String(b.c || '').toLowerCase(), d: String(b.d), id: id }); P.setProperty('hgq', JSON.stringify(q.slice(-100)));
+    if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwGradeJob')) ScriptApp.newTrigger('hwGradeJob').timeBased().after(1000).create(); } catch (x) {} }
+  return out_({ ok: true, id: id, score: score, total: total, res: res, pend: ai.length && AIK_() ? ai.length : 0, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
+}
+/* الطالب بيسأل على درجته النهائية (بعد تصحيح الكتابي) */
+function hwMy_(b) { const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
+  const x = (jget_(f, 'hw_sub.json') || []).find(s => s.id && s.id === String(b.id || '')); if (!x) return out_({ ok: false, e: 'nosub' });
+  return out_({ ok: true, score: x.score, total: x.total, res: x.res, pend: x.pend ? x.pend.length : 0 }); }
+function hwGradeJob() {
+  const C = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties(), t0 = Date.now(); if (C.get('hg_run')) return; C.put('hg_run', '1', 330);
+  try { ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() == 'hwGradeJob') ScriptApp.deleteTrigger(t); });
+    while (Date.now() - t0 < 270000) { let q = []; try { q = JSON.parse(P.getProperty('hgq') || '[]'); } catch (x) {} if (!q.length) break;
+      const j = q.shift(); P.setProperty('hgq', JSON.stringify(q));
+      try { const f = cls_(j.c, j.d); if (!f) continue; const hw = jget_(f, 'hw.json'); let subs = jget_(f, 'hw_sub.json') || []; const x = subs.find(s => s.id === j.id); if (!hw || !x || !x.pend) continue;
+        const ai = x.pend, ans = x.ans; let o = {};
+        try { o = ai_([{ text: 'صحّح إجابات الطالب دي مقارنةً بالإجابة النموذجية. اقبل الإجابة لو المعنى صح حتى لو الصياغة مختلفة أو فيها أخطاء إملائية بسيطة، ولو الرقم صح حتى لو الوحدة مكتوبة بشكل مختلف. لكل سؤال اديله درجة 0 أو 0.5 أو 1، وملاحظة قصيرة بنفس لغة السؤال. رجّع JSON بس: {"r":[{"i":رقم,"s":درجة,"fb":"ملاحظة"}]}\n\n' +
+          ai.map(i => '#' + i + '\nالسؤال: ' + hw.qs[i].q + '\nالنموذجية: ' + hw.qs[i].answer + '\nالطالب: ' + ans[i]).join('\n\n') }], 0); } catch (e) { o = {}; }
+        const L = LockService.getUserLock(); let got = false; try { got = L.tryLock(10000); } catch (z) {}
+        try { subs = jget_(f, 'hw_sub.json') || []; const y = subs.find(s => s.id === j.id); if (!y) continue;
+          (o.r || []).forEach(r => { if (ai.indexOf(+r.i) > -1) y.res[+r.i] = { s: Math.max(0, Math.min(1, +r.s || 0)), fb: String(r.fb || '').slice(0, 300) }; });
+          ai.forEach(i => { if (y.res[i] && y.res[i].p) y.res[i] = { s: 0, fb: 'هيتصحح من المعلم', p: 1 }; });
+          y.score = y.res.reduce((a, r) => a + (r ? r.s : 0), 0); delete y.pend; jput_(f, 'hw_sub.json', subs); } finally { if (got) L.releaseLock(); }
+      } catch (e) {} }
+    if (JSON.parse(P.getProperty('hgq') || '[]').length) ScriptApp.newTrigger('hwGradeJob').timeBased().after(1000).create();
+  } finally { C.remove('hg_run'); }
 }
 function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
