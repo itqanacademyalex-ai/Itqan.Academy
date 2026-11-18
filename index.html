@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.01-a';
+const VER='2026.12.01-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -3620,13 +3620,37 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
     /* لو بيتعمل أصلًا في الخلفية: بنتابع بس (مانبدأش طلب تاني يصرف من حصة الذكاء الاصطناعي المجانية) */
     const g=r.dataset.poll?await hwWait(x,it.d,h):await hwGenRun(x,it.d,h,0);delete r.dataset.poll;clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
    else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#27496b':'#1a9486',()=>hwEdit(x,it.d,h,it.hw)));
-   if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>{const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(it.d)));R.innerHTML=it.subs.slice().sort((a,b)=>b.score-a.score).map(s=>'<div class="sxr" style="background:#1d3652;border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between"><b translate="no">'+esc(s.n)+'</b><span>'+(+s.score).toFixed(1).replace('.0','')+' / '+s.total+'</span></div>').join('')}));
+   if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>hwRes(x,it.d,h)));
    /* لو الواجب بيتعمل في الخلفية: نكمّل المتابعة لوحدنا */
    const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));
    if(it.st=='run'&&gb){r.dataset.poll=1;setTimeout(()=>gb.click(),50)}
    /* أحدث حصة (من آخر 3 أيام) لسه مالهاش واجب: بيبدأ يتعمل لوحده أول ما تفتح «الواجبات» */
    else if(!it.st&&gb&&!sec.dataset.auto){const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(it.d);if(m&&Date.now()-new Date(+m[1],+m[2]-1,+m[3]).getTime()<3*864e5){sec.dataset.auto=1;setTimeout(()=>gb.click(),300)}}
    sec.append(r)})}}
+/* 📊 نتايج الواجب: كل طالب ودرجته — دوسة على الاسم بتفتح إجاباته سؤال سؤال، والمعلم يقدر يعدّل درجة أي سؤال (✔ / ½ / ✖) */
+async function hwRes(x,d,h){const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(d)));R.innerHTML='<small>⏳</small>';
+ const j=await hwApi({a:'hwsubs',c:x.c,d,h});if(!j||!j.ok){R.innerHTML='<small style="color:#fca5a5">⚠️ '+esc(hwErr(j))+' — لو السكربت قديم: الصق registry.gs الجديد واعمل New version.</small>';return}
+ const fmt=v=>(+v).toFixed(1).replace('.0',''),qs=j.qs||[];R.innerHTML='';
+ if(!j.subs.length){R.innerHTML='<small>لسه محدش سلّم.</small>';return}
+ j.subs.slice().sort((a,b)=>b.score-a.score).forEach(sb=>{const row=document.createElement('div');row.style.cssText='background:#1d3652;border-radius:12px;overflow:hidden';
+  const hd=document.createElement('button');hd.style.cssText='width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:transparent;color:#fff;font:inherit;text-align:start';
+  const sc=document.createElement('span');const upd=()=>{sc.innerHTML='<b>'+fmt(sb.score)+' / '+sb.total+'</b>'+(sb.pend?' <small style="color:#a9c4f5">⏳ بيتصحح</small>':'')};upd();
+  hd.innerHTML='<span style="display:flex;flex-direction:column"><b translate="no">'+esc(sb.n)+'</b><small style="color:#a9bccd">'+new Date(sb.at).toLocaleString('ar-EG',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})+' · اضغط لعرض الإجابات</small></span>';hd.append(sc);
+  const body=document.createElement('div');body.hidden=true;body.style.cssText='padding:4px 10px 12px;display:flex;flex-direction:column;gap:8px';
+  hd.onclick=()=>{body.hidden=!body.hidden;if(body.dataset.ok)return;body.dataset.ok=1;
+   qs.forEach((q,i)=>{const r=(sb.res||[])[i]||{s:0},a=(sb.ans||[])[i]||'';const c=document.createElement('div');c.style.cssText='background:#0f2236;border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;border-right:4px solid '+(r.p?'#6c8cd5':r.s>=1?'#1f8f5f':r.s>0?'#e3c08d':'#b5473f');
+    if(hwEn({qs})){c.style.direction='ltr';c.style.textAlign='left'}
+    c.innerHTML='<small style="color:#e3c08d">سؤال '+(i+1)+'</small><b style="line-height:1.8">'+fracH(q.q)+'</b>'+
+     '<div><small style="color:#a9bccd">إجابة الطالب: </small><span>'+(a.trim()?fracH(a):'<i style="color:#fca5a5">مفيش إجابة</i>')+'</span></div>'+
+     '<div><small style="color:#a9bccd">الإجابة الصح: </small><span style="color:#9ee6c4">'+fracH(q.answer||'')+'</span></div>'+
+     (r.fb&&r.fb!=='✔'?'<small style="color:#c4d3e0">💬 '+fracH(r.fb)+'</small>':'');
+    /* أزرار التصحيح اليدوي */
+    const g=document.createElement('div');g.style.cssText='display:flex;gap:6px;align-items:center';g.innerHTML='<small style="color:#a9bccd">الدرجة: </small>';
+    [[1,'✔ صح','#1f8f5f'],[.5,'½ نص','#c79a4b'],[0,'✖ غلط','#b5473f']].forEach(([v,t,bg])=>{const bt=document.createElement('button');bt.textContent=t;bt.style.cssText='padding:4px 10px;border-radius:8px;font-size:13px;background:'+(!r.p&&r.s===v?bg:'#27496b');
+     bt.onclick=async()=>{bt.disabled=true;const k=await hwApi({a:'hwgrade',c:x.c,d,h,id:sb.id,i,s:v});bt.disabled=false;if(!k||!k.ok)return alert('❌ '+hwErr(k));
+      sb.res[i]={s:v,fb:''};sb.score=k.score;if(sb.pend)sb.pend=0;upd();[...g.querySelectorAll('button')].forEach(z=>z.style.background='#27496b');bt.style.background=bg;c.style.borderRightColor=bg};g.append(bt)});
+    c.append(g);body.append(c)})};
+  row.append(hd,body);R.append(row)})}
 /* مراجعة الواجب: كل سؤال يتعدّل (السؤال، الاختيارات، الإجابة) ← ✅ انشر / 💾 احفظ / 🔄 اعمل تاني */
 function hwEdit(x,d,h,hw){const B=hwModal('hwe','✏️ واجب '+esc(x.t||'')+' — '+esc(hwNice(d)));B.innerHTML='';
  const ip='background:#0f2236;border:1px solid #27496b;border-radius:10px;padding:8px;color:#fff;font:inherit;width:100%;text-align:start';
