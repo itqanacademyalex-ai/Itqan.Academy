@@ -567,10 +567,12 @@ function hwSub_(b) {
   if (ai.length && AIK_()) { try { const P = PropertiesService.getScriptProperties(); let q = []; try { q = JSON.parse(P.getProperty('hgq') || '[]'); } catch (x) {}
     q.push({ c: String(b.c || '').toLowerCase(), d: String(b.d), id: id }); P.setProperty('hgq', JSON.stringify(q.slice(-100)));
     if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwGradeJob')) ScriptApp.newTrigger('hwGradeJob').timeBased().after(1000).create(); } catch (x) {} }
-  return out_({ ok: true, id: id, score: score, total: total, res: res, pend: ai.length && AIK_() ? ai.length : 0, key: hw.qs.map(q => ({ answer: q.answer, explain: q.explain })) });
+  /* 🔒 الطالب مايشوفش الدرجة ولا الإجابات الصح — بيوصله «اتسلّم» بس، والدرجة للمعلم */
+  return out_({ ok: true, id: id });
 }
 /* الطالب بيسأل على درجته النهائية (بعد تصحيح الكتابي) */
-function hwMy_(b) { const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
+function hwMy_(b) { return out_({ ok: false, e: 'hidden' }); }
+function hwMyOld_(b) { const f = cls_(String(b.c || '').toLowerCase(), b.d); if (!f) return out_({ ok: false, e: 'class' });
   const x = (jget_(f, 'hw_sub.json') || []).find(s => s.id && s.id === String(b.id || '')); if (!x) return out_({ ok: false, e: 'nosub' });
   return out_({ ok: true, score: x.score, total: x.total, res: x.res, pend: x.pend ? x.pend.length : 0 }); }
 /* 👀 المعلم: إجابات كل طالب في واجب حصة (بكود المعلم) */
