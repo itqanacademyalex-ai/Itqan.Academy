@@ -113,6 +113,9 @@ function doGet_(e) {
             /* أي فيديو أو سبورة (حتى اللي اتحط على Drive بإيدك) يتفتح باللينك عشان الطالب يشغّله — مرة واحدة لكل ملف */
             if (!C.get('sh_' + xid)) { try { if (x.getSharingAccess() != DriveApp.Access.ANYONE_WITH_LINK) x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); C.put('sh_' + xid, '1', 21600); } catch (e) {} }
             files.push({ n: nm, id: xid, m: mt, s: x.getSize() }); } }
+        try { const mf = f.getFoldersByName(MATF); if (mf.hasNext()) { const mi = mf.next().getFiles(); while (mi.hasNext()) { const x = mi.next(); if (x.isTrashed()) continue; const xid = x.getId();
+          if (!C.get('sh_' + xid)) { try { if (x.getSharingAccess() != DriveApp.Access.ANYONE_WITH_LINK) x.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); C.put('sh_' + xid, '1', 21600); } catch (e) {} }
+          files.push({ n: x.getName(), id: xid, m: x.getMimeType(), s: x.getSize(), mat: 1 }); } } } catch (e) {}
         const hw = jget_(f, 'hw.json'), it2 = { d: f.getName(), files: files }; if (hw && hw.st == 'pub') it2.hw = pubHw_(hw); if (files.length || it2.hw) out.push(it2); }
     } catch (x) { return out_({ ok: false, e: String(x) }); }
     out.sort((a, b) => a.d < b.d ? 1 : -1);
@@ -160,6 +163,11 @@ function doPost_(e) {
   if (b.a === 'hwsubs') return hwSubs_(b);
   if (b.a === 'hwgrade') return hwGrade_(b);
   if (b.a === 'hwlist') return hwList_(b);
+  /* 📎 ملفات الحصة: المعلم بيرفع أي ملف (PDF، صور، HTML…) والطلاب بيشوفوه في تاب «الملفات» */
+  if (b.a === 'mstart') return matStart_(b);
+  if (b.a === 'mlist') return matList_(b);
+  if (b.a === 'mdel') return matDel_(b);
+  if (b.a === 'mraw') return matRaw_(b);
   /* حالة واجب حصة واحدة (خفيفة) — الصفحة بتسأل عليها وهي مستنية المسودة، بدل ما تقرا كل فولدرات المجموعة كل كام ثانية */
   if (b.a === 'hwst') { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + b.d) || 'null'); } catch (x) {}
     const f = cls_(b.c, b.d), hw = f ? jget_(f, 'hw.json') : null, run = S && S.s == 'run' && Date.now() - S.t < 600000;
@@ -608,7 +616,7 @@ function hwGradeJob() {
 function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
   const out = [], it = DriveApp.getFolderById(id).getFolders();
-  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/);
+  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/) || f.getFoldersByName(MATF).hasNext();
     let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
@@ -662,6 +670,36 @@ function linkOld_(go) {
 
 /* 📄 سبورة الحصة للمكتبة: بنبعت الـ PDF نفسه للموقع يعرضه بنفسه (معاينة Drive جوه الصفحة بتطلع سودا على الآيفون)
    بس لو الملف سبورة PDF جوه فولدر حصة تبع المجموعة دي */
+/* ===== 📎 ملفات الحصة (من المعلم للطلاب) — جوه فولدر الحصة في فولدر فرعي «📎 ملفات» ===== */
+const MATF = '📎 ملفات';
+function matDir_(b, make) { if (!hOk_(b.c, b.h)) return null; const f = cls_(b.c, b.d); if (!f) return null; const it = f.getFoldersByName(MATF); return it.hasNext() ? it.next() : make ? f.createFolder(MATF) : null; }
+function matStart_(b) {
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const g = matDir_(b, true); if (!g) return out_({ ok: false, e: 'class' });
+  const meta = { name: String(b.name || 'ملف').replace(/[\\/:*?"<>|]/g, '_').slice(0, 150), mimeType: String(b.mime || 'application/octet-stream').split(';')[0].slice(0, 100), parents: [g.getId()] };
+  const r = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+    method: 'post', contentType: 'application/json; charset=UTF-8', payload: JSON.stringify(meta),
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': meta.mimeType }, muteHttpExceptions: true });
+  const h = r.getHeaders(), loc = h['Location'] || h['location']; if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
+  const s = Utilities.getUuid(), c = String(b.c).toLowerCase(), C = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties();
+  C.put('up_' + s, loc, 21600); P.setProperty('up_' + s, loc); C.put('upc_' + s, c, 21600); P.setProperty('upc_' + s, c); C.remove('lb2_' + c);
+  return out_({ ok: true, s: s });
+}
+function matList_(b) { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const g = matDir_(b, false), L = [];
+  if (g) { const it = g.getFiles(); while (it.hasNext()) { const x = it.next(); if (!x.isTrashed()) L.push({ n: x.getName(), id: x.getId(), m: x.getMimeType(), s: x.getSize(), at: x.getDateCreated().getTime() }); } }
+  L.sort((a, b2) => a.at - b2.at); return out_({ ok: true, files: L }); }
+function matDel_(b) { const g = matDir_(b, false); if (!g) return out_({ ok: false, e: 'auth' });
+  try { const x = DriveApp.getFileById(String(b.id || '')), ps = x.getParents(); let ok = false; while (ps.hasNext()) if (ps.next().getId() == g.getId()) ok = true; if (!ok) return out_({ ok: false, e: 'nofile' }); x.setTrashed(true); } catch (e) { return out_({ ok: false, e: 'nofile' }); }
+  CacheService.getScriptCache().remove('lb2_' + String(b.c).toLowerCase()); return out_({ ok: true }); }
+/* صفحة HTML من المعلم: الطالب بيشوفها جوه الموقع (في صندوق مقفول مايوصلش لبيانات الطالب) — بنرجّع النص بس لو الملف فعلًا من ملفات مجموعته */
+function matRaw_(b) {
+  const c = String(b.c || '').toLowerCase(), gid = PropertiesService.getScriptProperties().getProperty('gf_' + c);
+  if (!/^[a-z0-9]{4,6}$/.test(c) || !gid || !/^[A-Za-z0-9_-]{10,100}$/.test(String(b.id || ''))) return out_({ ok: false, e: 'bad' });
+  let x; try { x = DriveApp.getFileById(b.id); } catch (e) { return out_({ ok: false, e: 'nofile' }); }
+  if (x.isTrashed() || !(/html/.test(x.getMimeType()) || /\.html?$/i.test(x.getName()))) return out_({ ok: false, e: 'type' });
+  let ok = false; const ps = x.getParents(); while (ps.hasNext() && !ok) { const m = ps.next(); if (m.getName() != MATF) continue; const s1 = m.getParents(); while (s1.hasNext() && !ok) { const g = s1.next().getParents(); while (g.hasNext()) if (g.next().getId() == gid) ok = true; } }
+  if (!ok) return out_({ ok: false, e: 'group' }); if (x.getSize() > 5e6) return out_({ ok: false, e: 'big' });
+  return out_({ ok: true, t: x.getBlob().getDataAsString('UTF-8') });
+}
 function pdf_(b) {
   const c = String(b.c || '').toLowerCase(), gid = PropertiesService.getScriptProperties().getProperty('gf_' + c);
   if (!/^[a-z0-9]{4,6}$/.test(c) || !gid || !/^[A-Za-z0-9_-]{10,100}$/.test(String(b.id || ''))) return out_({ ok: false, e: 'bad' });
