@@ -318,7 +318,7 @@ input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:
 /* ½ كسر بشرطة أفقية */
 .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.15;margin:0 3px;direction:ltr}.fr>span:first-child{border-bottom:1.6px solid currentColor;padding:0 3px}
 #stabs{position:fixed;top:0;left:0;right:0;z-index:255;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(180deg,rgba(10,20,34,.92),rgba(10,20,34,.6));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06);direction:rtl}
-#stabs .stw{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:5px;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 30px rgba(0,0,0,.25)}
+#stabs .stw{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 30px rgba(0,0,0,.25)}
 #stabs .stb{border:0;border-radius:15px;background:transparent;color:#b9c8d6;font:inherit;cursor:pointer;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;transition:background .25s,color .25s,box-shadow .25s,transform .15s}
 #stabs .stb:active{transform:scale(.96)}
 #stabs .stb i{font-style:normal;font-size:19px;line-height:1.2}
@@ -336,7 +336,7 @@ input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:
 #libm .lbig:active{transform:scale(.98)}#libm .lbig:hover{filter:brightness(1.08)}
 #libm .lbig.v{background:linear-gradient(135deg,#1a9486,#22b3a0)}
 #libm .lbig.b{background:linear-gradient(135deg,#27496b,#3b6f99)}
-#libm .lbig.h{background:linear-gradient(135deg,#c79a4b,#e3c08d);color:#1b2533}
+#libm .lbig.f{background:linear-gradient(135deg,#5b4b8a,#7d6bb3);text-align:start}#libm .lbig.h{background:linear-gradient(135deg,#c79a4b,#e3c08d);color:#1b2533}
 
 /* ===== 🧸 واجهة الطالب — تصميم مجسّم ناعم (Soft Clay 3D): كروت وأزرار كأنها صلصال، والتابات شريط عايم تحت =====
    بتتطبّق على شاشات الطالب برا الحصة بس (الدخول، الانتظار، المكتبة، الواجب) — الفصل نفسه زي ما هو */
@@ -379,7 +379,7 @@ body.stj #libm .lbig.v{position:relative;height:150px;display:flex;flex-directio
 body.stj #libm .lbig.v::before{content:"▶";position:absolute;top:30px;left:50%;transform:translateX(-50%);width:62px;height:62px;border-radius:50%;background:#fff;color:var(--cl-or);font-size:24px;display:flex;align-items:center;justify-content:center;padding-left:4px;box-sizing:border-box;box-shadow:4px 4px 12px rgba(0,0,0,.12)}
 body.stj #libm .lbig.b{background:var(--cl-bg)!important;color:var(--cl-pu)}
 body.stj #libm .lbig.h{background:var(--cl-pu)!important;color:#fff;box-shadow:6px 6px 14px rgba(108,99,255,.35)}
-body.stj #libm .lbig:not(.v):not(.b):not(.h){color:var(--cl-ink)}
+body.stj #libm .lbig.f{background:#fff!important;color:var(--cl-ink);box-shadow:6px 6px 14px rgba(120,100,80,.18)}body.stj #libm .lbig:not(.v):not(.b):not(.h):not(.f){color:var(--cl-ink)}
 /* حل الواجب */
 body.stj #hws{align-items:flex-start!important}
 body.stj #hws>.card{margin:auto}
@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.05-a';
+const VER='2026.12.06-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1033,7 +1033,7 @@ function codeLanding(){if(LK)return;const q=new URLSearchParams(location.search)
 /* تابات الطالب (لينك المجموعة): 🎥 الحصة · 📄 السبورات · ▶ الفيديوهات · 📝 الواجبات — بتظهر طول ما هو برا الحصة */
 function libBtn(c){if(!regUrl()||$('#stabs'))return;const n=new URLSearchParams(location.search).get('n')||'';
  const bar=document.createElement('div');bar.id='stabs';const w=document.createElement('div');w.className='stw';bar.append(w);document.body.classList.add('stu','stj');
- const T=[['c','🎥','الحصة','Live'],['b','📄','السبورات','Boards'],['v','▶️','الفيديوهات','Videos'],['h','📝','الواجبات','Homework']],B={};
+ const T=[['c','🎥','الحصة','Live'],['b','📄','السبورات','Boards'],['v','▶️','الفيديوهات','Videos'],['h','📝','الواجبات','Homework'],['f','📎','الملفات','Files']],B={};
  const pick=k=>{Object.entries(B).forEach(([x,b])=>b.classList.toggle('on',x==k));const m=$('#libm');if(k=='c'){if(m)m.remove()}else libOpen(c,n,k)};
  T.forEach(([k,ic,t,en])=>{const b=document.createElement('button');b.className='stb';b.innerHTML='<i>'+ic+'</i><b>'+t+'</b><small>'+en+'</small>';b.onclick=()=>pick(k);B[k]=b;w.append(b)});
  document.body.appendChild(bar);{const hd=document.createElement('div');hd.id='sthd';hd.innerHTML='<img src="'+(($('#gate .logo')||{}).src||'')+'" alt=""><div><b translate="no"></b><small></small></div>';hd.querySelector('b').textContent=n||'أكاديمية إتقان';hd.querySelector('small').textContent=n?'أكاديمية إتقان · Itqan Academy':'Itqan Academy';document.body.appendChild(hd)}window.stPick=pick;pick('c');{const pf=()=>{try{libFetch(String(c).toLowerCase())}catch(e){}};document.readyState=='complete'?pf():addEventListener('load',pf)}
@@ -3525,7 +3525,7 @@ async function wbResume(){recBase();if(!(window.RPART>1))return;const v=await wb
  try{WPG=v.wpg;pi=Math.max(0,Math.min(WPG.length-1,+v.pi||0));pgShow();wbPut.sig='';sys('↩️ رجعت لنفس الحصة — السبورة رجعت بكل صفحاتها، والتسجيل هيكمّل في نفس فولدر الحصة (الجزء '+window.RPART+')')}catch(e){}}
 /* ===== 📚 مكتبة المجموعة: كل الحصص اللي فاتت (فيديو + سبورة + ملخص) لأي حد معاه لينك المجموعة ===== */
 async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#libm');if(m)m.remove();m=document.createElement('div');m.id='libm';
- const MT={b:'السبورات',v:'الفيديوهات',h:'الواجبات'}[mode]||'📚 الحصص اللي فاتت',tb=mode&&$('#stabs')?$('#stabs').offsetHeight:0;
+ const MT={b:'السبورات',v:'الفيديوهات',h:'الواجبات',f:'📎 الملفات'}[mode]||'📚 الحصص اللي فاتت',tb=mode&&$('#stabs')?$('#stabs').offsetHeight:0;
  m.style.cssText='position:fixed;inset:0;'+(document.body.classList.contains('stj')?'bottom:'+tb+'px;padding-top:max(12px,env(safe-area-inset-top)) !important;':'top:'+tb+'px;')+'z-index:250;background:rgba(10,20,34,.97);display:flex;align-items:'+(tb?'flex-start':'center')+';justify-content:center;padding:12px;direction:rtl';
  m.innerHTML='<div class="card" style="width:min(560px,100%);max-height:'+(tb?'calc(100vh - '+(tb+24)+'px)':'92vh')+';overflow:auto;gap:10px;text-align:start"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="font-size:19px">'+MT+(title?' — <span translate="no">'+esc(title)+'</span>':'')+'</h2><button class="w" id="libx" style="flex:none;width:auto;padding:6px 12px">✕</button></div><div id="libl" style="display:flex;flex-direction:column;gap:8px"><small>⏳ جارٍ التحميل…</small></div></div>';
  if(mode)m.className='libtab';document.body.appendChild(m);$('#libx').onclick=()=>{m.remove();if(mode&&window.stPick)stPick('c')};const L=$('#libl');
@@ -3537,15 +3537,16 @@ async function libOpen(c,title,mode){c=String(c||'').toLowerCase();let m=$('#lib
  /* للطالب: الفيديو والسبورة بس (الملخص والتفريغ للإدارة) */
  const isV=f=>/video\//.test(f.m||''),isB=f=>/السبورة/.test(f.n||'')&&/pdf/.test(f.m||'');
  /* التاب بيحدد إيه اللي يظهر: سبورات بس، فيديوهات بس، أو الواجبات المنشورة بس */
- const keep=f=>mode=='b'?isB(f):mode=='v'?isV(f):mode=='h'?false:(isV(f)||isB(f));
+ const keep=f=>mode=='f'?!!f.mat:f.mat?!mode:mode=='b'?isB(f):mode=='v'?isV(f):mode=='h'?false:(isV(f)||isB(f));
  j.items=j.items.map(it=>({d:it.d,hw:mode&&mode!='h'?null:it.hw,files:it.files.filter(keep)})).filter(it=>it.files.length||(it.hw&&(it.hw.qs||[]).length));
- if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">'+(mode=='h'?'لسه مفيش واجبات منشورة للمجموعة دي — أول ما المعلم ينشر واجب هيظهر هنا.':mode=='b'?'لسه مفيش سبورات متسجّلة للمجموعة دي.':mode=='v'?'لسه مفيش فيديوهات متسجّلة للمجموعة دي.':'لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.')+'</small>';return}
+ if(!j.items.length){L.innerHTML='<small style="color:#a9bccd;line-height:1.8">'+(mode=='f'?'لسه مفيش ملفات من المعلم للمجموعة دي — أول ما المعلم يرفع ملف هيظهر هنا.':mode=='h'?'لسه مفيش واجبات منشورة للمجموعة دي — أول ما المعلم ينشر واجب هيظهر هنا.':mode=='b'?'لسه مفيش سبورات متسجّلة للمجموعة دي.':mode=='v'?'لسه مفيش فيديوهات متسجّلة للمجموعة دي.':'لسه مفيش حصص متسجّلة للمجموعة دي — أول ما حصة تخلص، الفيديو والسبورة بيظهروا هنا.')+'</small>';return}
  j.items.forEach(it=>{const r=document.createElement('div');r.className='lit';r.style.cssText='background:#1d3652;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px';
   r.innerHTML='<b>🗓 '+esc(nice(it.d))+'</b>';const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
   const mk=(t,bg,f)=>{const b=document.createElement('button');b.className='w';b.style.cssText='flex:none;width:auto;padding:8px 12px;font-weight:700;background:'+bg;b.textContent=t;b.onclick=f;row.append(b)};
-  const kind=f=>/^video\//.test(f.m||'')?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
-  const order={v:0,b:1,s:2,t:3,o:4},pno=f=>+((/الجزء (\d+)/.exec(f.n)||[])[1]||1);it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]||pno(a)-pno(b)).forEach(f=>{const k=kind(f);
+  const kind=f=>f.mat?'f':/^video\//.test(f.m||'')?'v':/السبورة/.test(f.n)?'b':/الملخص/.test(f.n)?'s':/التفريغ/.test(f.n)?'t':'o';
+  const order={v:0,b:1,s:2,t:3,o:4,f:5},pno=f=>+((/الجزء (\d+)/.exec(f.n)||[])[1]||1);it.files.slice().sort((a,b)=>order[kind(a)]-order[kind(b)]||pno(a)-pno(b)).forEach(f=>{const k=kind(f);
    /* الفيديو والسبورة: زرار كبير بيفتح الملف على طول (بيشتغل على كل الأجهزة، والآيفون كمان) */
+   if(k=='f'){const B=document.createElement('button');B.className='lbig f';B.textContent=matIcon(f)+' '+String(f.n).slice(0,60);B.onclick=()=>matOpen(f,c);row.append(B);return}
    if(k=='v'||k=='b'){const u='https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/view',B=document.createElement('a');B.href=u;B.target='_blank';B.rel='noopener';
     const nv=it.files.filter(z=>kind(z)=='v').length,pn=(/الجزء (\d+)/.exec(f.n)||[])[1];B.textContent=k=='v'?'▶ افتح الفيديو'+(nv>1?' — الجزء '+(pn||1):''):'📄 افتح السبورة';B.className='lbig '+k;row.append(B);return}
    const label=k=='s'?'📝 الملخص':k=='t'?'🗒 التفريغ':'📎 '+String(f.n).replace(/^.*?_\d{4}-\d\d-\d\d_\d\d-\d\d_?/,'').slice(0,30);
@@ -3596,6 +3597,46 @@ let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.s
  const nt=document.createElement('small');nt.style.cssText='color:#a9bccd;padding:6px 10px;background:#0e1a2b;direction:rtl;line-height:1.7';nt.textContent='لو الشاشة فضلت سودا: الفيديو ممكن يكون لسه بيتجهّز على Drive (لحد ساعة بعد الحصة)، أو اضغط «↗ فتح في Drive».';
  m.append(bar,fr,nt);document.body.appendChild(m);
  if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1)){o.textContent='▶ تشغيل في Drive';o.style.cssText='color:#0e1a2b;background:#e3c08d;font-weight:700;font-size:13px;padding:6px 12px;border-radius:10px;text-decoration:none'}}
+/* ===== 📎 ملفات الحصة: المعلم بيرفع أي ملف ← بيظهر للطلاب في تاب «الملفات» ===== */
+const matIcon=f=>{const m=f.m||'',n=f.n||'';return/html/.test(m)||/\.html?$/i.test(n)?'🌐':/pdf/.test(m)?'📕':/^image\//.test(m)?'🖼':/^video\//.test(m)?'🎬':/^audio\//.test(m)?'🎧':/presentation|powerpoint|\.pptx?$/i.test(m+n)?'📊':/word|document|\.docx?$/i.test(m+n)?'📝':/sheet|excel|\.xlsx?$/i.test(m+n)?'📈':'📎'};
+const matSz=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+/* الطالب فتح ملف: صفحة HTML بتتعرض جوه الموقع في صندوق مقفول (sandbox من غير allow-same-origin: مايقدرش يقرا بيانات الطالب ولا يتحكم في الموقع)، وأي ملف تاني بيفتح في Drive */
+function matOpen(f,c){const isH=/html/.test(f.m||'')||/\.html?$/i.test(f.n||'');
+ if(!isH){window.open('https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/view','_blank','noopener');return}
+ let m=$('#libv');if(m)m.remove();m=document.createElement('div');m.id='libv';m.style.cssText='position:fixed;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column';
+ const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#0e1a2b;color:#fff;gap:8px;direction:rtl';
+ const t=document.createElement('b');t.style.cssText='font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';t.textContent='🌐 '+f.n;const x=document.createElement('button');x.className='w';x.style.cssText='flex:none;width:auto;padding:6px 14px;background:#27496b';x.textContent='✕ رجوع';x.onclick=()=>m.remove();bar.append(t,x);
+ const st=document.createElement('small');st.style.cssText='padding:24px;color:#334;text-align:center;direction:rtl';st.textContent='⏳ جارٍ تحميل الشرح…';m.append(bar,st);document.body.appendChild(m);
+ (async()=>{let txt=null,CC=null;try{try{CC=await caches.open('itqan-mats');const hit=await CC.match('/m/'+f.id);if(hit)txt=await hit.text()}catch(e){}
+   if(txt==null){const j=await hwApi({a:'mraw',c,id:f.id});if(!j||!j.ok||typeof j.t!='string')throw new Error(j&&j.e||'');txt=j.t;try{CC&&await CC.put('/m/'+f.id,new Response(txt,{headers:{'Content-Type':'text/html;charset=utf-8'}}))}catch(e){}}}
+  catch(e){st.textContent='تعذّر فتح الشرح'+(e&&e.message?' ('+e.message+')':'')+' — جرّب تاني بعد شوية.';return}
+  if(!m.isConnected)return;const fr=document.createElement('iframe');fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals allow-popups-to-escape-sandbox');fr.setAttribute('referrerpolicy','no-referrer');
+  fr.style.cssText='flex:1;border:0;width:100%;background:#fff';fr.srcdoc=/<meta[^>]+viewport/i.test(txt)?txt:'<meta name="viewport" content="width=device-width,initial-scale=1">'+txt;st.replaceWith(fr)})()}
+/* المعلم: «📎 ملفات الحصة» — رفع (أكتر من ملف مرة واحدة) + قايمة الملفات + حذف */
+async function matPanel(x,d,h){const B=hwModal('hwm','📎 ملفات الحصة — '+esc(hwNice(d)));
+ B.innerHTML='<small style="line-height:1.8;color:#c4d3e0">أي ملف ترفعه هنا بيظهر للطلاب على طول في تاب «📎 الملفات». ملفات <b>HTML</b> بتتفتح للطالب كصفحة شرح جوه الموقع.</small>';
+ const inp=document.createElement('input');inp.type='file';inp.multiple=true;inp.hidden=true;
+ const list=document.createElement('div');list.style.cssText='display:flex;flex-direction:column;gap:6px';
+ const add=hwBtn('➕ ارفع ملفات','#1a9486',()=>inp.click());add.style.width='100%';add.style.fontSize='16px';add.style.padding='12px';B.append(inp,add,list);
+ let busy=0;const load=async()=>{if(busy)return;list.innerHTML='<small>⏳</small>';const j=await hwApi({a:'mlist',c:x.c,d,h});list.innerHTML='';
+  if(!j||!j.ok){list.innerHTML='<small style="color:#fca5a5">⚠️ '+esc(hwErr(j))+' — لو السكربت قديم: الصق registry.gs الجديد واعمل New version.</small>';return}
+  if(!j.files.length){list.innerHTML='<small style="color:#a9bccd">لسه مفيش ملفات للحصة دي.</small>';return}
+  j.files.forEach(f=>{const r=document.createElement('div');r.style.cssText='background:#1d3652;border-radius:12px;padding:8px 10px;display:flex;gap:8px;align-items:center';
+   const n=document.createElement('span');n.style.cssText='flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';n.textContent=matIcon(f)+' '+f.n;const z=document.createElement('small');z.style.cssText='color:#a9bccd;flex:none';z.textContent=matSz(f.s);
+   r.append(n,z,hwBtn('👁','#27496b',()=>matOpen(f,x.c)),hwBtn('🗑','#7a3b3b',async function(){if(!confirm('تمسح «'+f.n+'» من عند الطلاب؟'))return;this.disabled=true;const k=await hwApi({a:'mdel',c:x.c,d,h,id:f.id});if(!k||!k.ok){this.disabled=false;return alert('❌ '+hwErr(k))}r.remove();toast('🗑','اتمسح')}));list.append(r)})};
+ inp.onchange=async()=>{const fs=[...inp.files];inp.value='';busy=1;for(const f of fs){
+  if(!f.size){alert('«'+f.name+'» فاضي');continue}if(f.size>200*1048576){alert('«'+f.name+'» أكبر من 200 ميجا');continue}
+  const row=document.createElement('small');row.style.color='#e3c08d';row.textContent='⏳ بيترفع: '+f.name+' — 0%';list.prepend(row);
+  try{await matUp(x.c,d,h,f,p=>row.textContent='⏳ بيترفع: '+f.name+' — '+Math.round(p*100)+'%');row.remove();toast('✅','اترفع: '+f.name)}
+  catch(e){row.style.color='#fca5a5';row.textContent='❌ «'+f.name+'» مااترفعش: '+(e&&e.message||e)}}
+  busy=0;load()};
+ load()}
+async function matUp(c,d,h,f,prog){const mime=f.type||(/\.html?$/i.test(f.name)?'text/html':'application/octet-stream');
+ const s=await hwApi({a:'mstart',c,d,h,name:f.name,mime});if(!s||!s.ok||!s.s)throw new Error(hwErr(s));
+ const CH=1572864,tot=f.size,b64=bl=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const t=String(r.result),i=t.indexOf(';base64,');ok(i<0?'':t.slice(i+8))};r.onerror=()=>no(r.error);r.readAsDataURL(bl)});
+ let off=0;while(off<tot){const en=Math.min(off+CH,tot);let j=await hwApi({a:'chunk',s:s.s,st:off,en:en-1,tot:String(tot),d:await b64(f.slice(off,en)),m:mime});
+  if(!j||!j.ok){const q=await hwApi({a:'status',s:s.s});if(q&&q.ok&&q.done)j={ok:1,done:1};else if(q&&q.ok&&q.r===en)j={ok:1};else throw new Error(hwErr(j))}
+  off=en;prog&&prog(off/tot);if(j.done)break}}
 /* ===== 📝 الواجب التلقائي: بصمة المعلم للغرفة (من كوده) — السجل بيقارنها بالبصمة اللي السكرتارية رفعتها ===== */
 async function hwH(r,p){if(!r||!p)return'';const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-hw|'+r+'|'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 /* طلبات الواجبات: مهلة دقيقتين، ولو الرد مش JSON (صفحة خطأ من جوجل) بنرجّع السبب بدل «تعذّر الاتصال»، ولو النت قطع بنعيد مرة */
@@ -3646,6 +3687,7 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
     const g=r.dataset.poll?await hwWait(x,it.d,h):await hwGenRun(x,it.d,h,0);delete r.dataset.poll;clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
    else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#27496b':'#1a9486',()=>hwEdit(x,it.d,h,it.hw)));
    if(it.subs.length)r.append(hwBtn('📊 النتايج','#27496b',()=>hwRes(x,it.d,h)));
+   r.append(hwBtn('📎 ملفات','#5b4b8a',()=>matPanel(x,it.d,h)));
    /* لو الواجب بيتعمل في الخلفية: نكمّل المتابعة لوحدنا */
    const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));
    if(it.st=='run'&&gb){r.dataset.poll=1;setTimeout(()=>gb.click(),50)}
