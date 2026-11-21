@@ -138,7 +138,7 @@ function doPost_(e) {
     if (!((r.h && b.h && r.h === String(b.h)) || (r.v && b.v && r.v === String(b.v)))) return out_({ ok: false, e: 'auth' });
     const P = PropertiesService.getScriptProperties(); if (b.off) P.deleteProperty('lv_' + c); else P.setProperty('lv_' + c, String(Date.now()));
     /* نسخة سريعة لقايمة المدير (من غير ما يقرا كل الإعدادات): الحصص المفتوحة واسمها */
-    try { const C = CacheService.getScriptCache(); let m = {}; try { m = JSON.parse(C.get('lvx') || '{}'); } catch (x) {} if (b.off) delete m[c]; else m[c] = { at: Date.now(), n: r.n || '', t: r.t || '' };
+    try { const C = CacheService.getScriptCache(); let m = {}; try { m = JSON.parse(C.get('lvx') || '{}'); } catch (x) {} if (b.off) delete m[c]; else m[c] = { at: Date.now(), n: r.n || '', t: r.t || '', k: (/^[A-Za-z0-9_-]{86,88}$/.test(String(b.k || '')) && r.v && String(b.k).slice(1, 15) === r.v) ? String(b.k) : '' };
       Object.keys(m).forEach(k => { if (Date.now() - m[k].at > 150000) delete m[k]; }); C.put('lvx', JSON.stringify(m), 900); } catch (x) {}
     return out_({ ok: true }); }
   /* 👔 المدير: الحصص المفتوحة دلوقتي (المعلم بلّغ إنه فاتح من أقل من دقيقتين ونص) — ببصمة كلمة سر المدير.
@@ -146,7 +146,7 @@ function doPost_(e) {
   if (b.a === 'lvl') { const h = String(b.h || ''); if (!/^[a-f0-9]{64}$/.test(h)) return out_({ ok: false, e: 'auth' });
     const P = PropertiesService.getScriptProperties(), cur = P.getProperty('dir_h'); if (!cur) P.setProperty('dir_h', h); else if (cur !== h) return out_({ ok: false, e: 'auth' });
     const now = Date.now(); let L = [], X = null; try { X = JSON.parse(CacheService.getScriptCache().get('lvx') || 'null'); } catch (x) {}
-    if (X) Object.keys(X).forEach(c => { if (now - X[c].at < 150000) L.push({ c: c, n: X[c].n, t: X[c].t, at: X[c].at }); });
+    if (X) Object.keys(X).forEach(c => { if (now - X[c].at < 150000) L.push({ c: c, n: X[c].n, t: X[c].t, at: X[c].at, k: X[c].k || '' }); });
     else { const all = load_(), A = P.getProperties(); Object.keys(A).filter(k => k.indexOf('lv_') === 0).forEach(k => { const c = k.slice(3), t = +A[k] || 0, r = all[c]; if (r && now - t < 150000) L.push({ c: c, n: r.n || '', t: r.t || '', at: t }); }); }
     L.sort((a, b2) => (a.t + a.n).localeCompare(b2.t + b2.n));
     /* all: كمان أسماء كل الغرف — جهاز المشرف بيحفظها ويسأل الغرف مباشرة (أسرع بكتير من السجل) */
