@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.04-c';
+const VER='2026.12.04-d';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -724,8 +724,10 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  const er=$('#der'),go=async(code)=>{const pw=$('#dpw').value;if(!pw){er.textContent='اكتب كلمة سر Academic Supervisor';return}const c=parseCode(code||$('#dcd').value);if(!c){er.textContent='اكتب كود الحصة (4 حروف وأرقام)';return}
   er.style.color='#e3c08d';er.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(e){er.style.color='#fca5a5';er.textContent='كلمة السر غير صحيحة';return}
   er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';/* لو المعلم لسه بيعيد الاتصال بالخادم (بيحصل ثواني) بنحاول تاني لحد 45 ثانية بدل ما نقول «مش مفتوحة» على طول */
-  const t0=Date.now(),tryR=()=>(window.DKN&&DKN[c]?Promise.resolve({room:c,k:DKN[c]}):resolveCode(c)).catch(e=>{if(/مفيش حصة مفتوحة|مش لاقي/.test(String(e))&&Date.now()-t0<45000){er.textContent='⏳ الحصة '+fmtCode(c)+' بتعيد الاتصال — بنحاول تاني ('+Math.round((Date.now()-t0)/1000)+' ث)…';return new Promise(z=>setTimeout(z,3000)).then(tryR)}throw e});
-  tryR().then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'الحصة '+fmtCode(c)+' مش مفتوحة دلوقتي (المعلم قفلها أو النت فصل عنده).':String(e)})};
+  const why=()=>{const R=window.RCS||{};return R.dc?'اتوصلنا بجهاز المعلم بس مارجّعش المفتاح':R.up?(R.ice?'جهاز المعلم اتلاقى بس الاتصال بيه فشل ('+R.ice+') — غالبًا شبكة أحد الطرفين بتمنع الاتصال المباشر':'خادم الربط مش لاقي جهاز المعلم دلوقتي — اتصال المعلم بالخادم نايم (هيتصلّح لوحده لو المعلم على الإصدار الجديد)'):'جهازك مش قادر يوصل لخادم الربط — جرّب نت تاني (داتا بدل الواي فاي)، ولو آيفون اقفل iCloud Private Relay'},
+   noK=()=>DKN[c]?'':'\n(مفتاح الحصة ماوصلش من السجل — اتأكد إن registry الجديد متنشر New version وإن المعلم على الإصدار '+VER+')';
+  const t0=Date.now(),tryR=()=>(window.DKN&&DKN[c]?Promise.resolve({room:c,k:DKN[c]}):resolveCode(c)).catch(e=>{if(/مفيش حصة مفتوحة|مش لاقي/.test(String(e))&&Date.now()-t0<45000){er.style.whiteSpace='pre-line';er.textContent='⏳ بنحاول تاني ('+Math.round((Date.now()-t0)/1000)+' ث)…\nالسبب: '+why()+noK();return new Promise(z=>setTimeout(z,3000)).then(tryR)}throw e});
+  tryR().then(x=>{location.href=linkOf(x.room,x.k,'s')+'&dir=1'},e=>{er.style.color='#fca5a5';er.style.whiteSpace='pre-line';er.textContent=/مفيش حصة مفتوحة|مش لاقي/.test(String(e))?'مقدرناش ندخل الحصة '+fmtCode(c)+'.\nالسبب: '+why()+noK()+'\n(الإصدار '+VER+')':String(e)})};
  $('#dgo').onclick=()=>go();$('#dcd').addEventListener('keydown',e=>{if(e.key=='Enter')go()});
  /* لو المدير استرجع ملف الغرف الثابتة على جهازه: أزرار دخول سريعة لكل غرفة */
  const L=fxList();if(L.length)$('#dfx').innerHTML='<small style="color:#a9bccd">الغرف الثابتة:</small>'+L.map(x=>'<button class="w" style="background:#27496b;text-align:start" data-c="'+x.room+'">👁 '+esc(x.title||'غرفة')+(x.tn?' — '+esc(x.tn):'')+' <small style="direction:ltr">('+fmtCode(x.room)+')</small></button>').join('');
@@ -1003,13 +1005,14 @@ function linkOf(room,k,r){return location.origin+location.pathname+'?s='+room+'&
 function peerWait(ok,bad){if(typeof Peer!=='undefined')return ok();let n=0;const t=setInterval(()=>{if(typeof Peer!=='undefined'){clearInterval(t);ok()}else if(++n>=60){clearInterval(t);bad()}},250)}
 function resolveCode(code){return new Promise(async(ok,no)=>{
  if(typeof Peer==='undefined')return peerWait(()=>resolveCode(code).then(ok,no),()=>no('تعذر تحميل مكتبة الاتصال — تأكد من الإنترنت'));
- const room=code;let p,done=0,miss=0;
+ const room=code;let p,done=0,miss=0;window.RCS={up:0,dc:0,ice:''};
  const end=(k,e)=>{if(done)return;done=1;clearTimeout(tm);try{p.destroy()}catch(x){}k?ok({room,k}):no(e)};
  const tm=setTimeout(()=>end(null,'مش لاقي الحصة دي — اتأكد من الكود، أو إن السكرتارية فاتحة الحصة.'),15000);
  let ice;try{ice=await getIce()}catch(x){}
  p=new Peer(undefined,PSO({config:ice}));
- p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{const c=p.connect(id,{reliable:true});
-  c.on('open',()=>{try{c.send({t:'pk?'})}catch(x){}});
+ p.on('open',()=>['itqan-reg-'+room,'itqan-'+room].forEach(id=>{window.RCS.up=1;const c=p.connect(id,{reliable:true});
+  try{c.on('iceStateChanged',s=>{if(id=='itqan-'+room)window.RCS.ice=s})}catch(x){}
+  c.on('open',()=>{window.RCS.dc=1;try{c.send({t:'pk?'})}catch(x){}});
   c.on('data',async d=>{if(d&&d.t=='pk'&&typeof d.k=='string'&&/^[A-Za-z0-9_-]{86,88}$/.test(d.k))end(d.k)})}));
  p.on('error',e=>{if(e.type=='peer-unavailable'&&++miss>=2)end(null,'مفيش حصة مفتوحة بالكود ده — اتأكد من الكود، أو اسأل السكرتارية.')})})}
 /* رابط فيه ?c=كود&r=t|s (من تطبيق الكمبيوتر) ← نجيب الحصة ونحوّله للرابط العادي */
