@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.04-a';
+const VER='2026.12.04-b';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -762,7 +762,7 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
     setTimeout(()=>{if(done)return;fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null).then(fin)},8000)})).finally(()=>clearTimeout(tm));
    const ok=DIRK?Promise.resolve(1):dirUnlock(pw).then(()=>1,()=>0);
    const [j,good]=await Promise.all([rq,ok]);if(!good){lv.innerHTML='';busy=0;return}
-   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];if(j.rooms&&typeof j.rooms=='object')try{localStorage.setItem('itqan_drooms',JSON.stringify(j.rooms))}catch(e){}SRV=L;merge();{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
+   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];if(j.rooms&&typeof j.rooms=='object')try{localStorage.setItem('itqan_drooms',JSON.stringify(j.rooms))}catch(e){}L.forEach(x=>{if(x&&x.k&&/^[A-Za-z0-9_-]{86,88}$/.test(x.k))DKN[x.c]=x.k;delete x.k});SRV=L;merge();{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
    else if(j&&j.e=='auth'&&!PRN)lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>';
    else if(!lv.dataset.ok&&!Object.keys(PR).length&&!PRN)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.'+(why?'<br><span style="color:#a9bccd;font-size:11px;direction:ltr;display:inline-block">'+esc(why)+'</span>':''))+'</small><button class="w dre" style="margin-top:4px;background:#27496b;font-size:13px">🔄 حاول تاني</button>';{const b=lv.querySelector('.dre');if(b)b.onclick=()=>{lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';busy=0;load()}}}catch(e){}busy=0};
  if(!lv.innerHTML&&dpwGet())lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';
@@ -821,7 +821,7 @@ async function regQ(o,ms){const u=regUrl();if(!u)return null;const tmo=f=>{const
  try{const q=Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');return await tmo(sg=>fetch(u+(u.includes('?')?'&':'?')+q+'&t='+Date.now(),{signal:sg}).then(r=>r.json()))}catch(e){return null}}
 /* 🟢 المعلم جوه الحصة: جهاز المعلم بيبلّغ السجل كل دقيقة إنه فاتح — عشان الطالب يعرف على طول لو المعلم لسه مادخلش */
 let liveT=0;async function liveSend(off){if(role!='t'||!room)return;const pin=tpGet(room);try{const h=pin?await hwH(room,pin):'',v=LK&&LK.k?fpOf(LK.k):'',u=regUrl();if(!u||(!h&&!v))return;
- fetch(u,{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'live',c:room,h,v,off:off?1:0})}).catch(()=>{})}catch(e){}}
+ fetch(u,{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'live',c:room,h,v,k:LK&&LK.k||'',off:off?1:0})}).catch(()=>{})}catch(e){}}
 function liveOn(){clearInterval(liveT);liveSend(0);liveT=setInterval(()=>liveSend(0),60000)}
 function liveOff(){clearInterval(liveT);liveT=0;liveSend(1)}
 async function regOne(code){const u=regUrl();if(!u)return null;const j=await regQ({a:'chk',c:code},10000);return j&&j.ok?j:null}
@@ -4160,6 +4160,19 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
  },1000);
 })();
 
+/* ===== 🩺 المعلم بيتأكد كل دقيقة إن الغرفة لسه «باينة» على خادم الربط =====
+   ساعات اتصال المعلم بالخادم بيموت بصمت: الطلاب اللي جوه شغالين عادي، بس أي حد جديد (طالب أو المشرف) مايلاقيش الغرفة.
+   جهاز المعلم بيعمل «زائر تجريبي» يدق على الغرفة؛ لو ماردّتش مرتين ورا بعض بنعيد ربط الغرفة بالخادم (من غير ما حد من اللي جوه يخرج) */
+(function(){let bad=0,busy=0;
+ setInterval(async()=>{if(role!='t'||!peer||peer.destroyed||!peer.open||peer.disconnected||busy||endBusy||!navigator.onLine)return;busy=1;let ok=0,up=0,q=null;
+  try{q=new Peer(undefined,PSO({config:ICE}));q.on('error',()=>{});
+   await new Promise(res=>{const t=setTimeout(res,15000);q.on('open',()=>{up=1;let c;try{c=q.connect(peer.id,{reliable:true})}catch(e){return}
+    c.on('open',()=>{try{c.send({t:'pk?'})}catch(e){}});c.on('data',d=>{if(d&&d.t=='pk'){ok=1;clearTimeout(t);res()}})})})}catch(e){}
+  try{q&&q.destroy()}catch(e){}busy=0;
+  if(ok||!up){bad=ok?0:bad;return}
+  if(++bad<2)return;bad=0;
+  try{H.t.peer++;hEv('🩺 الغرفة ماكانتش باينة للداخلين الجداد — اتعاد ربطها بالخادم لوحدها')}catch(e){}
+  try{peer.disconnect()}catch(e){}},60000)})();
 /* ===== 4) الوضع الخفيف التلقائي: يقيس قدرة نت/جهاز المعلم ويخفّض الجودة بصمت عند الحاجة ===== */
 (function(){
  let on=0,bad=0,good=0;try{localStorage.removeItem('itqan_lite')}catch(e){}
