@@ -531,7 +531,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.04-b';
+const VER='2026.12.04-c';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -735,12 +735,18 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  const lv=$('#dlv');let busy=0;
  /* ⚡ طريقة سريعة (من غير جوجل سكربت): بنسأل كل غرف الأكاديمية مباشرة عن طريق نفس اتصال الحصص — الغرفة المفتوحة بترد في ثانيتين
     وبترجّع مفتاح الدخول كمان (فالدخول بقى فوري). وقايمة السجل بتكمّل الصورة لو وصلت */
- window.DKN=window.DKN||{};let SRV=null,PR={};
+ window.DKN=window.DKN||{};let SRV=null,PR={},PQ={};
  const RMS=()=>{const R={};try{Object.assign(R,JSON.parse(localStorage.getItem('itqan_drooms')||'{}'))}catch(e){}try{fxList().forEach(x=>{if(x.room&&!R[x.room])R[x.room]={n:x.title||'',t:x.tn||''}})}catch(e){}try{Object.entries(window.SCHR||{}).forEach(([c,y])=>{if(!R[c])R[c]={n:y.n||'',t:y.t||''}})}catch(e){}return R};
  /* بعد ما السؤال المباشر يخلص بنجاح: الغرف اللي ماردّتش بتتشال حتى لو السجل لسه فاكرها (المعلم قفل الصفحة من غير «إنهاء» — السجل بيفضل فاكرها دقيقتين ونص) */
- const merge=old=>{const R=RMS(),M={};(SRV||[]).forEach(x=>{if(PRN&&window.PROK&&!(PR[x.c]&&Date.now()-PR[x.c].at<100000))return;M[x.c]=x});Object.values(PR).forEach(x=>{if(Date.now()-x.at<100000&&!M[x.c])M[x.c]={c:x.c,n:(R[x.c]||{}).n||'',t:(R[x.c]||{}).t||''}});const L=Object.values(M).sort((a,b)=>(a.t+a.n).localeCompare(b.t+b.n));if(L.length||SRV||PRN)draw(L,old&&!SRV&&!PRN)};let PRN=0;
+ const merge=old=>{const R=RMS(),M={};(SRV||[]).forEach(x=>{if(PRN&&window.PROK&&PQ[x.c]&&!(PR[x.c]&&Date.now()-PR[x.c].at<100000))return;M[x.c]=x});Object.values(PR).forEach(x=>{if(Date.now()-x.at<100000&&!M[x.c])M[x.c]={c:x.c,n:(R[x.c]||{}).n||'',t:(R[x.c]||{}).t||''}});const L=Object.values(M).sort((a,b)=>(a.t+a.n).localeCompare(b.t+b.n));if(L.length||SRV||PRN)draw(L,old&&!SRV&&!PRN)};let PRN=0;
  const probe=async()=>{if(typeof Peer==='undefined'||m.hidden||!document.body.contains(lv))return;if(!window.SCHR){try{window.SCHR=(await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json()).rooms||{}}catch(e){window.SCHR={}}}
-  const codes=Object.keys(RMS()).filter(c=>/^[a-z0-9]{4,6}$/.test(c));if(!codes.length)return;
+  /* ⚠️ زمان كنا بندق على كل غرف الأكاديمية (40+) مرة واحدة كل 45 ثانية — كل دقة اتصال WebRTC كامل بخوادم TURN،
+     فالموبايل كان بيتخنق ومايلحقش يوصل للحصة اللي المشرف داس عليها. دلوقتي بندق بس على الغرف اللي ممكن تكون مفتوحة فعلاً:
+     اللي السجل قال إنها مفتوحة ومفتاحها ماوصلش، واللي ميعادها في الجدول دلوقتي — وبحد أقصى 8 */
+  const now=new Date(),dw=now.getDay(),mn=now.getHours()*60+now.getMinutes(),td=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),hm=x=>{const a=String(x).split(':');return(+a[0])*60+(+a[1]||0)};
+  const SCH=window.SCHR||{},onNow=c=>((SCH[c]||{}).s||[]).some(q=>Array.isArray(q)&&+q[0]===dw&&(!q[3]||q[3]===td)&&mn>=hm(q[1])-15&&mn<hm(q[1])+(+q[2]||60)+30);
+  const want={};(SRV||[]).forEach(x=>{if(!DKN[x.c])want[x.c]=1});Object.keys(SCH).forEach(c=>{if(!DKN[c]&&onNow(c))want[c]=1});
+  window.PRT=Date.now();const codes=Object.keys(want).filter(c=>/^[a-z0-9]{4,6}$/.test(c)).slice(0,8);if(!codes.length){PRN=0;return}codes.forEach(c=>PQ[c]=1);
   try{if(!window.DPR||DPR.destroyed||DPR.disconnected){let ice;try{ice=await getIce()}catch(e){}window.DPR=new Peer(undefined,PSO({config:ice}));DPR.on('error',()=>{});await new Promise(ok=>{DPR.on('open',ok);setTimeout(ok,8000)})}
    window.PROK=!!(DPR.open&&!DPR.disconnected);
    /* بعد 9 ثواني من السؤال: اللي ماردّش يبقى مقفول — والقايمة بتتعرض حتى لو فاضية (من غير ما نستنى السجل) */
@@ -762,7 +768,7 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
     setTimeout(()=>{if(done)return;fetch(u+(u.includes('?')?'&':'?')+'a=lvl&h='+h+'&t='+Date.now(),{signal:ac.signal}).then(r=>r.json()).catch(()=>null).then(fin)},8000)})).finally(()=>clearTimeout(tm));
    const ok=DIRK?Promise.resolve(1):dirUnlock(pw).then(()=>1,()=>0);
    const [j,good]=await Promise.all([rq,ok]);if(!good){lv.innerHTML='';busy=0;return}
-   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];if(j.rooms&&typeof j.rooms=='object')try{localStorage.setItem('itqan_drooms',JSON.stringify(j.rooms))}catch(e){}L.forEach(x=>{if(x&&x.k&&/^[A-Za-z0-9_-]{86,88}$/.test(x.k))DKN[x.c]=x.k;delete x.k});SRV=L;merge();{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
+   if(j&&j.ok){lv.dataset.ok=1;const L=j.live||[];if(j.rooms&&typeof j.rooms=='object')try{localStorage.setItem('itqan_drooms',JSON.stringify(j.rooms))}catch(e){}L.forEach(x=>{if(x&&x.k&&/^[A-Za-z0-9_-]{86,88}$/.test(x.k))DKN[x.c]=x.k;delete x.k});SRV=L;merge();if(L.some(x=>!DKN[x.c])&&Date.now()-(window.PRT||0)>12000&&dpwGet())probe();{const sm=lv.querySelector('small');if(sm)sm.insertAdjacentHTML('beforeend',' <span style="color:#7f93a8;font-weight:400">· '+((performance.now()-t0)/1000).toFixed(1)+' ث</span>')}try{localStorage.setItem('itqan_dlv',JSON.stringify({at:Date.now(),L}))}catch(e){}}
    else if(j&&j.e=='auth'&&!PRN)lv.innerHTML='<small style="color:#fca5a5">القايمة مش متاحة لكلمة السر دي — لو اتغيّرت، شغّل dirReset من جوجل سكربت.</small>';
    else if(!lv.dataset.ok&&!Object.keys(PR).length&&!PRN)lv.innerHTML='<small style="color:#fca5a5;line-height:1.8">'+(j?'⚠️ قايمة الحصص المفتوحة محتاجة تحديث سكربت جوجل (الصق registry.gs الجديد واعمل New version).':'⚠️ مش قادر أوصل لسجل الحصص — اتأكد من النت.'+(why?'<br><span style="color:#a9bccd;font-size:11px;direction:ltr;display:inline-block">'+esc(why)+'</span>':''))+'</small><button class="w dre" style="margin-top:4px;background:#27496b;font-size:13px">🔄 حاول تاني</button>';{const b=lv.querySelector('.dre');if(b)b.onclick=()=>{lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';busy=0;load()}}}catch(e){}busy=0};
  if(!lv.innerHTML&&dpwGet())lv.innerHTML='<small style="color:#a9bccd">⏳ بندوّر على الحصص المفتوحة…</small>';
