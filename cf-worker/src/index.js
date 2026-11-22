@@ -73,6 +73,8 @@ export class Hub {
 
   async fetch(req) {
     const url = new URL(req.url), id = url.searchParams.get('id'), token = String(url.searchParams.get('token') || '').slice(0, 64);
+    /* الغرفة (اختياري): الأجهزة اللي في نفس الغرفة تقدر تبعت رسالة لكلهم مرة واحدة (استراحة الطلاب لما المعلم يخرج) */
+    const room = /^[a-z0-9]{4,6}$/.test(url.searchParams.get('room') || '') ? url.searchParams.get('room') : '';
     /* نفس الاسم متوصل: لو نفس الجهاز (نفس التوكن) بيرجع بعد انقطاع ← نقفل القديم ونكمّل. جهاز تاني ← «الاسم محجوز» */
     for (const old of this.sockets(id)) {
       const a = old.deserializeAttachment() || {};
@@ -84,12 +86,12 @@ export class Hub {
       }
     }
     const pair = new WebSocketPair();
-    this.state.acceptWebSocket(pair[1], [id]);
+    this.state.acceptWebSocket(pair[1], room ? [id, 'r:' + room] : [id]);
     /* رجع خلال مهلة السماح: نلغي «مشي»، ونسلّمه الرسايل اللي اتبعتت له وهو فاصل */
     const held = this.held && this.held[id];
     if (this.held) delete this.held[id];
     let prev = null; try { prev = await this.state.storage.get('lv:' + id); await this.state.storage.delete('lv:' + id); } catch (e) {}
-    pair[1].serializeAttachment({ id, token, peers: (prev && prev.peers || []).slice(-200) });
+    pair[1].serializeAttachment({ id, token, room, peers: (prev && prev.peers || []).slice(-200) });
     this.send(pair[1], { type: 'OPEN', id });
     if (held) for (const x of held.q) this.send(pair[1], x);
     return new Response(null, { status: 101, webSocket: pair[0] });
@@ -101,6 +103,13 @@ export class Hub {
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
     if (m.type === 'HB') return this.send(ws, { type: 'HBA' });
     const a = ws.deserializeAttachment() || {}, to = String(m.dst || '');
+    /* رسالة لكل اللي في الغرفة (ماعدا المرسل) */
+    if (m.type === 'RB') {
+      if (!a.id || !a.room) return;
+      const s = JSON.stringify({ type: 'RB', src: a.id, payload: m.payload });
+      for (const x of this.state.getWebSockets('r:' + a.room)) if (x !== ws && x.readyState === 1) this.send(x, s);
+      return;
+    }
     if (!a.id || !ID_RE.test(to)) return;
     const t = this.sockets(to);
     if (!t.length) {
