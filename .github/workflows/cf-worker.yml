@@ -1,0 +1,27 @@
+name: Deploy Itqan Cloudflare server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cf-worker/**'
+      - '.github/workflows/cf-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cf-worker
+          secrets: |
+            CF_SFU_APP_ID
+            CF_SFU_TOKEN
+        env:
+          CF_SFU_APP_ID: ${{ secrets.CF_SFU_APP_ID }}
+          CF_SFU_TOKEN: ${{ secrets.CF_SFU_TOKEN }}
