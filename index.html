@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.09-a';
+const VER='2026.12.10-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -719,7 +719,8 @@ const dpwGet=()=>{try{return localStorage.getItem('itqan_dpw')||sessionStorage.g
 async function dirUnlock(pw){const rk=await tkOpen('director',pw,DIR_BLOB,DIR_PUB);try{localStorage.setItem('itqan_dpw',pw);sessionStorage.setItem('itqan_dpw',pw)}catch(e){}DIRK=rk;return rk}
 function dirOut(){try{localStorage.removeItem('itqan_dpw');sessionStorage.removeItem('itqan_dpw')}catch(e){}DIRK=null}
 async function dirH(pw){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('itqan-dir|'+pw));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-async function dirKey(){if(DIRK)return DIRK;let pw=dpwGet();if(!pw)return null;try{return await dirUnlock(pw)}catch(e){return null}}
+/* بيتحسب مرة واحدة بس (حتى لو اتطلب من مكانين في نفس الوقت) */
+let DIRKP=null;function dirKey(){if(DIRK)return Promise.resolve(DIRK);const pw=dpwGet();if(!pw)return Promise.resolve(null);return DIRKP||(DIRKP=dirUnlock(pw).catch(()=>null).finally(()=>{DIRKP=null}))}
 const DIRM=new URLSearchParams(location.search).get('dir')=='1';
 function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id='dirm';m.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:14px';document.body.append(m)}
  m.innerHTML='<div class="card" style="gap:10px"><h2>Academic Supervisor</h2><input id="dpw" type="password" placeholder="كلمة سر Academic Supervisor" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dlv" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto"></div><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button><button class="w" id="dout" style="background:transparent;border:1px solid #27496b;font-size:13px">🚪 تسجيل الخروج من الجهاز ده</button></div>';
@@ -1357,7 +1358,7 @@ async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
  window.HUBMODE=HUBR(room);window.HUBROOM=room;const p=peer=new (PC(room))('itqan-'+room,PSO({config:ice}));let opened=0;
- p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
+ p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول');try{p.warm&&p.warm()}catch(e){}}});
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
   /* 🛡 الغرفة كانت مفتوحة وخادم الغرف فصل لحظة: وهو بيرجع ممكن يقول «الرقم محجوز» (لسه فاكر الاتصال القديم).
@@ -1698,7 +1699,7 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  c.on('open',()=>{if(window.WASIN)showGate(...dropMsg())});
  c.on('error',()=>{})}
 async function initS(){
- admitted=0;final=0;
+ admitted=0;final=0;if(DIRM&&!DIRK)try{dirKey()}catch(e){}
  if(!(window.RTCPeerConnection||window.webkitRTCPeerConnection)){showGate('⚠️',T('noRtc'),1);return}
  if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳','جارٍ الاتصال بالغرفة...'+(sTries?' ('+(sTries+1)+')':''));
  /* في نفس الوقت بنسأل جدول الحصص: لو مش وقت الحصة بنقول على طول (بدل ما نستنى خادم الاتصال يرد) — والاتصال بيكمل في الخلفية وأول ما المعلم يفتح بيدخل */
@@ -1711,7 +1712,7 @@ async function initS(){
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
  p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
- p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn()});
+ p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn();try{p.warm&&p.warm()}catch(e){}});
  peer.on('call',c=>{c.answer();
   if(c.metadata&&c.metadata.k=='cam'){c.on('stream',s=>showCam('T',s,'المعلم'));c.on('close',()=>hideCam('T'));return}
   tCall=c;auBad=0;auBuf=0;auPL=[0,0];
