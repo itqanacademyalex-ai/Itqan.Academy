@@ -39,6 +39,16 @@
     } catch (e) {}
     return ICE;
   }
+  /* 🔊 صوت أثبت: لو جزء صغير من الصوت ضاع في السكة (نت ضعيف في الرفع) بيطلع «زي الروبوت».
+     بنطلب من Opus يبعت مع كل جزء نسخة مضغوطة من اللي قبله (FEC) ويرفع حدّه شوية — الجزء اللي يضيع بيترجّع بدل ما يتألّف */
+  function opusSafe(sdp) {
+    try {
+      const m = /a=rtpmap:(\d+) opus\/48000[^\r\n]*/i.exec(sdp); if (!m) return sdp;
+      const pt = m[1], re = new RegExp('a=fmtp:' + pt + ' ([^\\r\\n]*)');
+      const add = p => { const has = k => new RegExp('(^|;)\\s*' + k + '=').test(p); if (!has('useinbandfec')) p += ';useinbandfec=1'; if (!has('usedtx')) p += ';usedtx=0'; if (!has('maxaveragebitrate')) p += ';maxaveragebitrate=48000'; return p.replace(/^;/, ''); };
+      return re.test(sdp) ? sdp.replace(re, (x, p) => 'a=fmtp:' + pt + ' ' + add(p)) : sdp.replace(m[0], m[0] + '\r\na=fmtp:' + pt + ' ' + add(''));
+    } catch (e) { return sdp; }
+  }
   /* ---------- الصوت والصورة: جلسة واحدة لكل جهاز مع Cloudflare SFU ---------- */
   class SFU {
     constructor(hp) { this.hp = hp; this.q = Promise.resolve(); this.reset(); }
@@ -82,7 +92,7 @@
         try { j = await this.api('/sessions/' + this.sid + '/tracks/new', 'POST', { sessionDescription: { type: 'offer', sdp: this.pc.localDescription.sdp }, tracks: add.map(p => ({ location: 'local', mid: p.tr.mid, trackName: p.name })) }); break; }
         catch (e) { if (!/not ready/i.test(e.message) || i === 5) throw e; log('session not ready, waiting'); await new Promise(r => setTimeout(r, 3000)); }
       }
-      await this.pc.setRemoteDescription(new RTCSessionDescription(j.sessionDescription));
+      await this.pc.setRemoteDescription(new RTCSessionDescription({ type: j.sessionDescription.type, sdp: opusSafe(j.sessionDescription.sdp) }));
     }
     /* رفع: نفس التراك (زي صورة المعلم) بيترفع مرة واحدة بس مهما كان عدد الطلاب */
     publish(tracks) {
