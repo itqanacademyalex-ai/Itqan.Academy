@@ -7,6 +7,7 @@
 const ORIGINS = ['https://itqanacademyalex-ai.github.io', 'http://localhost:8765'];
 const SFU = 'https://rtc.live.cloudflare.com/v1/apps/';
 const ID_RE = /^[A-Za-z0-9_-]{4,64}$/;
+let TURN_C = null;
 const GRACE = 12000; /* مهلة السماح لجهاز فصل لحظة */
 
 function cors(origin) {
@@ -20,7 +21,7 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-    if (url.pathname === '/health') return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), v: 1 }, 200, origin);
+    if (url.pathname === '/health') return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), turn: !!(env.CF_TURN_KEY_ID && env.CF_TURN_KEY_TOKEN), v: 2 }, 200, origin);
 
     if (url.pathname === '/ws') {
       if (req.headers.get('Upgrade') !== 'websocket') return json({ ok: false, e: 'ws' }, 426, origin);
@@ -28,6 +29,19 @@ export default {
       const id = url.searchParams.get('id') || '';
       if (!ID_RE.test(id)) return json({ ok: false, e: 'id' }, 400, origin);
       return env.HUB.get(env.HUB.idFromName('hub')).fetch(req);
+    }
+
+    /* بيانات TURN مؤقتة (Cloudflare): للأجهزة اللي شبكتها بتقفل الاتصال المباشر — بتعدّي على منفذ 443 زي أي موقع */
+    if (url.pathname === '/turn') {
+      if (!ORIGINS.includes(origin)) return json({ ok: false, e: 'origin' }, 403, origin);
+      if (!env.CF_TURN_KEY_ID || !env.CF_TURN_KEY_TOKEN) return json({ ok: false, e: 'noturn' }, 200, origin);
+      if (!TURN_C || Date.now() > TURN_C.exp) {
+        const r = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/' + env.CF_TURN_KEY_ID + '/credentials/generate-ice-servers', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + env.CF_TURN_KEY_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ ttl: 86400 }) });
+        if (!r.ok) return json({ ok: false, e: 'turn ' + r.status }, 200, origin);
+        const j = await r.json(); TURN_C = { ice: j.iceServers, exp: Date.now() + 6 * 3600e3 };
+      }
+      return json({ ok: true, iceServers: TURN_C.ice }, 200, origin);
     }
 
     if (url.pathname.startsWith('/sfu/')) {

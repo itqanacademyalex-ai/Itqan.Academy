@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      HAS_TURN: ${{ secrets.CF_TURN_KEY_ID != '' && secrets.CF_TURN_KEY_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Deploy worker
@@ -25,3 +27,18 @@ jobs:
         env:
           CF_SFU_APP_ID: ${{ secrets.CF_SFU_APP_ID }}
           CF_SFU_TOKEN: ${{ secrets.CF_SFU_TOKEN }}
+      # TURN (اختياري): بيترفع بس لو السرّين متحطين في GitHub
+      - name: TURN secrets
+        if: env.HAS_TURN == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cf-worker
+          command: whoami
+          secrets: |
+            CF_TURN_KEY_ID
+            CF_TURN_KEY_TOKEN
+        env:
+          CF_TURN_KEY_ID: ${{ secrets.CF_TURN_KEY_ID }}
+          CF_TURN_KEY_TOKEN: ${{ secrets.CF_TURN_KEY_TOKEN }}
