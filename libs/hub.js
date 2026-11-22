@@ -227,6 +227,8 @@
       setTimeout(() => this._connect(), 0);
     }
     sfu() { return this._sfu || (this._sfu = new SFU(this)); }
+    /* تجهيز الاتصال بـ Cloudflare من بدري (قبل أول مكالمة) — الصوت بيوصل أسرع لما الطالب أو المشرف يدخل */
+    warm() { const f = this.sfu(); f.run(() => f.init()).catch(() => {}); }
     _connect() {
       if (this.destroyed) return;
       let w; try { w = this.ws = new WebSocket(WS + '?id=' + encodeURIComponent(this.id) + '&token=' + this._tok + (this.room ? '&room=' + encodeURIComponent(this.room) : '')); } catch (e) { setTimeout(() => this._connect(), 3000); return; }
