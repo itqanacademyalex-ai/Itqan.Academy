@@ -534,7 +534,13 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.10-a';
+const VER='2026.12.11-a';
+/* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
+setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
+ const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
+ if(inClass){if(!window.VNOTE){window.VNOTE=1;sys('🔄 فيه نسخة جديدة من البرنامج — اعمل تحديث للصفحة بعد الحصة')}return}
+ if(document.hidden){location.reload();return}
+ if(!document.getElementById('vupd')){const b=document.createElement('button');b.id='vupd';b.textContent='🔄 فيه تحديث جديد — اضغط هنا';b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom));z-index:400;background:#1a9486;color:#fff;border:0;border-radius:999px;padding:10px 18px;font:inherit;font-weight:800;box-shadow:0 6px 20px rgba(0,0,0,.35)';b.onclick=()=>location.reload();document.body.append(b)}}catch(e){}},180000);
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1710,7 +1716,8 @@ async function initS(){
  const ice=await getIce();
  window.HUBMODE=HUBR(room);window.HUBROOM=room;const p=peer=new (PC(room))(undefined,PSO({config:ice}));let up=0;try{lgSetup(p)}catch(e){}
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
- p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
+ p.on('error',e=>{if(e.type=='peer-unavailable'&&(window.HUBMODE||window.HUB_OLD)&&!window.WASIN&&!admitted&&++hubMiss===3)regChk(room).then(R=>{hubMiss=0;if(R&&R.live===true&&!admitted&&peer===p){/* المعلم فاتح بس مش لاقيينه: غالبًا فاتح من نسخة تانية (أقدم أو أحدث) — نجرّب الطريقة التانية */window.HUB_OLD=window.HUB_OLD?0:1;sys(window.HUB_OLD?'↪️ المعلم فاتح من نسخة أقدم — بنتوصل بالطريقة القديمة':'↪️ بنجرّب نتوصل بخادم إتقان');try{p.destroy()}catch(x){}sTries=0;initS()}}).catch(()=>{hubMiss=0});
+  if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
  p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn();try{p.warm&&p.warm()}catch(e){}});
  peer.on('call',c=>{c.answer();
@@ -1743,7 +1750,7 @@ function lgSetup(p){if(!p||!p.on||p._lg)return;p._lg=1;
   else if(d.t=='lc'&&typeof d.m=='string'&&d.m.trim()){chat.push({n:String(d.n||'طالب').slice(0,40),m:d.m.slice(0,500),ts:Date.now()});render()}})}
 /* الطالب كتب في الشات وهو في الاستراحة: الرسالة بتروح لزمايله على طول */
 function lgChat(m){if(!LG.on||st.lock||!peer||!peer.broadcast)return false;peer.broadcast({t:'lc',n:name,m});chat.push({n:name,m,ts:Date.now()});render();return true}
-let vOk=0,vNonce='';
+let vOk=0,vNonce='',hubMiss=0;
 /* معرّف ثابت للطالب في هذه الغرفة — يسمح للمعلم بإرجاعه تلقائياً بعد انقطاع النت بدون غرفة الانتظار */
 function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)||''}catch(e){}if(!/^[A-Za-z0-9_-]{16,32}$/.test(v)){v=rnd();try{localStorage.setItem(k,v)}catch(e){}}return v}
 async function vProof(d){const c=conn;
@@ -3460,6 +3467,7 @@ async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=
 /* ---- الرفع (عبر سكريبت Google) ---- */
 /* أخطاء نت (مهلة/انقطاع/السيرفر مشغول) ← إعادة المحاولة، مش تحويل لسكربت تاني */
 const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|NetworkError)/i.test(String(e&&e.message||e));
+function recHold(){try{return role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)}catch(e){return false}}
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -3468,7 +3476,12 @@ function recUp(meta,onSt){
  const b64=bl=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>{const r=String(f.result),i=r.indexOf(';base64,');res(i<0?'':r.slice(i+8))};f.onerror=()=>rej(f.error);f.readAsDataURL(bl)});
  U.save=sv;
  U.add=c=>{U.q.push(c);rtx('chunks','readwrite',s=>s.put({key:meta.id+':'+c.idx,id:meta.id,idx:c.idx,blob:c.blob,last:c.last})).catch(()=>{});U.pump()};
- U.pump=async()=>{if(U.busy||U.fin)return;U.busy=1;
+ U.pump=async()=>{if(U.busy||U.fin)return;
+  /* 🎙 الحصة شغالة والمعلم معاه طلاب: رفع التسجيل بيستنى لحد ما الحصة تخلص.
+     كان بيرفع أجزاء كبيرة وسط الحصة، والجزء الواحد بياخد نت المعلم كله لثواني ← الصوت بيتقطع عند الكل.
+     الأجزاء محفوظة على الجهاز، وبتترفع لوحدها بعد «إنهاء الحصة» (أو لو المعلم فتح الموقع تاني) */
+  if(recHold()){clearTimeout(U.ht);U.ht=setTimeout(U.pump,15000);if(!U.held){U.held=1;try{hEv('🎙 رفع التسجيل هيبدأ بعد الحصة عشان مايتقلش على صوت الحصة')}catch(e){}}return}
+  U.busy=1;
   try{
    /* الرفع بيروح لسكربت السجل الأول (بيعمل فولدر لكل حصة)، ولو مارضيش بيرجع لسكربت التسجيل القديم */
    if(!meta.sid){if(!meta.fb&&REG_URL&&meta.u!==REG_URL){meta.u0=meta.u;meta.u=REG_URL}

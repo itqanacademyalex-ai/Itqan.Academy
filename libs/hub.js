@@ -15,7 +15,7 @@
   const ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 
   const rid = () => { const a = crypto.getRandomValues(new Uint8Array(12)); return Array.from(a, x => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join(''); };
-  window.HUBR = r => { const c = String(r || '').toLowerCase(); if (!c || HUB_OFF.includes(c)) return false; return HUB_ALL || HUB_ROOMS.includes(c); };
+  window.HUBR = r => { const c = String(r || '').toLowerCase(); if (!c || HUB_OFF.includes(c) || window.HUB_OLD) return false; return HUB_ALL || HUB_ROOMS.includes(c); };
   /* الكلاس المناسب للغرفة: محوّل إتقان أو PeerJS العادي */
   window.PC = r => (window.HUBR(r) ? HubPeer : window.Peer);
   const log = (...a) => { try { console.log('[hub]', ...a); } catch (e) {} };
