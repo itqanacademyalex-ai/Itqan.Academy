@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.13-a';
+const VER='2026.12.14-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -581,7 +581,11 @@ function meter(t){try{const ac=new(window.AudioContext||window.webkitAudioContex
   if(!t.enabled||t.muted){b.style.boxShadow='none';z=0;window.MZ=0;return}
   if(ac.state!='running')ac.resume().catch(()=>{});
   let m=0;if(fl){an.getFloatTimeDomainData(d);for(let i=0;i<d.length;i++)m=Math.max(m,Math.abs(d[i]))}else{an.getByteTimeDomainData(d);for(let i=0;i<d.length;i++)m=Math.max(m,Math.abs(d[i]-128)/128)}
-  z=(ac.state!='running'||m===0)?z+.15:0;window.MZ=z;
+  const zr=ac.state!='running'?'ctx':m===0?'zero':'';
+  /* «صفر» رجع لوحده لما الشخص اتكلم (من غير ما نعيد تشغيل المايك): السماعة/الجهاز ده بيقفل الصوت في السكوت (noise gate) — ده طبيعي مش عطل.
+     بعد مرتين كده بنبطّل نعيد تشغيل المايك على «الصفر» (كان بيعمل تقطيع صغير عند الطلاب كل شوية من غير لازمة) */
+  if(!zr&&z>=3&&!window._quietReset&&Date.now()-(window.mzLast||0)>6000){window.MZS=(window.MZS||0)+1;if(window.MZS>=2&&!window.MICGATE){window.MICGATE=1;try{role=='t'?hEv('🎤 مايك المعلم بيسكت لوحده لما مفيش كلام (طبيعي في بعض السماعات) — مش هنعيد تشغيله على الفاضي'):dg('mic','gate')}catch(e){}}}
+  if(zr)window.MZR=zr;z=zr?z+.15:0;window.MZ=z;
   b.style.boxShadow='0 0 0 '+Math.min(8,Math.round(m*40))+'px #22c55e66'},150)}catch(e){}}
 function micErr(e,what,gate){if(!what&&e&&e.name=='NotAllowedError'&&Date.now()-(window._gumT||0)<450)e={name:'blocked'};if(!what&&e&&e.name=='blocked')return micBlocked(gate);if(!what){window.MERR=(e&&e.name)||'x';setTimeout(mbarUpd,0);try{if(role=='t'){H.t.mic=window.MERR;hEv('❌ مايك المعلم مش شغّال ('+window.MERR+')')}else dg('mic',window.MERR)}catch(x){}}what=what||'الميكروفون';
  const n=e&&e.name,emb=window!==top,ok=window.isSecureContext&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia,
@@ -629,10 +633,10 @@ function mbarUpd(){let b=document.getElementById('mbar');
  const sus=role=='t'&&$('#join').hidden&&!final&&typeof MX!='undefined'&&MX.ac&&MX.ac.state!='running'&&MX.ac.state!='closed';
  if(sus&&!window._susOn){window._susOn=1;try{H.t.sus++;hEv('🔇 محرّك صوت المعلم اتوقف — الطلاب ماكانوش سامعين لحد ما لمس الشاشة')}catch(e){}}else if(!sus)window._susOn=0;
  const inC=!final&&(role=='t'?$('#join').hidden:role=='s'&&admitted&&canTalk);
- const zero=inC&&live&&tk.enabled&&(window.MZ||0)>=5;
+ const zero=inC&&live&&tk.enabled&&(window.MZ||0)>=5&&!(window.MICGATE&&window.MZR==='zero');
  if(zero&&!window._zLog){window._zLog=1;try{role=='t'?hEv('🎤 مايك المعلم كان مفتوح بس مش بيلقط صوت'):dg('mic','مفتوح بس مش بيلقط صوت')}catch(e){}}else if(!zero)window._zLog=0;
  /* محاولة تلقائية مرة واحدة قبل ما نطلب لمسة */
- if(zero&&!window._zAuto&&(window.MZ||0)>=6){window._zAuto=1;window.MZ=0;audioReset();return}
+ if(zero&&!window._zAuto&&(window.MZ||0)>=6){window._zAuto=1;window.MZ=0;window.mzLast=Date.now();audioReset();return}
  const need=zero||sus||!!window.MERR&&!live&&!final&&(role=='t'?$('#join').hidden:role=='s'&&admitted&&canTalk);
  if(!need){if(b)b.hidden=true;return}
  if(!b){b=document.createElement('button');b.id='mbar';b.style.cssText='position:fixed;z-index:58;top:calc(8px + env(safe-area-inset-top));inset-inline:10px;margin-inline:auto;max-width:560px;background:#b5473f;color:#fff;border:2px solid #fff;border-radius:16px;padding:10px 14px;font:inherit;text-align:center;line-height:1.7;box-shadow:0 8px 28px #000a;cursor:pointer';
@@ -665,8 +669,9 @@ setInterval(()=>{if(window.auInt&&!document.hidden&&(role=='t'||role=='s'&&admit
 /* 🎤 المايك منوّر بس مش بيلقط (برنامج تاني ماسكه — زووم/تيمز/واتساب — أو الجهاز اتغيّر): لو المايك مفتوح وبيسجّل صمت تام 4 ثواني
    أو مكتوم من النظام، بنشغّله من جديد لوحدنا — ولو لسه برضه بنقول للمستخدم يقفل البرنامج التاني */
 let mzFix=0,mzT=0;setInterval(()=>{try{if(document.hidden)return;const t=role=='t'?(typeof micT!='undefined'?micT:null):role=='s'&&admitted?micS:null;if(!t||t.readyState!='live'||!t.enabled)return;
- const dead=(window.MZ||0)>=4||t.muted;if(!dead){if(mzFix&&Date.now()-mzT>20000)mzFix=0;return}if(Date.now()-mzT<15000)return;mzT=Date.now();
- if(mzFix<2){mzFix++;window._quietReset=1;toast('🎤','المايك مكانش بيلقط صوت — بنشغّله من جديد…');try{role=='t'?hEv('🎤 مايك المعلم كان صامت تمامًا — اتشغّل من جديد'):dg('mic','silent')}catch(e){}audioReset().finally(()=>{window._quietReset=0})}
+ const gz=window.MICGATE&&window.MZR==='zero',dead=t.muted||((window.MZ||0)>=4&&!gz);if(!dead){if(mzFix&&Date.now()-mzT>20000)mzFix=0;return}if(Date.now()-mzT<15000)return;mzT=Date.now();window.mzLast=mzT;
+ const why=(t.muted?'مكتوم من النظام':window.MZR==='ctx'?'محرّك الصوت وقف':'صفر تام')+(t.label?' — '+String(t.label).slice(0,40):'');
+ if(mzFix<2){mzFix++;window._quietReset=1;toast('🎤','المايك مكانش بيلقط صوت — بنشغّله من جديد…');try{role=='t'?hEv('🎤 مايك المعلم كان صامت تمامًا ('+why+') — اتشغّل من جديد'):dg('mic','silent')}catch(e){}audioReset().finally(()=>{window._quietReset=0})}
  else if(!window._mzAlert){window._mzAlert=1;mzFix=0;alert('🎤 المايك مش بيلقط صوت.\n\nغالبًا برنامج تاني ماسك المايك (زووم، تيمز، واتساب، مسجّل صوت، مكالمة).\nاقفل البرنامج ده خالص، وبعدين دوس 🎤 مرتين (اقفله وافتحه).\n\nلو بتستخدم سماعة بلوتوث أو مايك خارجي: اتأكد إنه متوصّل.')}}catch(e){}},3000);
 /* الآيفون بيقفل المايك خالص لما المعلم/الطالب يخرج من التطبيق (مفيش مايك في الخلفية لتطبيقات الويب) —
    لو كان فاتح المايك قبل ما يخرج، نرجّعه لوحده أول ما يرجع، من غير ما يدوس 🎤 */
