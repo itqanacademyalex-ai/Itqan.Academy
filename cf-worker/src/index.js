@@ -7,6 +7,7 @@
 const ORIGINS = ['https://itqanacademyalex-ai.github.io', 'http://localhost:8765'];
 const SFU = 'https://rtc.live.cloudflare.com/v1/apps/';
 const ID_RE = /^[A-Za-z0-9_-]{4,64}$/;
+const GRACE = 12000; /* مهلة السماح لجهاز فصل لحظة */
 
 function cors(origin) {
   const h = { 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
@@ -70,8 +71,13 @@ export class Hub {
     }
     const pair = new WebSocketPair();
     this.state.acceptWebSocket(pair[1], [id]);
-    pair[1].serializeAttachment({ id, token, peers: [] });
+    /* رجع خلال مهلة السماح: نلغي «مشي»، ونسلّمه الرسايل اللي اتبعتت له وهو فاصل */
+    const held = this.held && this.held[id];
+    if (this.held) delete this.held[id];
+    let prev = null; try { prev = await this.state.storage.get('lv:' + id); await this.state.storage.delete('lv:' + id); } catch (e) {}
+    pair[1].serializeAttachment({ id, token, peers: (prev && prev.peers || []).slice(-200) });
     this.send(pair[1], { type: 'OPEN', id });
+    if (held) for (const x of held.q) this.send(pair[1], x);
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
@@ -83,7 +89,12 @@ export class Hub {
     const a = ws.deserializeAttachment() || {}, to = String(m.dst || '');
     if (!a.id || !ID_RE.test(to)) return;
     const t = this.sockets(to);
-    if (!t.length) return this.send(ws, { type: 'EXPIRE', src: to, payload: { cid: m.payload && m.payload.cid } });
+    if (!t.length) {
+      /* الجهاز فاصل لحظة (في مهلة السماح): بنحتفظ بالرسالة لحد ما يرجع، بدل ما نقول «مش موجود» */
+      const h = this.held && this.held[to];
+      if (h && Date.now() - h.at < GRACE) { m.src = a.id; delete m.dst; if (h.q.length < 400) h.q.push(JSON.stringify(m)); return; }
+      return this.send(ws, { type: 'EXPIRE', src: to, payload: { cid: m.payload && m.payload.cid } });
+    }
     /* بنفتكر مين بيكلم مين، عشان لو جهاز فصل نقول للتانيين على طول (بدل ما يستنوا) */
     if (!a.peers.includes(to)) { a.peers.push(to); if (a.peers.length > 200) a.peers.shift(); ws.serializeAttachment(a); }
     m.src = a.id; delete m.dst;
@@ -95,13 +106,30 @@ export class Hub {
     }
   }
 
-  webSocketClose(ws) { this.gone(ws); }
-  webSocketError(ws) { this.gone(ws); }
-  gone(ws) {
+  async webSocketClose(ws) { await this.gone(ws); }
+  async webSocketError(ws) { await this.gone(ws); }
+  async gone(ws) {
     const a = ws.deserializeAttachment() || {};
     if (!a.id) return;
     /* لو نفس الاسم رجع باتصال جديد (أو اتبدل) مانقولش إنه مشي */
     if (this.sockets(a.id).some(s => s !== ws)) return;
-    for (const p of a.peers || []) for (const x of this.sockets(p)) this.send(x, { type: 'LEAVE', src: a.id });
+    /* مهلة سماح: لو النت فصل لحظة ورجع خلال ثواني، محدش يحس — «مشي» بيتبعت بس لو ماارجعش */
+    this.held = this.held || {};
+    this.held[a.id] = { at: Date.now(), q: [] };
+    try {
+      await this.state.storage.put('lv:' + a.id, { peers: a.peers || [], at: Date.now() });
+      const al = await this.state.storage.getAlarm(); if (!al) await this.state.storage.setAlarm(Date.now() + GRACE + 500);
+    } catch (e) {}
+  }
+  async alarm() {
+    const L = await this.state.storage.list({ prefix: 'lv:' }); let next = 0;
+    for (const [k, v] of L) {
+      const id = k.slice(3);
+      if (this.sockets(id).length) { await this.state.storage.delete(k); continue; }
+      if (Date.now() - v.at < GRACE) { next = next ? Math.min(next, v.at + GRACE) : v.at + GRACE; continue; }
+      await this.state.storage.delete(k); if (this.held) delete this.held[id];
+      for (const p of v.peers || []) for (const x of this.sockets(p)) this.send(x, { type: 'LEAVE', src: id });
+    }
+    if (next) await this.state.storage.setAlarm(next + 300);
   }
 }
