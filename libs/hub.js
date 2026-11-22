@@ -49,7 +49,7 @@
     }
     async init() {
       if (this.sid) return;
-      const pc = this.pc = new RTCPeerConnection({ iceServers: await hubIce(), bundlePolicy: 'max-bundle' });
+      const pc = this.pc = new RTCPeerConnection({ iceServers: await hubIce(), bundlePolicy: 'max-bundle', iceTransportPolicy: window.HUB_RELAY ? 'relay' : 'all' });
       const gen = this.gen;
       pc.ontrack = e => { const mid = e.transceiver && e.transceiver.mid; if (mid == null) return; this.byMid[mid] = e.track; const w = this.wait[mid]; if (w) { delete this.wait[mid]; w(e.track); } };
       let dt = 0;
@@ -67,12 +67,17 @@
       this.sid = j.sessionId;
       this.ready = new Promise(ok => {
         const done = () => { const s = pc.iceConnectionState; if (s === 'connected' || s === 'completed') { pc.removeEventListener('iceconnectionstatechange', done); ok(1); } };
-        pc.addEventListener('iceconnectionstatechange', done); done(); setTimeout(() => ok(0), 15000);
+        pc.addEventListener('iceconnectionstatechange', done); done(); setTimeout(() => ok(0), 30000);
       });
     }
     async sdpPublish(add) {
       await this.pc.setLocalDescription(await this.pc.createOffer());
-      const j = await this.api('/sessions/' + this.sid + '/tracks/new', 'POST', { sessionDescription: { type: 'offer', sdp: this.pc.localDescription.sdp }, tracks: add.map(p => ({ location: 'local', mid: p.tr.mid, trackName: p.name })) });
+      let j = null;
+      /* الاتصال بـ Cloudflare لسه بيكمل (شبكة بطيئة): بنستنى ونعيد بدل ما نستسلم */
+      for (let i = 0; i < 6; i++) {
+        try { j = await this.api('/sessions/' + this.sid + '/tracks/new', 'POST', { sessionDescription: { type: 'offer', sdp: this.pc.localDescription.sdp }, tracks: add.map(p => ({ location: 'local', mid: p.tr.mid, trackName: p.name })) }); break; }
+        catch (e) { if (!/not ready/i.test(e.message) || i === 5) throw e; log('session not ready, waiting'); await new Promise(r => setTimeout(r, 3000)); }
+      }
       await this.pc.setRemoteDescription(new RTCSessionDescription(j.sessionDescription));
     }
     /* رفع: نفس التراك (زي صورة المعلم) بيترفع مرة واحدة بس مهما كان عدد الطلاب */
