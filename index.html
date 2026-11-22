@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.14-a';
+const VER='2026.12.15-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1465,7 +1465,7 @@ window.BWF=1;
    بدل ما كل طالب ياخد 1 ميجا ثابت (3 طلاب = 3 ميجا رفع — أكتر من نت أغلب البيوت فكان الصوت بيتقطّع عند الكل) */
 /* الجودة كاملة طول ما نت المعلم مستحمل (1.5 ميجا لطالب واحد، 1 ميجا لكل طالب لو أكتر) — وبتقل بس لو البرنامج قاس إن النت مش مكفّي:
    ساعتها بيقسم سرعة الرفع الحقيقية على الطلاب، ولما النت يتحسّن بيرجع للجودة الكاملة بالتدريج */
-function tuneBr(){const n=window.HUBMODE?1:Math.max(1,Object.values(conns).filter(x=>x.adm&&!x.dir).length),full=window.HUBMODE?2e6:n<=1?1.5e6:1e6,cap=window.UPB?window.UPB/n:Infinity;return Math.max(8e4,Math.min(full,cap)*window.BWF)}
+function tuneBr(){const n=window.HUBMODE?1:Math.max(1,Object.values(conns).filter(x=>x.adm&&!x.dir).length),full=window.HUBMODE?(typeof scrT!='undefined'&&scrT?1.6e6:1.2e6):n<=1?1.5e6:1e6,cap=window.UPB?window.UPB/n:Infinity;return Math.max(8e4,Math.min(full,cap)*window.BWF)}
 /* مشاركة الشاشة/الصفحات: نفس النت بيتوزّع على فريمات أقل ← كل فريم بياخد بيانات أكتر فالكلام والصور بيبانوا واضحين بدل ما يبقوا مبكسلين.
    الفيديو المتشارك (S.__vid) بيفضل بحركة طبيعية */
 /* مشاركة ملف أو شرائح (مش فيديو): فريمات أقل = كل فريم بياخد بيانات أكتر = الكلام أوضح */
