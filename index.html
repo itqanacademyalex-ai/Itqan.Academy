@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.11-a';
+const VER='2026.12.11-b';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -2414,7 +2414,7 @@ function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
  if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
  if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
   if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';
-   if(rl&&!S.relay){const ru=String((lc.candidateType=='relay'?lc.url:rc.url)||'');S.relay=(/metered/i.test(ru)?'Metered ':/expressturn/i.test(ru)?'ExpressTURN ':'')+(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
+   if(rl&&!S.relay){const ru=String((lc.candidateType=='relay'?lc.url:rc.url)||'');S.relay=(/metered/i.test(ru)?'Metered ':/expressturn/i.test(ru)?'ExpressTURN ':/cloudflare/i.test(ru)?'Cloudflare ':'')+(lc.relayProtocol||lc.protocol||'udp');hEv('🔁 '+o.name+' اتوصل عبر TURN ('+S.relay+')'+(dir?' — '+dir:''))}
    else if(!rl&&S.relay==='')S.relay='direct';
    /* استهلاك TURN: البيانات اللي عدّت في الاتصال ده وهو ماشي عبر TURN (بنجمع الزيادة بس، عشان الاتصال ممكن يتعمل من جديد) */
    const tot=(pair.bytesSent||0)+(pair.bytesReceived||0);if(pc){const d=Math.max(0,tot-(pc._hb||0));pc._hb=tot;if(rl)S.mb=(S.mb||0)+d/1048576}}}
@@ -2433,7 +2433,7 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
  L.push('===== صحة النظام (الصوت والاتصال) =====');
  L.push(issues?'⚠️ اتسجّل '+issues+' مشكلة واتعالجت تلقائياً — التفاصيل تحت.':'✅ مفيش أي خلل اتسجّل في الصوت أو الاتصال.');
  L.push('');
- L.push('🔁 خادم TURN: '+(hasTurn?'متاح ('+['ExpressTURN',(MET_KEY||MET_USER)&&'Metered احتياطي'].filter(Boolean).join(' + ')+')':'❌ مش متاح (مفيش بيانات TURN)'));
+ L.push(window.HUBMODE?'🔁 الاتصال: خادم إتقان على Cloudflare (الصوت والصورة عبر Cloudflare، وTURN بتاعه لو الشبكة مقفولة)':'🔁 خادم TURN: '+(hasTurn?'متاح ('+['ExpressTURN',(MET_KEY||MET_USER)&&'Metered احتياطي'].filter(Boolean).join(' + ')+')':'❌ مش متاح (مفيش بيانات TURN)'));
  const mbF=v=>v>=1024?(v/1024).toFixed(2)+' جيجا':(v>=10?Math.round(v):v.toFixed(1))+' ميجا',mbT=relay.reduce((a,[n,x])=>a+(x.mb||0),0);
  L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
  if(relay.length)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
@@ -3498,7 +3498,8 @@ function recUp(meta,onSt){
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
    /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
-   if(/^session/.test(U.err)&&U.fails>=3){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
+   /* رفع قديم مش هيكمل أبدًا: جلسة Drive انتهت (بتعيش أسبوع) أو الأجزاء مش متطابقة مع اللي على Drive — بيتلغى بدل ما يفضل يعيد كل حصة ويستهلك النت */
+   if((/^session/.test(U.err)&&U.fails>=3)||(/^chunk (400|404)/.test(U.err)&&U.fails>=4)){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
    if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
