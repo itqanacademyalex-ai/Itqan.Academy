@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.12-b';
+const VER='2026.12.13-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1473,7 +1473,7 @@ function callCam(o){try{o.cc&&o.cc.close()}catch(e){}o.cc=null;if(!camT)return;o
    المعلم: كل 5 ثواني يشوف اتصال كل طالب — لو فشل أو اتقفل والطالب لسه في الحصة يتصل بيه تاني.
    الطالب: كل 3 ثواني يتأكد إن صوت المعلم واصل فعلاً — لو الاتصال فشل أو مفيش صوت بيوصل ~9 ثواني يطلب من المعلم يتصل تاني،
    ولو ده مانفعش 3 مرات يعيد الاتصال بالكامل (زي الريفريش بالظبط بس لوحده). */
-let tCall=null,auBad=0,auLast=-1,auAsk=0,auTry=0,auPL=[0,0],auBuf=0;
+let sqN=0,tCall=null,auBad=0,auLast=-1,auAsk=0,auTry=0,auPL=[0,0],auBuf=0;
 /* نت الطالب متذبذب (بيضيع منه صوت أو بيوصل متقطّع): نكبّر مخزن الصوت عنده لثلث ثانية —
    الصوت بيتأخر شوية صغيرة بس بيوصل متصل بدل ما يتقطّع */
 function auJB(lo,rc,ji){const dl=lo-auPL[0],dr=rc-auPL[1];auPL=[lo,rc];if(dr<=0||auBuf)return;
@@ -1485,7 +1485,8 @@ setInterval(()=>{if(role!='t'||!peer||peer.destroyed)return;
   if((bad||o.bd>=2)&&Date.now()-(o.rcT||0)>10000){o.rcT=Date.now();o.bd=0;hEv('🔌 اتصال الصوت مع '+o.name+' وقع ('+(q||'مفيش')+') — اتعمل من جديد');callOne(o);if(camT)callCam(o)}})},5000);
 setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
  const q=pcSt(tCall);let bad=q=='failed'||q=='closed'?3:!q||q=='disconnected'?1:0;
- if(!bad&&tCall&&st.mic&&lastA>0)try{let b=-1,lo=0,rc=0,ji=0;(await tCall.peerConnection.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio'){b=r.bytesReceived;lo=r.packetsLost||0;rc=r.packetsReceived||0;ji=r.jitter||0}});
+ if(!bad&&tCall&&st.mic&&lastA>0)try{let b=-1,lo=0,rc=0,ji=0,rt=0,rl='';const SS=await tCall.peerConnection.getStats();SS.forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio'){b=r.bytesReceived;lo=r.packetsLost||0;rc=r.packetsReceived||0;ji=r.jitter||0}if(r.type=='candidate-pair'&&r.nominated&&r.state=='succeeded'){rt=r.currentRoundTripTime||0;const lc=SS.get(r.localCandidateId);rl=lc&&lc.candidateType=='relay'?'relay-'+(lc.relayProtocol||'udp'):'direct'}});
+  if(window.HUBMODE&&++sqN%10===0&&rc>0)try{dg('q',JSON.stringify({l:lo/(lo+rc),r:rt,c:rl}))}catch(e){}
   auJB(lo,rc,ji);
   if(b>=0&&b===auLast)bad=1;auLast=b}catch(e){}
  auBad=bad?auBad+bad:0;
@@ -2409,7 +2410,16 @@ const hT=()=>new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-dig
 function hEv(m){if(role!='t')return;const l=H.ev[H.ev.length-1];if(l&&l.m===m&&Date.now()-l.ts<60000)return;H.ev.push({ts:Date.now(),t:hT(),m});if(H.ev.length>120)H.ev.splice(0,H.ev.length-120)}
 function hS(n){n=String(n||'؟');return H.stu[n]||(H.stu[n]={relay:'',loss:0,rtt:0,weak:0,recall:0,remic:0,reset:0,heal:0,jb:0,blk:0,full:0,mic:''})}
 /* من إحصائيات الاتصال: نوع المسار (مباشر ولا عبر TURN) + أقصى فقد صوت وتأخير */
-function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
+/* على خادم إتقان: الإحصائيات اللي عند المعلم هي اتصاله هو بـ Cloudflare (واحد لكل الطلاب) — بتتسجّل مرة واحدة كـ «اتصال المعلم» */
+function hSelf(stats){try{const C=H.t.cf||(H.t.cf={relay:'',rtt:0,loss:0,pb:{}});let pair=null;
+ stats.forEach(x=>{if(x.type=='transport'&&x.selectedCandidatePairId)pair=stats.get(x.selectedCandidatePairId)});
+ if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
+ if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
+  if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';const v=rl?'عبر TURN ('+(lc.relayProtocol||lc.protocol||'udp')+')':'مباشر';if(C.relay!==v){if(C.relay)hEv('🔁 اتصال المعلم بـ Cloudflare بقى '+v);C.relay=v}}
+  if(pair.currentRoundTripTime>C.rtt)C.rtt=pair.currentRoundTripTime;
+  C.pb[pair.id]=Math.max(C.pb[pair.id]||0,(pair.bytesSent||0)+(pair.bytesReceived||0))}
+ stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'&&x.fractionLost>C.loss)C.loss=x.fractionLost})}catch(e){}}
+function hPc(o,stats,dir,pc){if(window.HUBMODE)return hSelf(stats);try{const S=hS(o.name);let pair=null;
  stats.forEach(x=>{if(x.type=='transport'&&x.selectedCandidatePairId)pair=stats.get(x.selectedCandidatePairId)});
  if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
  if(pair){const lc=stats.get(pair.localCandidateId),rc=stats.get(pair.remoteCandidateId);
@@ -2421,6 +2431,7 @@ function hPc(o,stats,dir,pc){try{const S=hS(o.name);let pair=null;
  stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'){if(x.fractionLost>S.loss)S.loss=x.fractionLost;if(x.roundTripTime>S.rtt)S.rtt=x.roundTripTime}
   if(x.type=='inbound-rtp'&&x.kind=='audio'&&x.packetsReceived>50){const f=(x.packetsLost||0)/((x.packetsLost||0)+x.packetsReceived);if(f>S.loss)S.loss=f}})}catch(e){}}
 function hDg(o,d){const S=hS(o.name),k=String(d.k||'');
+ if(k=='q'){try{const q=JSON.parse(String(d.v||'{}'));if(+q.l>S.loss)S.loss=Math.min(1,+q.l);if(+q.r>S.rtt)S.rtt=+q.r;if(/^(direct|relay-(udp|tcp|tls))$/.test(q.c||''))S.relay=q.c=='direct'?'direct':'Cloudflare '+q.c.slice(6)}catch(e){}return}
  if(k=='mic'){S.mic=String(d.v||'').slice(0,40);hEv('❌ مايك '+o.name+' مش شغّال ('+S.mic+')')}
  else if(k=='reset'){S.reset++;hEv('📞 '+o.name+' رجع من مكالمة — الصوت اتظبط تاني')}
  else if(k=='heal'){S.heal++;hEv('🎤 مايك '+o.name+' كان مكتوم من الجهاز — اتفتح تاني')}
@@ -2435,10 +2446,11 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
  L.push('');
  L.push(window.HUBMODE?'🔁 الاتصال: خادم إتقان على Cloudflare (الصوت والصورة عبر Cloudflare، وTURN بتاعه لو الشبكة مقفولة)':'🔁 خادم TURN: '+(hasTurn?'متاح ('+['ExpressTURN',(MET_KEY||MET_USER)&&'Metered احتياطي'].filter(Boolean).join(' + ')+')':'❌ مش متاح (مفيش بيانات TURN)'));
  const mbF=v=>v>=1024?(v/1024).toFixed(2)+' جيجا':(v>=10?Math.round(v):v.toFixed(1))+' ميجا',mbT=relay.reduce((a,[n,x])=>a+(x.mb||0),0);
- L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
- if(relay.length)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
+ if(window.HUBMODE){const C=H.t.cf;if(C&&C.relay)L.push('   👨‍🏫 اتصال المعلم بـ Cloudflare: '+C.relay+' — أقصى تأخير '+ms(C.rtt)+' — أقصى فقد صوت في الرفع '+pct(C.loss)+' — داتا تقريباً '+mbF(Object.values(C.pb).reduce((a,b)=>a+b,0)/1048576));L.push('   (أرقام كل طالب تحت = اللي وصله هو فعلاً)')}
+ else L.push(relay.length?'   اتستخدم مع '+relay.length+' طالب: '+relay.map(([n,x])=>n+' ('+x.relay+'، '+mbF(x.mb||0)+')').join('، '):'   مااتستخدمش — كل الطلاب اتوصلوا مباشرة.');
+ if(relay.length&&!window.HUBMODE)L.push('   📦 إجمالي استهلاك TURN في الحصة دي تقريباً: '+mbF(mbT));
  if(stu.length){L.push('');L.push('👥 الطلاب:');
-  stu.forEach(([n,x])=>{const p=[];p.push(x.relay&&x.relay!=='direct'?'عبر TURN ('+mbF(x.mb||0)+')':x.relay==='direct'?'مباشر':'غير معروف');
+  stu.forEach(([n,x])=>{const p=[];p.push(window.HUBMODE?(x.relay==='direct'?'متوصل بـ Cloudflare مباشر':x.relay?'متوصل بـ Cloudflare عبر TURN ('+x.relay.replace('Cloudflare ','')+')':'لسه مابعتش قياس'):x.relay&&x.relay!=='direct'?'عبر TURN ('+mbF(x.mb||0)+')':x.relay==='direct'?'مباشر':'غير معروف');
    p.push('أقصى فقد صوت '+pct(x.loss));if(x.rtt)p.push('أقصى تأخير '+ms(x.rtt));
    if(x.weak)p.push('نت ضعيف '+x.weak+' مرة');if(x.recall)p.push('صوت المعلم رجع لوحده '+x.recall+' مرة');if(x.remic)p.push('صوت الطالب رجع لوحده '+x.remic+' مرة');
    if(x.full)p.push('إعادة اتصال كاملة '+x.full+' مرة');if(x.reset)p.push('الصوت اتظبط بعد مكالمة '+x.reset+' مرة');if(x.heal)p.push('المايك اتفتح تاني '+x.heal+' مرة');
