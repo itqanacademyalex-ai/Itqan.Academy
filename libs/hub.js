@@ -174,12 +174,24 @@
       super(); this.hp = hp; this.peer = peer; this.cid = cid; this.connectionId = cid; this.metadata = md || {}; this.open = false; this.type = 'media'; this._mids = [];
       const self = this;
       /* بعض أجزاء البرنامج بتقرا إحصائيات الاتصال أو بتظبط الجودة — بنديها واجهة شبه RTCPeerConnection لتراكات المكالمة دي بس */
+      /* حالة المكالمة دي بالذات (مش حالة الاتصال كله بـ Cloudflare): لو السحب فشل أو الصوت ماوصلش في 15 ثانية بتبقى failed —
+         وده اللي بيخلّي البرنامج يطلب من المعلم يتصل تاني لوحده (زمان كانت بتبان «متوصل» والطالب فاضل مش سامع) */
+      const st = () => {
+        if (self._x || self._fail) return 'failed';
+        if (!self._out && self._answered && !self._ok && Date.now() - self._t0 > 15000) return 'failed';
+        const pc = hp._sfu && hp._sfu.pc; return pc ? pc.connectionState : 'new';
+      };
       this.peerConnection = {
         getSenders: () => self._out ? hp.sfu().sendersFor(self.localStream ? self.localStream.getTracks() : []) : [],
         getReceivers: () => hp.sfu().receiversFor(self._mids),
-        getStats: () => (hp._sfu && hp._sfu.pc ? hp._sfu.pc.getStats() : Promise.resolve(new Map())),
-        get iceConnectionState() { return hp._sfu && hp._sfu.pc ? hp._sfu.pc.iceConnectionState : 'new'; },
-        get connectionState() { return hp._sfu && hp._sfu.pc ? hp._sfu.pc.connectionState : 'new'; },
+        /* إحصائيات التراكات بتاعة المكالمة دي بس (عشان «الصوت وقف؟» يتقاس صح) */
+        getStats: async () => {
+          const parts = self._out ? hp.sfu().sendersFor(self.localStream ? self.localStream.getTracks() : []) : hp.sfu().receiversFor(self._mids), m = new Map();
+          for (const x of parts) { try { (await x.getStats()).forEach((v, k) => m.set(k, v)); } catch (e) {} }
+          return m;
+        },
+        get iceConnectionState() { const s = st(); return s === 'connected' ? 'connected' : s; },
+        get connectionState() { return st(); },
         addEventListener() {}, removeEventListener() {}
       };
     }
@@ -191,9 +203,9 @@
     }
     _startOut(stream) {
       this._out = 1; this.localStream = stream;
-      this._publish(false).catch(e => { log('publish failed', e); this.emit('error', { type: 'webrtc', message: String(e) }); this._closed(true); });
+      this._publish(false).catch(e => { log('publish failed', e); this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); this._closed(true); });
     }
-    answer() { if (this._out || this._answered) return; this._answered = 1; this.open = true; this._pull().catch(e => { log('pull failed', e); this.emit('error', { type: 'webrtc', message: String(e) }); }); }
+    answer() { if (this._out || this._answered) return; this._answered = 1; this._t0 = Date.now(); this.open = true; this._pull().catch(e => { log('pull failed', e); this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); }); }
     async _pull() {
       const sfu = this.hp.sfu(), sid = this._sid, tn = this._tn.slice();
       const ps = await sfu.pullTracks(sid, tn);
@@ -204,6 +216,10 @@
       if (this._x) return;
       rs.getTracks().forEach(t => { if (!tracks.includes(t)) rs.removeTrack(t); });
       tracks.forEach(t => { if (!rs.getTracks().includes(t)) rs.addTrack(t); });
+      if (!tracks.length) { this._fail = 1; log('no tracks arrived'); return; }
+      /* الصورة وصلت بس الصوت لأ: نعتبر المكالمة فشلت عشان المعلم يتصل تاني (بدل «ميكروفون المعلم مقفول» وهو مش مقفول) */
+      if (tn.some(n => /^audio-/.test(n)) && !tracks.some(t => t.kind === 'audio')) { this._fail = 1; log('audio missing'); }
+      else { this._ok = 1; this._fail = 0; }
       this.emit('stream', rs);
     }
     /* الطرف التاني عمل جلسة جديدة مع Cloudflare: نسحب التراكات من مكانها الجديد */
