@@ -57,7 +57,7 @@ let role='';const f=document.getElementById('f'),u=document.getElementById('u'),
 const roleOf=s=>{try{const q=new URL(String(s).trim()).searchParams;return q.get('r')}catch(x){return null}};
 function pick(r){role=r;f.hidden=false;e.textContent='';
  document.getElementById('bt').classList.toggle('on',r=='t');document.getElementById('bs').classList.toggle('on',r=='s');
- document.getElementById('h').textContent=r=='t'?'اكتب «كود الحصة» اللي بعتته السكرتارية (أو الصق الرابط). كود المعلم السري هتكتبه في الخطوة الجاية.':'اكتب «كود الحصة» اللي بعتته السكرتارية (أو الصق الرابط).';
+ document.getElementById('h').textContent=r=='t'?'الصق «لينك المعلم» اللي بعتته السكرتارية (أو اكتب كود الحصة). أول مرة بس هتكتب كود المعلم، وبعد كده البرنامج بيفتح على حصصك على طول.':'اكتب «كود الحصة» اللي بعتته السكرتارية (أو الصق الرابط).';
  window.itqanApp.clipRead().then(t=>{t=(t||'').trim();if(u.value)return;if(roleOf(t)==r)u.value=t;else{const m=t.match(/كود الحصة\s*[:：]?\s*([A-Za-z0-9]{4,6})/);if(m)u.value=m[1].toUpperCase()}});u.focus()}
 function go(){const v=u.value.trim(),r=roleOf(v);
  if(!v)return e.textContent='اكتب كود الحصة الأول.';

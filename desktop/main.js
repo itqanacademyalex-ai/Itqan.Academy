@@ -18,6 +18,7 @@ function inviteUrl(raw) {
   const q = new URL(raw).searchParams;
   if (/^([a-z0-9]{4}|[a-z0-9]{6})$/.test(q.get('c') || '') && /^(t|s)$/.test(q.get('r') || '')) return raw; // كود الحصة — الموقع بيدوّر على الحصة
   if (q.get('tj') && q.get('r') === 't') return raw; // لينك «جدولي» للمعلم
+  if (/^.{1,40}$/.test(q.get('tn') || '')) return raw; // لينك المعلم الشخصي (فيه اسمه) ← بيحفظ حصصه على الجهاز بعد كود المعلم
   return q.get('s') && q.get('k') && /^(t|s)$/.test(q.get('r') || '') ? raw : null;
 }
 const HOME = path.join(__dirname, 'home.html');
