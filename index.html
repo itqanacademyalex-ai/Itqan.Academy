@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.08-a';
+const VER='2026.12.09-a';
 $('#ver').textContent='الإصدار '+VER;
 /* ===== إعدادات الاتصال: خادم TURN عبر ExpressTURN (لازم لما الطالب والمعلم يكونوا على شبكات مختلفة، خصوصاً الموبايل) ===== */
 /* خيار مجاني بحصة كبيرة: ExpressTURN (expressturn.com) — انسخ من لوحة التحكم عنوان السيرفر واسم المستخدم وكلمة المرور */
@@ -1356,7 +1356,7 @@ function forceEnd(){lastDel();Object.values(conns).forEach(o=>{try{o.c.send({t:'
 async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
- window.HUBMODE=HUBR(room);const p=peer=new (PC(room))('itqan-'+room,PSO({config:ice}));let opened=0;
+ window.HUBMODE=HUBR(room);window.HUBROOM=room;const p=peer=new (PC(room))('itqan-'+room,PSO({config:ice}));let opened=0;
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول')}});
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
@@ -1682,7 +1682,7 @@ function rcBar(i,t){let e=document.getElementById('rcbar');if(!t){if(e)e.remove(
  e.textContent=(i?i+' ':'')+t}
 const CLOSED='الغرفة مغلقة — لم يفتحها المعلم بعد. ستدخل تلقائياً بمجرد فتحها.';
 /* الطالب كان جوه الحصة والنت فصل لحظة: رسالة تطمّنه إنه هيرجع لوحده (بدل «الغرفة مغلقة» اللي بتخليه يقفل ويفتح اللينك) */
-function dropMsg(){if(window.WASIN)return Date.now()-window.WASIN<90000?['📶','الاتصال فصل لحظة — بنرجّعك للحصة تلقائياً…\nخليك مكانك ومتقفلش الصفحة']:['⏳','المعلم لسه مارجعش — خليك مكانك، أول ما يرجع هتكمّل الحصة معاه لوحدك'];return[window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED]}
+function dropMsg(){if(LG.on)return lgMsg();if(window.WASIN)return Date.now()-window.WASIN<90000?['📶','الاتصال فصل لحظة — بنرجّعك للحصة تلقائياً…\nخليك مكانك ومتقفلش الصفحة']:['⏳','المعلم لسه مارجعش — خليك مكانك، أول ما يرجع هتكمّل الحصة معاه لوحدك'];return[window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED]}
 /* الطالب خرج من التطبيق (واتساب/قفل الشاشة): بنقول للمعلم يصبر عليه، ولما يرجع نتأكد من الاتصال فوراً */
 document.addEventListener('visibilitychange',()=>{if(role!='s'||final)return;try{conn&&conn.open&&conn.send({t:'bg',on:document.hidden?1:0});if(!document.hidden&&conn&&conn.open)conn.send({t:'hb'})}catch(e){}
  if(!document.hidden&&!(conn&&conn.open)&&peer&&!peer.destroyed){clearTimeout(rt);rt=setTimeout(tryConn,300)}});
@@ -1694,7 +1694,7 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
  c.on('open',()=>{ok=1;cFail=0;clearTimeout(ct);vOk=0;vNonce=rnd();c.send({t:'chal',n:vNonce})});
  c.on('data',sData);
- c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم')}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
+ c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم');clearTimeout(LG.t);LG.t=setTimeout(()=>{if(!admitted&&!final)lgEnter()},14000)}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
  c.on('open',()=>{if(window.WASIN)showGate(...dropMsg())});
  c.on('error',()=>{})}
 async function initS(){
@@ -1707,7 +1707,7 @@ async function initS(){
   if(R.live!==false)return;const nx='';
   window.SCLOSED='👩‍🏫 المعلم لسه مادخلش الحصة'+(nx?' — ميعادها '+nx:'')+'.\nسيب الصفحة مفتوحة، وأول ما يدخل هتدخل غرفة الانتظار لوحدك.';if(!$('#gate').hidden)showGate('🕒',window.SCLOSED)}catch(e){}})();
  const ice=await getIce();
- window.HUBMODE=HUBR(room);const p=peer=new (PC(room))(undefined,PSO({config:ice}));let up=0;
+ window.HUBMODE=HUBR(room);window.HUBROOM=room;const p=peer=new (PC(room))(undefined,PSO({config:ice}));let up=0;try{lgSetup(p)}catch(e){}
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
  p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
@@ -1717,6 +1717,31 @@ async function initS(){
   tCall=c;auBad=0;auBuf=0;auPL=[0,0];
   c.on('stream',s=>{const v=$('#v');{const ha=s.getAudioTracks().length;if(ha!==lastA){lastA=ha;sys(ha?'وصل البث مع الصوت ✓':'وصل البث بدون صوت — ميكروفون المعلم غير مفعّل أو مكتوم')}}v.muted=true;v.srcObject=s;v.play().catch(()=>{});A.srcObject=s;A.play().then(()=>$('#unm').hidden=true).catch(()=>{$('#unm').hidden=false;dg('blk')})})});
 }
+/* ===== 🫂 استراحة الطلاب: المعلم خرج (النت فصل عنده، قفل التطبيق…) ← الطلاب يفضلوا جوه، ويقدروا يكلّموا بعض ويكتبوا في الشات
+   لحد ما يرجع. شغالة بس على خادم إتقان (Cloudflare)، لأن الطلاب بيوصلوا لبعض من غير جهاز المعلم.
+   أول ما المعلم يرجع كل حاجة بترجع زي ما كانت (والصوت يرجع يعدّي على المعلم). ===== */
+const LG={on:0,pub:null,peers:{},t:0};
+function lgMsg(){return['🫂','المعلم خرج لحظة — تقدروا تكلّموا بعض وتكتبوا في الشات لحد ما يرجع.\nخليك مكانك، والحصة هترجع لوحدها أول ما المعلم يرجع']}
+async function lgMe(){const me={t:'lj',n:name,id:peer.id};
+ try{if(micS&&micS.readyState=='live'&&canTalk){if(!LG.pub){const r=await peer.pubTracks([micS]);LG.pub={sid:r.sid,tn:r.names}}micS.enabled=true;me.sid=LG.pub.sid;me.tn=LG.pub.tn}}catch(e){}
+ return me}
+async function lgEnter(){if(!window.HUBMODE||role!='s'||DIRM||LG.on||final||admitted||!peer||!peer.broadcast)return;
+ LG.on=1;showGate(...lgMsg());sys('🫂 المعلم خرج لحظة — تقدروا تكلّموا بعض لحد ما يرجع');
+ const me=await lgMe();if(LG.on)peer.broadcast(me)}
+function lgDrop(k){const p=LG.peers[k];if(!p)return;delete LG.peers[k];try{p.a&&(p.a.srcObject=null,p.a.remove())}catch(e){}if(p.sid)try{peer.unpullStream(p.sid,p.tn)}catch(e){}}
+function lgLeave(){if(!LG.on)return;LG.on=0;try{peer&&peer.broadcast&&peer.broadcast({t:'ll'})}catch(e){}Object.keys(LG.peers).forEach(lgDrop);
+ if(LG.pub){try{peer.unpubTracks([micS])}catch(e){}LG.pub=null;if(micS&&!myCall)micS.enabled=false}}
+async function lgHear(k,p){const o=LG.peers[k]||(LG.peers[k]={n:String(p.n||'').slice(0,40)});o.n=String(p.n||o.n).slice(0,40);
+ if(!p.sid||!Array.isArray(p.tn)||!p.tn.length||(o.sid===p.sid&&String(o.tn)===String(p.tn)))return;
+ if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}o.sid=p.sid;o.tn=p.tn.slice(0,2);
+ try{const ms=await peer.pullStream(o.sid,o.tn);if(!LG.on||LG.peers[k]!==o)return;if(!o.a){o.a=document.createElement('audio');o.a.autoplay=true;o.a.hidden=true;document.body.append(o.a)}o.a.srcObject=ms;o.a.play().catch(()=>{})}catch(e){}}
+function lgSetup(p){if(!p||!p.on||p._lg)return;p._lg=1;
+ p.on('rb',async(k,d,direct)=>{if(!d||typeof d!='object'||!LG.on)return;
+  if(d.t=='lj'){const isNew=!LG.peers[k];lgHear(k,d);if(isNew&&!direct)p.tell(k,await lgMe());if(isNew)sys('🫂 '+String(d.n||'طالب').slice(0,40)+' معاك في الاستراحة')}
+  else if(d.t=='ll')lgDrop(k);
+  else if(d.t=='lc'&&typeof d.m=='string'&&d.m.trim()){chat.push({n:String(d.n||'طالب').slice(0,40),m:d.m.slice(0,500),ts:Date.now()});render()}})}
+/* الطالب كتب في الشات وهو في الاستراحة: الرسالة بتروح لزمايله على طول */
+function lgChat(m){if(!LG.on||st.lock||!peer||!peer.broadcast)return false;peer.broadcast({t:'lc',n:name,m});chat.push({n:name,m,ts:Date.now()});render();return true}
 let vOk=0,vNonce='';
 /* معرّف ثابت للطالب في هذه الغرفة — يسمح للمعلم بإرجاعه تلقائياً بعد انقطاع النت بدون غرفة الانتظار */
 function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)||''}catch(e){}if(!/^[A-Za-z0-9_-]{16,32}$/.test(v)){v=rnd();try{localStorage.setItem(k,v)}catch(e){}}return v}
@@ -1733,9 +1758,9 @@ function sData(d){
  if(!vOk){if(d.t=='proof')vProof(d);return}
  if(d.t=='recon'){$('#recb').hidden=!d.on;return}if(d.t=='hb'){window.T_HB=Date.now();return}
  if(d.t=='wait'){showGate('⏳','أنت في غرفة الانتظار — سيسمح لك المعلم بالدخول قريباً')}
- else if(d.t=='replaced'){final=1;try{dropCall()}catch(e){}stopMic();showGate('📱','الحصة اتفتحت عندك في تبويب أو جهاز تاني — كمّل من هناك. لو عايز تكمّل هنا اضغط «رجوع».',1);try{$('#gb').onclick=()=>location.reload()}catch(e){}}
- else if(d.t=='denied'||d.t=='kicked'){final=1;lastDel();stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
- else if(d.t=='init'){admitted=1;window.WASIN=0;rcBar();if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
+ else if(d.t=='replaced'){final=1;lgLeave();try{dropCall()}catch(e){}stopMic();showGate('📱','الحصة اتفتحت عندك في تبويب أو جهاز تاني — كمّل من هناك. لو عايز تكمّل هنا اضغط «رجوع».',1);try{$('#gb').onclick=()=>location.reload()}catch(e){}}
+ else if(d.t=='denied'||d.t=='kicked'){final=1;lgLeave();lastDel();stopMic();showGate('⛔',d.t=='kicked'?'أخرجك المعلم من الحصة':(d.m||'رفض المعلم دخولك'),1)}
+ else if(d.t=='init'){admitted=1;window.WASIN=0;clearTimeout(LG.t);lgLeave();rcBar();if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){if(d.img&&!(typeof d.img=='string'&&CIMG.test(d.img)))delete d.img;chat.push(d)}
  else if(d.t=='roster'){roster=d}
  else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
@@ -1802,7 +1827,7 @@ function imgView(el){const o=document.createElement('div');o.style.cssText='posi
 function send(){
  const i=$('#ci'),m=i.value.trim();if(!m)return;
  if(role=='t'){const o={n:name+' (المعلم)',m,ts:Date.now()};chat.push(o);bc({t:'chat',...o});render()}
- else{if(st.lock||!conn||!conn.open)return;conn.send({t:'chat',n:name,m})}
+ else{if(!(conn&&conn.open)&&lgChat(m)){i.value='';return}if(st.lock||!conn||!conn.open)return;conn.send({t:'chat',n:name,m})}
  i.value='';
 }
 $('#ci').onkeydown=e=>{if(e.key=='Enter')send()};
