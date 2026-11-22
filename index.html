@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.11-b';
+const VER='2026.12.12-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3467,7 +3467,10 @@ async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=
 /* ---- الرفع (عبر سكريبت Google) ---- */
 /* أخطاء نت (مهلة/انقطاع/السيرفر مشغول) ← إعادة المحاولة، مش تحويل لسكربت تاني */
 const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|NetworkError)/i.test(String(e&&e.message||e));
-function recHold(){try{return role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)}catch(e){return false}}
+/* الرفع شغال مع الحصة في نفس الوقت (المعلم بيرفع نسخة واحدة بس لـ Cloudflare فالنت بيكفي).
+   بيقف مؤقتًا بس لو نت المعلم اتخنق فعلًا (البرنامج نزّل الجودة) أو الحصة على الطريقة القديمة — ويكمّل لوحده لما النت يرتاح */
+function recHold(){try{if(!(role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)))return false;
+ return !window.HUBMODE||(window.BWF||1)<1||!!(window.LITE&&window.LITE())}catch(e){return false}}
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -3480,7 +3483,8 @@ function recUp(meta,onSt){
   /* 🎙 الحصة شغالة والمعلم معاه طلاب: رفع التسجيل بيستنى لحد ما الحصة تخلص.
      كان بيرفع أجزاء كبيرة وسط الحصة، والجزء الواحد بياخد نت المعلم كله لثواني ← الصوت بيتقطع عند الكل.
      الأجزاء محفوظة على الجهاز، وبتترفع لوحدها بعد «إنهاء الحصة» (أو لو المعلم فتح الموقع تاني) */
-  if(recHold()){clearTimeout(U.ht);U.ht=setTimeout(U.pump,15000);if(!U.held){U.held=1;try{hEv('🎙 رفع التسجيل هيبدأ بعد الحصة عشان مايتقلش على صوت الحصة')}catch(e){}}return}
+  if(recHold()){clearTimeout(U.ht);U.ht=setTimeout(U.pump,15000);if(!U.held){U.held=1;try{hEv(window.HUBMODE?'🎙 نت المعلم اتخنق — رفع التسجيل وقف مؤقتًا لحد ما النت يرتاح':'🎙 رفع التسجيل هيبدأ بعد الحصة عشان مايتقلش على صوت الحصة')}catch(e){}}return}
+  if(U.held){U.held=0;try{hEv('🎙 رفع التسجيل كمّل')}catch(e){}}
   U.busy=1;
   try{
    /* الرفع بيروح لسكربت السجل الأول (بيعمل فولدر لكل حصة)، ولو مارضيش بيرجع لسكربت التسجيل القديم */
