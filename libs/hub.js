@@ -7,11 +7,15 @@
 (function () {
   const HUB = 'https://itqan-hub.itqanacademy-alex.workers.dev';
   const WS = HUB.replace(/^http/, 'ws') + '/ws';
+  /* 🔀 مفتاح النقل: HUB_ALL = كل الغرف على خادم إتقان. للرجوع السريع للطريقة القديمة: HUB_ALL = false
+     (وغرف معيّنة ممكن تتحط في HUB_OFF عشان تفضل على القديم، أو في HUB_ROOMS عشان تبقى على الجديد) */
+  const HUB_ALL = true;
+  const HUB_OFF = [];
   const HUB_ROOMS = ['5wpt'];
   const ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 
   const rid = () => { const a = crypto.getRandomValues(new Uint8Array(12)); return Array.from(a, x => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join(''); };
-  window.HUBR = r => HUB_ROOMS.includes(String(r || '').toLowerCase());
+  window.HUBR = r => { const c = String(r || '').toLowerCase(); if (!c || HUB_OFF.includes(c)) return false; return HUB_ALL || HUB_ROOMS.includes(c); };
   /* الكلاس المناسب للغرفة: محوّل إتقان أو PeerJS العادي */
   window.PC = r => (window.HUBR(r) ? HubPeer : window.Peer);
   const log = (...a) => { try { console.log('[hub]', ...a); } catch (e) {} };
