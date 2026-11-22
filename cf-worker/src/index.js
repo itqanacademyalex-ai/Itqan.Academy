@@ -21,7 +21,7 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-    if (url.pathname === '/health') return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), turn: !!(env.CF_TURN_KEY_ID && env.CF_TURN_KEY_TOKEN), v: 2 }, 200, origin);
+    if (url.pathname === '/health') return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), turn: !!(env.CF_TURN_KEY_ID && env.CF_TURN_KEY_TOKEN), rb: 1, v: 3 }, 200, origin);
 
     if (url.pathname === '/ws') {
       if (req.headers.get('Upgrade') !== 'websocket') return json({ ok: false, e: 'ws' }, 426, origin);
