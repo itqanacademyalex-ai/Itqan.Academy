@@ -223,12 +223,13 @@
       super(); if (id && typeof id === 'object') { opts = id; id = null; }
       this.id = id || rid() + rid(); this._tok = rid() + rid(); this.options = opts || {};
       this.open = false; this.disconnected = false; this.destroyed = false; this.conns = {}; this.calls = {}; this._q = [];
+      this.room = String((this.options && this.options.room) || window.HUBROOM || '').toLowerCase();
       setTimeout(() => this._connect(), 0);
     }
     sfu() { return this._sfu || (this._sfu = new SFU(this)); }
     _connect() {
       if (this.destroyed) return;
-      let w; try { w = this.ws = new WebSocket(WS + '?id=' + encodeURIComponent(this.id) + '&token=' + this._tok); } catch (e) { setTimeout(() => this._connect(), 3000); return; }
+      let w; try { w = this.ws = new WebSocket(WS + '?id=' + encodeURIComponent(this.id) + '&token=' + this._tok + (this.room ? '&room=' + encodeURIComponent(this.room) : '')); } catch (e) { setTimeout(() => this._connect(), 3000); return; }
       const t0 = setTimeout(() => { if (this.ws === w && w.readyState !== 1) { try { w.close(); } catch (e) {} } }, 12000);
       w.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } this._msg(m); };
       w.onclose = () => {
@@ -273,6 +274,8 @@
         }
         case 'CALLUP': { const c = this.calls[cid]; if (c && c.peer === m.src) c._re(p.sid, p.tn || []); break; }
         case 'CALLX': { const c = this.calls[cid]; if (c && c.peer === m.src) c._closed(); break; }
+        /* رسايل الغرفة (للكل أو لجهاز واحد) — بتستخدمها «استراحة الطلاب» */
+        case 'RB': case 'RD': this.emit('rb', m.src, m.payload, m.type === 'RD'); break;
       }
     }
     _raw(s) { if (this.ws && this.ws.readyState === 1 && this.open) this.ws.send(s); else if (this._q.length < 800) this._q.push(s); }
@@ -281,6 +284,17 @@
       if (s.length > 1000000) { log('message too big', s.length); return; }
       this._raw(s);
     }
+    broadcast(obj) { if (this.room) this._raw(JSON.stringify({ type: 'RB', payload: obj })); }
+    tell(dst, obj) { this._send(dst, 'RD', obj); }
+    /* صوت مباشر بين الطلاب (من غير المعلم): رفع تراك، وسحب تراكات جهاز تاني كـ MediaStream */
+    async pubTracks(tracks) { return this.sfu().publish(tracks); }
+    unpubTracks(tracks) { return this._sfu && this._sfu.unpublish(tracks); }
+    async pullStream(sid, names) {
+      const sfu = this.sfu(), ps = await sfu.pullTracks(sid, names), ms = new MediaStream();
+      (await Promise.all(ps.map(p => sfu.track(p.mid)))).filter(Boolean).forEach(t => ms.addTrack(t));
+      return ms;
+    }
+    unpullStream(sid, names) { return this._sfu && this._sfu.unpull(sid, names); }
     connect(dst, o) { const c = new HubConn(this, dst, rid(), o && o.metadata); this.conns[c.cid] = c; this._send(dst, 'DC', { cid: c.cid, md: c.metadata }); return c; }
     call(dst, stream, o) { const c = new HubCall(this, dst, rid(), o && o.metadata); this.calls[c.cid] = c; c._startOut(stream); return c; }
     reconnect() { if (this.destroyed) throw new Error('destroyed'); if (!this.disconnected || this.ws) return; this._manual = 0; this.disconnected = false; this._connect(); }
