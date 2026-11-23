@@ -45,7 +45,7 @@
     try {
       const m = /a=rtpmap:(\d+) opus\/48000[^\r\n]*/i.exec(sdp); if (!m) return sdp;
       const pt = m[1], re = new RegExp('a=fmtp:' + pt + ' ([^\\r\\n]*)');
-      const add = p => { const has = k => new RegExp('(^|;)\\s*' + k + '=').test(p); if (!has('useinbandfec')) p += ';useinbandfec=1'; if (!has('usedtx')) p += ';usedtx=0'; if (!has('maxaveragebitrate')) p += ';maxaveragebitrate=48000'; return p.replace(/^;/, ''); };
+      const add = p => { const has = k => new RegExp('(^|;)\\s*' + k + '=').test(p); if (!has('useinbandfec')) p += ';useinbandfec=1'; if (!has('usedtx')) p += ';usedtx=0'; return p.replace(/^;/, ''); };
       return re.test(sdp) ? sdp.replace(re, (x, p) => 'a=fmtp:' + pt + ' ' + add(p)) : sdp.replace(m[0], m[0] + '\r\na=fmtp:' + pt + ' ' + add(''));
     } catch (e) { return sdp; }
   }
@@ -173,7 +173,24 @@
   class HubConn extends Em {
     constructor(hp, peer, cid, md) { super(); this.hp = hp; this.peer = peer; this.cid = cid; this.connectionId = cid; this.metadata = md; this.open = false; this.reliable = true; this.label = cid; this.type = 'data'; }
     _opened() { if (this.open || this._x) return; this.open = true; setTimeout(() => this.emit('open'), 0); }
-    send(d) { if (this._x) return; this.hp._send(this.peer, 'D', { cid: this.cid, d }); }
+    send(d) {
+      if (this._x) return;
+      let s; try { s = JSON.stringify(d); } catch (e) { return; }
+      if (s === undefined) return;
+      /* رسالة كبيرة (صفحة PDF عالية الدقة، أو السبورة كلها لطالب داخل متأخر): الخادم مابيقبلش أكتر من 1 ميجا ← بنقسّمها أجزاء والطرف التاني بيجمّعها */
+      if (s.length <= 450000) { this.hp._send(this.peer, 'D', { cid: this.cid, d }); return; }
+      const id = rid(), n = Math.ceil(s.length / 450000);
+      for (let i = 0; i < n; i++) this.hp._send(this.peer, 'DP', { cid: this.cid, id, i, n, s: s.slice(i * 450000, (i + 1) * 450000) });
+    }
+    _part(p) {
+      if (!p.id || !(p.n > 0) || p.n > 200 || !(p.i >= 0) || p.i >= p.n || typeof p.s !== 'string') return;
+      const B = this._parts || (this._parts = {}), b = B[p.id] || (B[p.id] = { n: p.n, got: 0, a: [], t: Date.now() });
+      if (b.a[p.i] === undefined) { b.a[p.i] = p.s; b.got++; }
+      Object.keys(B).forEach(k => { if (Date.now() - B[k].t > 120000) delete B[k]; });
+      if (b.got < b.n) return; delete B[p.id];
+      let d; try { d = JSON.parse(b.a.join('')); } catch (e) { return; }
+      setTimeout(() => this.emit('data', d), 0);
+    }
     close() { if (this._x) return; this.hp._send(this.peer, 'DCX', { cid: this.cid }); this._closed(); }
     _closed() { if (this._x) return; this._x = 1; this.open = false; delete this.hp.conns[this.cid]; this.emit('close'); }
   }
@@ -295,6 +312,7 @@
         }
         case 'DCOK': { const c = this.conns[cid]; if (c) c._opened(); break; }
         case 'D': { const c = this.conns[cid]; if (c && c.peer === m.src) { if (!c.open) c._opened(); setTimeout(() => c.emit('data', p.d), 0); } else this._send(m.src, 'DCX', { cid }); break; }
+        case 'DP': { const c = this.conns[cid]; if (c && c.peer === m.src) { if (!c.open) c._opened(); c._part(p); } break; }
         case 'DCX': { const c = this.conns[cid]; if (c && c.peer === m.src) c._closed(); break; }
         case 'CALL': {
           if (!cid || this.calls[cid]) return;
