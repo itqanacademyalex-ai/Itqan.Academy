@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.20-a';
+const VER='2026.12.21-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1368,7 +1368,7 @@ function forceEnd(){lastDel();Object.values(conns).forEach(o=>{try{o.c.send({t:'
 async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
- window.HUBMODE=HUBR(room);window.HUBROOM=room;window.DAMODE=window.HUBMODE&&(DA_ROOMS.includes(String(room).toLowerCase())||new URLSearchParams(location.search).get('da')==='1');const p=peer=new (PC(room))('itqan-'+room,PSO({config:ice}));let opened=0;
+ window.HUBMODE=HUBR(room);window.HUBROOM=room;window.DAMODE=window.HUBMODE&&new URLSearchParams(location.search).get('da')!=='0';const p=peer=new (PC(room))('itqan-'+room,PSO({config:ice}));let opened=0;
  p.on('open',()=>{if(!opened){opened=1;tTries=0;sys('✓ الغرفة جاهزة ويمكن للطلاب الدخول');try{p.warm&&p.warm()}catch(e){}}});
  p.on('disconnected',()=>{if(p.destroyed)return;try{H.t.peer++;hEv('🌐 خادم الغرف فصل عند المعلم — اتوصل تاني لوحده')}catch(e){}sys('⚠️ انقطع الاتصال بخادم الغرف — جارٍ إعادة الاتصال تلقائياً');const re=()=>{if(p.destroyed||!p.disconnected)return;try{p.reconnect()}catch(e){}setTimeout(re,3000)};setTimeout(re,1000)});
  p.on('error',e=>{
@@ -1518,7 +1518,7 @@ setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)
 /* الآيفون بيوقف الصوت لو جت مكالمة أو رسالة صوتية أو اتغيّرت السماعة: نشغّله تاني على طول، ولو اترفض يظهر زرار تشغيل الصوت */
 A.addEventListener('pause',()=>{if(role=='s'&&A.srcObject)setTimeout(()=>{if(A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},300)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&role=='s'&&A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)});
-function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream([window.DAMODE?mxBus('#pub'):mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
+function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream([window.DAMODE?(micT&&micT.readyState=='live'?micT:null):mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
 function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=new Audio();a.srcObject=s;a.play().catch(()=>{if(role=='t')$('#unm').hidden=false});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
 function dropMic(o){if(o.mt){mxSrcDel(o.c.peer);o.mt=null}if(o.au){o.au.srcObject=null;o.au=null}}
@@ -1587,7 +1587,7 @@ async function tGrabMic0(){
  try{
   window._gumT=Date.now();const t=(await navigator.mediaDevices.getUserMedia(MC)).getAudioTracks()[0];
   t.onended=()=>{if(micT!==t)return;if(t.enabled)window.micWant=1;window.MERR='ended';stream.removeTrack(t);mxSrcDel('T');micT=null;st.mic=0;bst();ui();sys('توقف ميكروفون المعلم — اضغط 🎤 لإعادة تشغيله')};
-  micT=t;t.addEventListener('mute',()=>{if(!document.hidden)window.auInt=1});stream.addTrack(t);mxSrc('T',t);meter(t);st.mic=1;$('#mg').hidden=true;window.MERR='';mbarUpd();if(Object.keys(conns).length){bst();ui()}else refresh();return true
+  const oldMic=micT;micT=t;try{daMicSwap(oldMic,t)}catch(e){}t.addEventListener('mute',()=>{if(!document.hidden)window.auInt=1});stream.addTrack(t);mxSrc('T',t);meter(t);st.mic=1;$('#mg').hidden=true;window.MERR='';mbarUpd();if(Object.keys(conns).length){bst();ui()}else refresh();return true
  }catch(e){st.mic=0;micErr(e,0,1);ui();return false}
 }
 async function tCam(){
@@ -1736,16 +1736,24 @@ async function initS(){
    أول ما المعلم يرجع كل حاجة بترجع زي ما كانت (والصوت يرجع يعدّي على المعلم). ===== */
 /* ===== 🔊 الصوت المباشر (تجربة على غرف معيّنة): المعلم بيرفع صوته مرة واحدة للكل، والطلاب بيسمعوا بعض من Cloudflare مباشرة
    (من غير ما صوتهم يلف على جهاز المعلم ونته). المعلم بيبعت لكل الطلاب قايمة المايكات المفتوحة، وكل طالب بيسحب اللي فيها ماعدا مايكه هو ===== */
-const DA_ROOMS=['5wpt'];
-setInterval(()=>{if(role!='t'||!window.DAMODE||!peer)return;try{
+function daMicSwap(oldT,t){if(role!='t'||!window.DAMODE)return;Object.values(conns).forEach(o=>{if(!o.adm||!o.call)return;let done=0;
+  try{o.call.peerConnection.getSenders().forEach(se=>{if(se.track&&se.track.kind=='audio'&&(se.track===oldT||se.track.readyState!='live')){se.replaceTrack(t).catch(()=>{});done=1}})}catch(e){}
+  if(!done&&!(o.call.localStream&&o.call.localStream.getAudioTracks().some(a=>a===t)))callOne(o)})}
+/* صوت الشاشة/الفيديو اللي المعلم بيشغّله: تراك واحد مشترك بيترفع مرة واحدة وبيتسحب زي مايك أي حد */
+let FXP=null;async function daFx(){if(!peer||!peer.pubTracks)return null;const t=mxBus('#pub');if(!t)return null;
+ const S=peer._sfu;if(FXP&&FXP.t===t&&S&&S.sid===FXP.sid&&S.pub&&S.pub.has(t.id))return FXP;
+ if(FXP&&FXP.busy)return null;FXP={busy:1};try{const r=await peer.pubTracks([t]);FXP={t,sid:r.sid,tn:r.names}}catch(e){FXP=null}return FXP}
+setInterval(async()=>{if(role!='t'||!window.DAMODE||!peer)return;try{
  const L=Object.values(conns).filter(o=>o.adm&&!o.dir&&o.can&&o.mc&&!o.mc._x&&o.mc._sid&&Array.isArray(o.mc._tn)).map(o=>({k:o.c.peer,sid:o.mc._sid,tn:o.mc._tn.filter(n=>/^audio-/.test(n))})).filter(x=>x.tn.length);
+ if(stuS&&stuS.call&&!stuS.call._x&&stuS.call._sid&&Array.isArray(stuS.call._tn)){const tn=stuS.call._tn.filter(n=>/^audio-/.test(n));if(tn.length)L.push({k:'SS:'+stuS.k,sid:stuS.call._sid,tn})}
+ const fx=Object.keys(conns).length?await daFx():null;if(fx&&fx.sid)L.push({k:'#fx',sid:fx.sid,tn:fx.tn});
  const sig=JSON.stringify(L),now=Date.now();if(sig===window.DASIG&&now-(window.DAT||0)<20000)return;window.DASIG=sig;window.DAT=now;
  Object.values(conns).forEach(o=>{if(o.adm&&o.c&&o.c.open)try{o.c.send({t:'dam',L})}catch(e){}})}catch(e){}},2000);
 const DAP={};
 function daDrop(k){const o=DAP[k];if(!o)return;delete DAP[k];if(o.a){o.a.srcObject=null;o.a.remove()}if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}}
 function daClear(){Object.keys(DAP).forEach(daDrop)}
 function daSync(L){if(!peer||!peer.pullStream||!Array.isArray(L))return;const keep={};
- L.slice(0,30).forEach(x=>{if(!x||x.k===peer.id||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
+ L.slice(0,30).forEach(x=>{if(!x||x.k===peer.id||x.k==='SS:'+peer.id||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
   if(DAP[x.k]&&DAP[x.k].key===key)return;daDrop(x.k);const o=DAP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,2)};
   peer.pullStream(o.sid,o.tn).then(ms=>{if(DAP[x.k]!==o){try{peer.unpullStream(o.sid,o.tn)}catch(e){}return}
    o.a=document.createElement('audio');o.a.autoplay=true;o.a.hidden=true;document.body.append(o.a);o.a.srcObject=ms;o.a.play().catch(()=>{$('#unm').hidden=false})}).catch(()=>{if(DAP[x.k]===o)delete DAP[x.k]})});
@@ -4014,19 +4022,19 @@ function mxRebuild(){const old=MX.ac;if(!old)return;
  /* التسجيل بيقرا صوت المحرّك من جديد كل نص ثانية، فبيكمّل في نفس الملف بالصوت الجديد */}
 /* 🎙 محرّك الصوت عند المعلم وقف (آيفون/آيباد بعد إشعار أو مكالمة، أو المتصفح وقفه): صوت المعلم كان بيعدّي عليه، فالطلاب كانوا بيبقوا مش سامعين خالص لحد ما يلمس الشاشة.
    دلوقتي: طول ما المحرّك واقف، صوت المايك نفسه بيتبعت للطلاب مباشرة (من غير خلط)، وأول ما المحرّك يرجع بيرجع الصوت المخلوط زي ما كان */
-setInterval(()=>{try{if(typeof role=='undefined'||role!='t'||!MX.ac||typeof micT=='undefined'||!micT||micT.readyState!='live')return;const down=MX.ac.state!='running';
+setInterval(()=>{try{if(typeof role=='undefined'||role!='t'||window.DAMODE||!MX.ac||typeof micT=='undefined'||!micT||micT.readyState!='live')return;const down=MX.ac.state!='running';
  Object.values(conns).forEach(o=>{const c=o.call;if(!c||!c.peerConnection)return;let ss=[];try{ss=c.peerConnection.getSenders()}catch(e){return}
   ss.forEach(se=>{if(down){if(se.track&&se.track!==micT&&se.track.kind=='audio'&&!se._busT){se._busT=se.track;se.replaceTrack(micT).catch(()=>{se._busT=null})}}
    else if(se._busT){const b=se._busT;se._busT=null;if(b.readyState=='live')se.replaceTrack(b).catch(()=>{})}})});
  if(down&&!window._byp){window._byp=1;try{hEv('🎙 محرّك الصوت عند المعلم وقف — صوت المايك بيتبعت للطلاب مباشرة لحد ما يرجع')}catch(e){}}else if(!down)window._byp=0}catch(e){}},700);
 function mxRecTrack(){try{mxAC();return MX.rec&&MX.rec.stream.getAudioTracks()[0]||null}catch(e){return null}}
 function mxSrc(key,t){const ac=mxAC();if(!ac||!t)return;mxSrcDel(key);let n;try{n=ac.createMediaStreamSource(new MediaStream([t]))}catch(e){return}
- n.connect(MX.rec);Object.keys(MX.bus).forEach(k=>{if(k!==mxOwn(key)&&!(k==='#pub'&&mxStu(key)))try{n.connect(MX.bus[k])}catch(e){}});MX.src[key]={n,t};try{trTap(key,n)}catch(e){}}
+ n.connect(MX.rec);Object.keys(MX.bus).forEach(k=>{if(k!==mxOwn(key)&&!(k==='#pub'&&(mxStu(key)||key==='T')))try{n.connect(MX.bus[k])}catch(e){}});MX.src[key]={n,t};try{trTap(key,n)}catch(e){}}
 function mxOwn(k){return String(k).replace(/^SS:/,'')}
 const mxStu=k=>{try{return!!conns[mxOwn(k)]}catch(e){return false}};
 function mxSrcDel(key){const e=MX.src[key];if(!e)return;try{trUntap(key)}catch(x){}try{e.n.disconnect()}catch(x){}delete MX.src[key]}
 function mxBus(key){const ac=mxAC();if(!ac)return null;let d=MX.bus[key];
- if(!d){d=MX.bus[key]=ac.createMediaStreamDestination();Object.keys(MX.src).forEach(k=>{if(mxOwn(k)!==key&&!(key==='#pub'&&mxStu(k)))try{MX.src[k].n.connect(d)}catch(e){}})}
+ if(!d){d=MX.bus[key]=ac.createMediaStreamDestination();Object.keys(MX.src).forEach(k=>{if(mxOwn(k)!==key&&!(key==='#pub'&&(mxStu(k)||k==='T')))try{MX.src[k].n.connect(d)}catch(e){}})}
  return d.stream.getAudioTracks()[0]||null}
 function mxBusDel(key){const d=MX.bus[key];if(!d)return;Object.keys(MX.src).forEach(k=>{try{MX.src[k].n.disconnect(d)}catch(e){}});delete MX.bus[key]}
 function sacGet(){if(SAC&&SAC.state!='closed')return SAC;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;SAC=new AC();SAC.onstatechange=()=>{if(SAC.state=='suspended'||SAC.state=='interrupted')SAC.resume().catch(()=>{})};return SAC}
