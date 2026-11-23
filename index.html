@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.15-a';
+const VER='2026.12.16-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3487,7 +3487,9 @@ const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|Networ
 /* الرفع شغال مع الحصة في نفس الوقت (المعلم بيرفع نسخة واحدة بس لـ Cloudflare فالنت بيكفي).
    بيقف مؤقتًا بس لو نت المعلم اتخنق فعلًا (البرنامج نزّل الجودة) أو الحصة على الطريقة القديمة — ويكمّل لوحده لما النت يرتاح */
 function recHold(){try{if(!(role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)))return false;
- return !window.HUBMODE||(window.BWF||1)<1||!!(window.LITE&&window.LITE())}catch(e){return false}}
+ if(!window.HUBMODE||(window.BWF||1)<1||(window.LITE&&window.LITE()))window.RECHOLD=LOG.start;
+ /* نت المعلم اتخنق مرة في الحصة دي ← الرفع بيستنى لآخر الحصة (مايرجعش يزاحم الصوت كل ما النت يرتاح شوية) */
+ return window.RECHOLD===LOG.start}catch(e){return false}}
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -4292,7 +4294,7 @@ body.nos #app{grid-template-columns:1fr}body.nos #side{display:none}#sdu{color:#
    ساعات اتصال المعلم بالخادم بيموت بصمت: الطلاب اللي جوه شغالين عادي، بس أي حد جديد (طالب أو المشرف) مايلاقيش الغرفة.
    جهاز المعلم بيعمل «زائر تجريبي» يدق على الغرفة؛ لو ماردّتش مرتين ورا بعض بنعيد ربط الغرفة بالخادم (من غير ما حد من اللي جوه يخرج) */
 (function(){let bad=0,busy=0;
- setInterval(async()=>{if(role!='t'||!peer||peer.destroyed||!peer.open||peer.disconnected||busy||endBusy||!navigator.onLine)return;busy=1;let ok=0,up=0,q=null;
+ setInterval(async()=>{if(role!='t'||window.HUBMODE||!peer||peer.destroyed||!peer.open||peer.disconnected||busy||endBusy||!navigator.onLine)return;busy=1;let ok=0,up=0,q=null;
   try{q=new (PC(room))(undefined,PSO({config:ICE}));q.on('error',()=>{});
    await new Promise(res=>{const t=setTimeout(res,15000);q.on('open',()=>{up=1;let c;try{c=q.connect(peer.id,{reliable:true})}catch(e){return}
     c.on('open',()=>{try{c.send({t:'pk?'})}catch(e){}});c.on('data',d=>{if(d&&d.t=='pk'){ok=1;clearTimeout(t);res()}})})})}catch(e){}
