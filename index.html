@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.18-a';
+const VER='2026.12.19-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);

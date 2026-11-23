@@ -15,7 +15,10 @@
   const ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 
   const rid = () => { const a = crypto.getRandomValues(new Uint8Array(12)); return Array.from(a, x => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join(''); };
-  window.HUBR = r => { const c = String(r || '').toLowerCase(); if (!c || HUB_OFF.includes(c) || window.HUB_OLD) return false; return HUB_ALL || HUB_ROOMS.includes(c); };
+  /* 📊 لو استهلاك Cloudflare الشهر ده قرّب من الحد المجاني، كل الغرف بتشتغل بالطريقة القديمة (مفيش فلوس تتسحب) */
+  try { const c = JSON.parse(sessionStorage.getItem('itqan_hubcap') || 'null'); if (c && Date.now() - c.at < 600000) window.HUB_CAP = c.cap; } catch (e) {}
+  if (window.HUB_CAP === undefined) fetch(HUB + '/health', { cache: 'no-store' }).then(r => r.json()).then(j => { window.HUB_CAP = !!(j && j.cap); window.HUB_USE = j; try { sessionStorage.setItem('itqan_hubcap', JSON.stringify({ cap: window.HUB_CAP, at: Date.now() })); } catch (e) {} }).catch(() => {});
+  window.HUBR = r => { const c = String(r || '').toLowerCase(); if (!c || HUB_OFF.includes(c) || window.HUB_OLD || window.HUB_CAP) return false; return HUB_ALL || HUB_ROOMS.includes(c); };
   /* الكلاس المناسب للغرفة: محوّل إتقان أو PeerJS العادي */
   window.PC = r => (window.HUBR(r) ? HubPeer : window.Peer);
   const log = (...a) => { try { console.log('[hub]', ...a); } catch (e) {} };
@@ -55,7 +58,7 @@
     reset() { try { this.pc && this.pc.close(); } catch (e) {} this.pc = null; this.sid = null; this.pub = new Map(); this.pull = new Map(); this.byMid = {}; this.wait = {}; this.gen = (this.gen || 0) + 1; }
     run(f) { const p = this.q.then(f, f); this.q = p.catch(() => {}); return p; }
     async api(path, method, body) {
-      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 12000);
       try {
         const r = await fetch(HUB + '/sfu' + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: ac.signal });
         const j = await r.json(); if (j.errorCode) throw new Error(j.errorCode + ' ' + (j.errorDescription || '')); return j;
@@ -70,8 +73,10 @@
       pc.oniceconnectionstatechange = () => {
         const s = pc.iceConnectionState; log('ice', s);
         clearTimeout(dt);
-        if (s === 'failed') this.heal(gen);
-        else if (s === 'disconnected') dt = setTimeout(() => { if (pc.iceConnectionState === 'disconnected') this.heal(gen); }, 6000);
+        if (s === 'connected' || s === 'completed') this.rs = 0;
+        /* النت فصل لحظة: الأول بنجرّب «إعادة اتصال خفيفة» (نفس الجلسة، الصوت بيكمّل بعدها على طول)، ولو Cloudflare مارضيش أو ماتصلّحتش ← إعادة بناء كاملة زي الأول */
+        if (s === 'failed') this.restart(gen);
+        else if (s === 'disconnected') dt = setTimeout(() => { if (pc.iceConnectionState === 'disconnected') this.restart(gen); }, 3000);
       };
       /* بنفتح الجلسة بقناة بيانات صغيرة عشان الاتصال بـ Cloudflare يكمل حتى لو الجهاز بيستقبل بس (طالب لسه مافتحش المايك) */
       try { pc.createDataChannel('itqan'); } catch (e) {}
@@ -95,9 +100,13 @@
       await this.pc.setRemoteDescription(new RTCSessionDescription({ type: j.sessionDescription.type, sdp: opusSafe(j.sessionDescription.sdp) }));
     }
     /* رفع: نفس التراك (زي صورة المعلم) بيترفع مرة واحدة بس مهما كان عدد الطلاب */
-    publish(tracks) {
+    /* بنجهّز الجلسة ونستنى الاتصال برّه الطابور — عشان جهاز بطيء الاتصال مايوقفش باقي الطلبات (زمان كان ممكن يعلّق الكل 30 ثانية) */
+    async prep() { await this.run(() => this.init()); await this.ready; }
+    async publish(tracks) {
+      await this.prep(); const gen = this.gen;
       return this.run(async () => {
-        await this.init(); await this.ready; const names = [], add = [];
+        if (gen !== this.gen) await this.init();
+        const names = [], add = [];
         for (const t of tracks) {
           if (!t) continue; let p = this.pub.get(t.id);
           if (p) { p.ref++; names.push(p.name); continue; }
@@ -121,15 +130,16 @@
       if (j.sessionDescription) await this.pc.setRemoteDescription(new RTCSessionDescription(j.sessionDescription));
     }
     /* استقبال: بنسحب تراكات جهاز تاني من Cloudflare */
-    pullTracks(sid, names) {
-      return this.run(async () => {
-        await this.init(); await this.ready; let need = [];
-        for (const n of names) { const k = sid + '|' + n, p = this.pull.get(k); if (p) p.ref++; else need.push(n); }
-        /* المعلم لسه بيبدأ يبعت (أو جلستنا لسه بتجهز): بنعيد على التراكات اللي ماوصلتش بس، لحد ~25 ثانية */
-        for (let i = 0; i < 8 && need.length; i++) {
+    async pullTracks(sid, names) {
+      await this.prep(); const gen = this.gen;
+      let need = await this.run(async () => { const need = []; for (const n of names) { const k = sid + '|' + n, p = this.pull.get(k); if (p) p.ref++; else need.push(n); } return need; });
+      /* المعلم لسه بيبدأ يبعت: كل محاولة طلب لوحدها في الطابور، والاستنى بينهم برّه الطابور (باقي الطلبات تمشي) — لحد ~15 ثانية */
+      for (let i = 0; i < 6 && need.length; i++) {
+        if (gen !== this.gen) throw new Error('reset');
+        need = await this.run(async () => {
           let j;
           try { j = await this.api('/sessions/' + this.sid + '/tracks/new', 'POST', { tracks: need.map(n => ({ location: 'remote', sessionId: sid, trackName: n })) }); }
-          catch (e) { log('pull retry', e.message); await new Promise(r => setTimeout(r, 1000 + 500 * i)); continue; }
+          catch (e) { log('pull retry', e.message); return need; }
           if (j.requiresImmediateRenegotiation && j.sessionDescription) {
             await this.pc.setRemoteDescription(new RTCSessionDescription(j.sessionDescription));
             await this.pc.setLocalDescription(await this.pc.createAnswer());
@@ -137,10 +147,11 @@
           }
           const fail = [];
           (j.tracks || []).forEach(t => { if (!t.errorCode && t.mid != null) this.pull.set(sid + '|' + t.trackName, { mid: t.mid, ref: 1 }); else fail.push(t.trackName); });
-          need = fail; if (need.length) { log('tracks not ready yet', need.length); await new Promise(r => setTimeout(r, 1500 + 500 * i)); }
-        }
-        return names.map(n => this.pull.get(sid + '|' + n)).filter(Boolean);
-      });
+          return fail;
+        });
+        if (need.length) { log('tracks not ready yet', need.length); await new Promise(r => setTimeout(r, 1000 + 500 * i)); }
+      }
+      return names.map(n => this.pull.get(sid + '|' + n)).filter(Boolean);
     }
     track(mid) {
       if (this.byMid[mid]) return Promise.resolve(this.byMid[mid]);
@@ -156,9 +167,22 @@
     }
     sendersFor(tracks) { return tracks.map(t => { const p = t && this.pub.get(t.id); return p && p.tr.sender; }).filter(Boolean); }
     receiversFor(mids) { if (!this.pc) return []; return this.pc.getTransceivers().filter(x => mids.includes(x.mid)).map(x => x.receiver); }
+    restart(gen) {
+      if (gen !== this.gen || this.healing) return;
+      if (this.rs) return this.heal(gen);
+      this.rs = 1; const pc = this.pc; log('ice restart');
+      this.run(async () => {
+        if (gen !== this.gen || !pc || pc.signalingState !== 'stable') throw new Error('busy');
+        pc.restartIce(); await pc.setLocalDescription(await pc.createOffer({ iceRestart: true }));
+        const j = await this.api('/sessions/' + this.sid + '/renegotiate', 'PUT', { sessionDescription: { type: 'offer', sdp: pc.localDescription.sdp } });
+        if (!j || !j.sessionDescription || j.sessionDescription.type !== 'answer') throw new Error('no answer');
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: opusSafe(j.sessionDescription.sdp) }));
+      }).then(() => { setTimeout(() => { const s = pc.iceConnectionState; if (gen === this.gen && s !== 'connected' && s !== 'completed') this.heal(gen); }, 8000); })
+        .catch(e => { log('ice restart failed', e.message); this.heal(gen); });
+    }
     /* الاتصال بـ Cloudflare وقع (الشبكة اتغيّرت مثلًا): جلسة جديدة، ونرفع ونسحب كل حاجة تاني، والمكالمات تكمّل من غير ما تتقفل */
     heal(gen) {
-      if (gen !== this.gen || this.healing) return; this.healing = 1; log('heal');
+      if (gen !== this.gen || this.healing) return; this.healing = 1; this.rs = 0; log('heal');
       const outs = Object.values(this.hp.calls).filter(c => c._out && c.open), ins = Object.values(this.hp.calls).filter(c => !c._out && c._sid && c.open);
       this.reset();
       (async () => {
@@ -232,7 +256,7 @@
       this._out = 1; this.localStream = stream;
       this._publish(false).catch(e => { log('publish failed', e); this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); this._closed(true); });
     }
-    answer() { if (this._out || this._answered) return; this._answered = 1; this._t0 = Date.now(); this.open = true; this._pull().catch(e => { log('pull failed', e); this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); }); }
+    answer() { if (this._out || this._answered) return; this._answered = 1; this._t0 = Date.now(); this.open = true; this._pull().catch(e => { log('pull failed', e); if (e && e.message === 'reset') return; /* الجلسة اتعادت والسحب بيتعمل من جديد لوحده */ this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); }); }
     async _pull() {
       const sfu = this.hp.sfu(), sid = this._sid, tn = this._tn.slice();
       const ps = await sfu.pullTracks(sid, tn);
@@ -269,7 +293,18 @@
       this.room = String((this.options && this.options.room) || window.HUBROOM || '').toLowerCase();
       setTimeout(() => this._connect(), 0);
     }
-    sfu() { return this._sfu || (this._sfu = new SFU(this)); }
+    sfu() {
+      if (!this._sfu) { this._sfu = new SFU(this); this._ut = setInterval(() => this._use(), 60000); }
+      return this._sfu;
+    }
+    async _use() {
+      try {
+        const pc = this._sfu && this._sfu.pc; if (!pc) return; let b = 0;
+        (await pc.getStats()).forEach(x => { if (x.type === 'transport' && x.bytesReceived) b += x.bytesReceived; });
+        const key = this._sfu.sid || '', last = this._ub && this._ub.k === key ? this._ub.b : 0, d = Math.max(0, b - last);
+        this._ub = { k: key, b }; if (d > 0) this._raw(JSON.stringify({ type: 'USE', b: d }));
+      } catch (e) {}
+    }
     /* تجهيز الاتصال بـ Cloudflare من بدري (قبل أول مكالمة) — الصوت بيوصل أسرع لما الطالب أو المشرف يدخل */
     warm() { const f = this.sfu(); f.run(() => f.init()).catch(() => {}); }
     _connect() {
@@ -350,6 +385,7 @@
       Object.values(this.conns).forEach(c => c.close()); Object.values(this.calls).forEach(c => c.close());
       this.destroyed = true; this._manual = 1; this.open = false; this.disconnected = true; clearInterval(this._hb);
       const w = this.ws; this.ws = null; setTimeout(() => { try { w && w.close(); } catch (e) {} }, 300);
+      clearInterval(this._ut); try { this._use(); } catch (e) {}
       try { this._sfu && this._sfu.close(); } catch (e) {}
       this.emit('close');
     }
