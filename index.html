@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.19-a';
+const VER='2026.12.20-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -2461,6 +2461,7 @@ function hPc(o,stats,dir,pc){if(window.HUBMODE)return hSelf(stats);try{const S=h
   if(x.type=='inbound-rtp'&&x.kind=='audio'&&x.packetsReceived>50){const f=(x.packetsLost||0)/((x.packetsLost||0)+x.packetsReceived);if(f>S.loss)S.loss=f}})}catch(e){}}
 function hDg(o,d){const S=hS(o.name),k=String(d.k||'');
  if(k=='q'){try{const q=JSON.parse(String(d.v||'{}'));if(+q.l>S.loss)S.loss=Math.min(1,+q.l);if(+q.r>S.rtt)S.rtt=+q.r;if(/^(direct|relay-(udp|tcp|tls))$/.test(q.c||''))S.relay=q.c=='direct'?'direct':'Cloudflare '+q.c.slice(6)}catch(e){}return}
+ if(k=='mic'&&d.v==='gate'){S.gate=1;return}
  if(k=='mic'){S.mic=String(d.v||'').slice(0,40);hEv('❌ مايك '+o.name+' مش شغّال ('+S.mic+')')}
  else if(k=='reset'){S.reset++;hEv('📞 '+o.name+' رجع من مكالمة — الصوت اتظبط تاني')}
  else if(k=='heal'){S.heal++;hEv('🎤 مايك '+o.name+' كان مكتوم من الجهاز — اتفتح تاني')}
@@ -3538,7 +3539,11 @@ function recUp(meta,onSt){
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
     catch(e){let r=-1,sd=null;try{sd=await api({a:'status',s:meta.sid});r=sd.r}catch(x){}
      /* الجزء وصل فعلًا والرد بس اللي ضاع: نكمّل — ولو الملف كله خلص (آخر جزء) نعتبره اترفع */
-     if(sd&&sd.done)j={ok:1,done:1,id:sd.id||''};else if(r===st+sz&&!c.last)j={ok:1,done:0};else throw e}
+     if(sd&&sd.done)j={ok:1,done:1,id:sd.id||''};else if(r===st+sz&&!c.last)j={ok:1,done:0};
+     /* Drive عنده جزء من القطعة دي (الصفحة اتقفلت أو اتعملها تحديث في نص الرفع): نكمّل من عند اللي وصل بالظبط */
+     else if(r>st&&r<st+sz){c.blob=c.blob.slice(r-st,sz,meta.mime);meta.off=r;await sv();try{hEv('🔧 رفع «'+meta.name+'» اتظبط على اللي وصل Drive فعلًا')}catch(x){}continue}
+     else if(r>st+sz&&!c.last){meta.off=st+sz;U.q.shift();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});continue}
+     else throw e}
     meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     meta.n=c.idx+1;await sv();onSt&&onSt()}
@@ -3547,7 +3552,7 @@ function recUp(meta,onSt){
    /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
    /* رفع قديم مش هيكمل أبدًا: جلسة Drive انتهت (بتعيش أسبوع) أو الأجزاء مش متطابقة مع اللي على Drive — بيتلغى بدل ما يفضل يعيد كل حصة ويستهلك النت */
    if((/^session/.test(U.err)&&U.fails>=3)||(/^chunk (400|404)/.test(U.err)&&U.fails>=4)){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
-   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
+   if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)&&!/^chunk 4/.test(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
 /* ---- المحرك: يرسم الفيديو على canvas ويدمج الأصوات ويسجل ---- */
@@ -4007,6 +4012,13 @@ function mxRebuild(){const old=MX.ac;if(!old)return;
  const pcs=[];Object.values(conns).forEach(o=>{o.call&&pcs.push(o.call.peerConnection)});Object.values(cohosts).forEach(c=>{c._mc&&pcs.push(c._mc.peerConnection)});
  pcs.forEach(pc=>{try{pc&&pc.getSenders().forEach(se=>{const n=se.track&&map.get(se.track);if(n)se.replaceTrack(n).catch(()=>{})})}catch(e){}});
  /* التسجيل بيقرا صوت المحرّك من جديد كل نص ثانية، فبيكمّل في نفس الملف بالصوت الجديد */}
+/* 🎙 محرّك الصوت عند المعلم وقف (آيفون/آيباد بعد إشعار أو مكالمة، أو المتصفح وقفه): صوت المعلم كان بيعدّي عليه، فالطلاب كانوا بيبقوا مش سامعين خالص لحد ما يلمس الشاشة.
+   دلوقتي: طول ما المحرّك واقف، صوت المايك نفسه بيتبعت للطلاب مباشرة (من غير خلط)، وأول ما المحرّك يرجع بيرجع الصوت المخلوط زي ما كان */
+setInterval(()=>{try{if(typeof role=='undefined'||role!='t'||!MX.ac||typeof micT=='undefined'||!micT||micT.readyState!='live')return;const down=MX.ac.state!='running';
+ Object.values(conns).forEach(o=>{const c=o.call;if(!c||!c.peerConnection)return;let ss=[];try{ss=c.peerConnection.getSenders()}catch(e){return}
+  ss.forEach(se=>{if(down){if(se.track&&se.track!==micT&&se.track.kind=='audio'&&!se._busT){se._busT=se.track;se.replaceTrack(micT).catch(()=>{se._busT=null})}}
+   else if(se._busT){const b=se._busT;se._busT=null;if(b.readyState=='live')se.replaceTrack(b).catch(()=>{})}})});
+ if(down&&!window._byp){window._byp=1;try{hEv('🎙 محرّك الصوت عند المعلم وقف — صوت المايك بيتبعت للطلاب مباشرة لحد ما يرجع')}catch(e){}}else if(!down)window._byp=0}catch(e){}},700);
 function mxRecTrack(){try{mxAC();return MX.rec&&MX.rec.stream.getAudioTracks()[0]||null}catch(e){return null}}
 function mxSrc(key,t){const ac=mxAC();if(!ac||!t)return;mxSrcDel(key);let n;try{n=ac.createMediaStreamSource(new MediaStream([t]))}catch(e){return}
  n.connect(MX.rec);Object.keys(MX.bus).forEach(k=>{if(k!==mxOwn(key)&&!(k==='#pub'&&mxStu(key)))try{n.connect(MX.bus[k])}catch(e){}});MX.src[key]={n,t};try{trTap(key,n)}catch(e){}}
