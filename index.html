@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.16-a';
+const VER='2026.12.17-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1431,7 +1431,8 @@ async function tData(c,d){
  const o=conns[c.peer];if(!o||!o.adm)return;
  if(d.t=='chat'&&o.dir){pmGot(c.peer,{m:d.m,ts:Date.now()});return}
  if(d.t=='chat'){if(st.lock)return;const m={n:o.name,m:String(d.m||'').slice(0,500),ts:Date.now()};if(typeof d.img=='string'&&d.img.length<700000&&CIMG.test(d.img))m.img=d.img;if(!m.m&&!m.img)return;chat.push(m);bc({t:'chat',...m});render()}
- else if(d.t=='dc'){dirRun(o,d)}else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;o.me=typeof d.e=='string'?d.e.slice(0,20):'';render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
+ else if(d.t=='dc'){dirRun(o,d)}else if(d.t=='ws'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsStroke(o,d.s,c.peer)}else if(d.t=='wd'){if(st.sw&&o.adm)wsDel(c.peer,d.id)}else if(d.t=='wp'){if(st.sw&&o.adm&&(!st.swp||st.swp===c.peer))wsPoint(c.peer,o,d)}else if(d.t=='ms'){o.mic=d.m?1:0;o.cam=d.c?1:0;o.me=typeof d.e=='string'?d.e.slice(0,20):'';render()}else if(d.t=='pm'&&typeof d.m=='string'){pmGot(c.peer,d)}else if(d.t=='pma'){pmAck(pmT[c.peer],d.ts)}else if(d.t=='dg'){hDg(o,d)}else if(d.t=='recall'&&tUpBad(o)){}
+ else if(d.t=='recall'){if(o.adm){hS(o.name).recall++;hEv('🔊 صوت المعلم وقف عند '+o.name+' — اتصل بيه تاني لوحده')}if(o.adm&&Date.now()-(o.rcT||0)>8000){o.rcT=Date.now();callOne(o);if(camT)callCam(o)}}else if(d.t=='hand'){d.on?hands.add(c.peer):hands.delete(c.peer);roster2()}
  else if(d.t=='tr'&&!TR.on&&typeof d.x=='string'&&d.x.length<600){LOG.tr.push({ts:Date.now(),t:d.x,n:o.name});if(LOG.tr.length>6000)LOG.tr.shift()}
  else if(d.t=='vote'&&poll){poll.v[c.peer]=d.v}
  else if(d.t=='pbg?'&&o.adm&&WPG){const bg=WPG[pi]&&WPG[pi].bg;if(bg){o.pgs&&o.pgs.delete(pgId(bg));pbgTo(o,bg)}}
@@ -1722,8 +1723,7 @@ async function initS(){
  const ice=await getIce();
  window.HUBMODE=HUBR(room);window.HUBROOM=room;const p=peer=new (PC(room))(undefined,PSO({config:ice}));let up=0;try{lgSetup(p)}catch(e){}
  const wd=setTimeout(()=>{if(up||peer!==p||final)return;sTries++;try{p.destroy()}catch(e){}if(sTries<4)initS();else wsDiag(ok=>showGate('⚠️',T(ok?'connHelp':'sigHelp'),1))},10000);
- p.on('error',e=>{if(e.type=='peer-unavailable'&&(window.HUBMODE||window.HUB_OLD)&&!window.WASIN&&!admitted&&++hubMiss===3)regChk(room).then(R=>{hubMiss=0;if(R&&R.live===true&&!admitted&&peer===p){/* المعلم فاتح بس مش لاقيينه: غالبًا فاتح من نسخة تانية (أقدم أو أحدث) — نجرّب الطريقة التانية */window.HUB_OLD=window.HUB_OLD?0:1;sys(window.HUB_OLD?'↪️ المعلم فاتح من نسخة أقدم — بنتوصل بالطريقة القديمة':'↪️ بنجرّب نتوصل بخادم إتقان');try{p.destroy()}catch(x){}sTries=0;initS()}}).catch(()=>{hubMiss=0});
-  if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
+ p.on('error',e=>{if(e.type=='peer-unavailable'){showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,4000)}else if(['network','server-error','socket-error','socket-closed'].indexOf(e.type)>-1){showGate('⏳','مشكلة في الوصول لخادم الغرف — جارٍ إعادة المحاولة...');clearTimeout(rt);rt=setTimeout(tryConn,3000)}else sys('خطأ في الاتصال: '+e.type)});
  p.on('disconnected',()=>{if(p.destroyed||final)return;clearTimeout(rt);rt=setTimeout(tryConn,1500)});
  p.on('open',()=>{up=1;clearTimeout(wd);sTries=0;if(!(conn&&conn.open))tryConn();try{p.warm&&p.warm()}catch(e){}});
  peer.on('call',c=>{c.answer();
@@ -2423,7 +2423,13 @@ function hSelf(stats){try{const C=H.t.cf||(H.t.cf={relay:'',rtt:0,loss:0,pb:{}})
   if(lc&&rc){const rl=lc.candidateType=='relay'||rc.candidateType=='relay';const v=rl?'عبر TURN ('+(lc.relayProtocol||lc.protocol||'udp')+')':'مباشر';if(C.relay!==v){if(C.relay)hEv('🔁 اتصال المعلم بـ Cloudflare بقى '+v);C.relay=v}}
   if(pair.currentRoundTripTime>C.rtt)C.rtt=pair.currentRoundTripTime;
   C.pb[pair.id]=Math.max(C.pb[pair.id]||0,(pair.bytesSent||0)+(pair.bytesReceived||0))}
+ stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'&&typeof x.fractionLost=='number'){C.cur=Math.max(x.fractionLost,Date.now()-(C.curT||0)<4000?(C.cur||0):0);C.curT=Date.now()}});
  stats.forEach(x=>{if(x.type=='remote-inbound-rtp'&&x.kind=='audio'&&x.fractionLost>C.loss)C.loss=x.fractionLost})}catch(e){}}
+/* 🔊 الطالب بيقول «مش سامع المعلم»: لو السبب نت المعلم نفسه (صوته بيضيع وهو طالع، أو أكتر من طالب اشتكى مع بعض)
+   الاتصال من جديد مش بيحل حاجة وبيعمل فجوة صوت زيادة — بنسجّلها بس ومانعيدش الاتصال */
+const RCL={};function tUpBad(o){if(!window.HUBMODE)return false;const now=Date.now(),C=H.t.cf||{};RCL[o.c.peer]=now;
+ const up=C.curT&&now-C.curT<15000&&(C.cur||0)>.08,many=Object.entries(RCL).filter(([k,t])=>k!==o.c.peer&&now-t<15000).length>0;
+ if(!(up||many))return false;if(now-(window.RCLog||0)>60000){window.RCLog=now;try{hEv('🔊 الطلاب مش سامعين كويس بسبب نت المعلم ('+(up?'صوت المعلم بيضيع في الرفع '+Math.round(C.cur*100)+'%':'أكتر من طالب في نفس الوقت')+') — مش هنعيد الاتصال على الفاضي')}catch(e){}}return true}
 function hPc(o,stats,dir,pc){if(window.HUBMODE)return hSelf(stats);try{const S=hS(o.name);let pair=null;
  stats.forEach(x=>{if(x.type=='transport'&&x.selectedCandidatePairId)pair=stats.get(x.selectedCandidatePairId)});
  if(!pair)stats.forEach(x=>{if(x.type=='candidate-pair'&&x.nominated&&x.state=='succeeded')pair=x});
