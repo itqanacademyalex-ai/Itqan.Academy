@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.21-a';
+const VER='2026.12.22-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1536,6 +1536,9 @@ async function sCam(){
  watchCall(camCall,'الكاميرا');showCam('me',new MediaStream([t]),'أنت',1);sys('📷 تم تشغيل الكاميرا وإرسالها للمعلم');ui()}
 function stopCam(){if(camS){camS.stop();camS=null}if(camCall){try{camCall.close()}catch(e){}camCall=null}hideCam('me');ui()}
 async function sMic(){window.acUnlock&&acUnlock();
+ /* 🫂 الاستراحة: الطالب يفتح/يقفل المايك بنفسه وزمايله بيسمعوه على طول */
+ if(LG.on&&peer&&peer.broadcast){if(!micS||micS.readyState!='live'){if(!await prepMic(1))return;micS.enabled=false}
+  if(micS.enabled&&LG.pub){micS.enabled=false;ui();return}const me=await lgMe(1);if(LG.on)peer.broadcast(me);ui();return}
  if(!canTalk)return alert('كتم المعلم ميكروفونك');
  if(!micS||micS.readyState!='live'){if(await prepMic(1))sendMic();return}
  if(micS.enabled){micS.enabled=false;ui()}else{const stale=micStale(micS);sendMic();if(stale){window._quietReset=1;audioReset().finally(()=>{window._quietReset=0})}}
@@ -1708,7 +1711,7 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
  c.on('open',()=>{ok=1;cFail=0;clearTimeout(ct);vOk=0;vNonce=rnd();c.send({t:'chal',n:vNonce})});
  c.on('data',sData);
- c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم');clearTimeout(LG.t);LG.t=setTimeout(()=>{if(!admitted&&!final)lgEnter()},14000)}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
+ c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم');clearTimeout(LG.t);LG.t=setTimeout(()=>{if(!admitted&&!final)lgEnter()},1500)}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
  c.on('open',()=>{if(window.WASIN)showGate(...dropMsg())});
  c.on('error',()=>{})}
 async function initS(){
@@ -1759,13 +1762,13 @@ function daSync(L){if(!peer||!peer.pullStream||!Array.isArray(L))return;const ke
    o.a=document.createElement('audio');o.a.autoplay=true;o.a.hidden=true;document.body.append(o.a);o.a.srcObject=ms;o.a.play().catch(()=>{$('#unm').hidden=false})}).catch(()=>{if(DAP[x.k]===o)delete DAP[x.k]})});
  Object.keys(DAP).forEach(k=>{if(!keep[k])daDrop(k)})}
 ['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,()=>{Object.values(DAP).forEach(o=>{if(o.a&&o.a.paused)o.a.play().catch(()=>{})})},{passive:true,capture:true}));
-const LG={on:0,pub:null,peers:{},t:0};
-function lgMsg(){return['🫂','المعلم خرج لحظة — تقدروا تكلّموا بعض وتكتبوا في الشات لحد ما يرجع.\nخليك مكانك، والحصة هترجع لوحدها أول ما المعلم يرجع']}
-async function lgMe(){const me={t:'lj',n:name,id:peer.id};
- try{if(micS&&micS.readyState=='live'&&canTalk){if(!LG.pub){const r=await peer.pubTracks([micS]);LG.pub={sid:r.sid,tn:r.names}}micS.enabled=true;me.sid=LG.pub.sid;me.tn=LG.pub.tn}}catch(e){}
+const LG={on:0,pub:null,peers:{},t:0,was:1};
+function lgMsg(){return['🫂','المعلم خرج لحظة — تقدروا تكلّموا بعض (اضغط 🎤) وتكتبوا في الشات لحد ما يرجع.\nخليك مكانك، والحصة هترجع لوحدها أول ما المعلم يرجع']}
+async function lgMe(on){const me={t:'lj',n:name,id:peer.id};
+ try{if(micS&&micS.readyState=='live'&&(on||LG.was)){if(!LG.pub){const r=await peer.pubTracks([micS]);LG.pub={sid:r.sid,tn:r.names}}micS.enabled=true;me.sid=LG.pub.sid;me.tn=LG.pub.tn}}catch(e){}
  return me}
 async function lgEnter(){try{daClear()}catch(e){}if(!window.HUBMODE||role!='s'||DIRM||LG.on||final||admitted||!peer||!peer.broadcast)return;
- LG.on=1;showGate(...lgMsg());sys('🫂 المعلم خرج لحظة — تقدروا تكلّموا بعض لحد ما يرجع');
+ LG.on=1;LG.was=canTalk?1:0;canTalk=1;try{ui()}catch(e){}showGate(...lgMsg());sys('🫂 المعلم خرج لحظة — تقدروا تكلّموا بعض لحد ما يرجع');
  const me=await lgMe();if(LG.on)peer.broadcast(me)}
 function lgDrop(k){const p=LG.peers[k];if(!p)return;delete LG.peers[k];try{p.a&&(p.a.srcObject=null,p.a.remove())}catch(e){}if(p.sid)try{peer.unpullStream(p.sid,p.tn)}catch(e){}}
 function lgLeave(){if(!LG.on)return;LG.on=0;try{peer&&peer.broadcast&&peer.broadcast({t:'ll'})}catch(e){}Object.keys(LG.peers).forEach(lgDrop);
