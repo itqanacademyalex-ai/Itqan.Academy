@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.25-a';
+const VER='2026.12.26-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1497,7 +1497,7 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   if(b>=0&&b===auLast)bad=1;auLast=b}catch(e){}
  auBad=bad?auBad+bad:0;
  if(auBad>=3){auBad=0;auLast=-1;if(Date.now()-auAsk<[9,20,40,60][Math.min(auTry,3)]*1000)return;auAsk=Date.now();
-  if(++auTry>3){auTry=0;dg('full');sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync();return}
+  if(++auTry>3){auTry=0;dg('full');sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync0();return}
   /* خادم إتقان: المرة التانية بنعمل جلسة جديدة مع Cloudflare (لو اتصال الجهاز نفسه هو اللي واقع) بدل ما نطلب من المعلم يتصل تاني */
   if(auTry==2&&peer&&peer.rebuild){dg('reset');try{peer.rebuild()}catch(e){}return}
   /* خادم إتقان: بنسيب نسختنا القديمة من صوت المعلم (اللي واقفة) عشان المكالمة الجاية تتسحب جديدة فعلًا من Cloudflare */
@@ -1810,6 +1810,7 @@ function sData(d){
  else if(d.t=='init'){admitted=1;window.WASIN=0;clearTimeout(LG.t);lgLeave();daClear();rcBar();if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){if(d.img&&!(typeof d.img=='string'&&CIMG.test(d.img)))delete d.img;chat.push(d)}
  else if(d.t=='roster'){roster=d}
+ else if(d.t=='resync'){sResync(1)}
  else if(d.t=='dam'){daSync(d.L)}
  else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
@@ -1843,8 +1844,18 @@ function hand(){
  if(role=='t'){hands.clear();roster2();return}
  myHand=myHand?0:1;conn&&conn.open&&conn.send({t:'hand',on:myHand});ui();
 }
-function sync(){
- if(role=='t'){if(!peer||peer.destroyed){tTries=0;startTPeer();return}audioReset();refresh();sys('تمت مزامنة الاتصال');return}
+/* 🔄 تحديث صوت الطالب: جلسة جديدة مع Cloudflare + نسخة جديدة من صوت المعلم + المايك يتبعت من جديد — من غير ما يخرج من الحصة.
+   لو اتطلب تاني خلال 40 ثانية (الصوت لسه مش واصل) ← إعادة اتصال كاملة */
+function sResync(byT){if(role!='s'||final)return;const now=Date.now();
+ if(!window.HUBMODE||!admitted||now-(window.rsT||0)<40000){window.rsT=0;sys(byT?'🔄 المعلم طلب تحديث الصوت — إعادة اتصال كاملة':'جارٍ إعادة الاتصال...');sync0();return}
+ window.rsT=now;sys(byT?'🔄 المعلم حدّث الصوت عندك':'🔄 بنحدّث الصوت…');try{dg('reset')}catch(e){}
+ try{tCall&&tCall._closed&&tCall._closed()}catch(e){}try{peer.rebuild&&peer.rebuild()}catch(e){}
+ if(!byT)try{conn.send({t:'recall'})}catch(e){}
+ if(micS&&micS.enabled)setTimeout(()=>{try{micResend()}catch(e){}},800);
+ try{A.srcObject&&A.play().catch(()=>{$('#unm').hidden=false})}catch(e){}}
+function sync(){if(role=='s')return sResync(0);return sync0()}
+function sync0(){
+ if(role=='t'){if(!peer||peer.destroyed){tTries=0;startTPeer();return}audioReset();refresh();if(window.HUBMODE&&peer.rebuild)try{peer.rebuild()}catch(e){}sys('تمت مزامنة الاتصال');return}
  clearTimeout(rt);dropCall();stopCam();canTalk=1;canCam=1;try{peer.destroy()}catch(e){}initS();sys('جارٍ إعادة الاتصال...');
 }
 function endCall(){
@@ -1881,12 +1892,18 @@ function send(){
 $('#ci').onkeydown=e=>{if(e.key=='Enter')send()};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
 /* قايمة الطلاب بأزرار المعلم (بتتعرض عند المعلم، وبتتبعت للمدير بنفس الأزرار) */
+/* 🔄 المعلم (أو المشرف) يحدّث صوت طالب بدوسة: جهاز الطالب بيجدّد كل مسارات الصوت عنده (من غير ما يخرج من الحصة)،
+   والمعلم بيتصل بيه من جديد. لو اتداس تاني خلال 40 ثانية ← إعادة اتصال كاملة للطالب ده */
+function resync(k){const o=conns[k];if(!o||!o.adm||o.dir)return;try{o.c.send({t:'resync'})}catch(e){}setTimeout(()=>{if(conns[k]===o&&o.adm){callOne(o);if(typeof camT!='undefined'&&camT)callCam(o)}},1500);
+ try{hEv('🔄 المعلم حدّث صوت '+o.name)}catch(e){}toast('🔄','بنحدّث صوت '+o.name+'…')}
+function resyncAll(){const L=Object.keys(conns).filter(k=>conns[k].adm&&!conns[k].dir);L.forEach((k,i)=>setTimeout(()=>resync(k),i*400));if(!L.length)toast('🔄','مفيش طلاب جوه الحصة')}
 function stuHTML(){const B=c=>'style="background:'+c+';border-radius:10px;padding:4px 10px"',
   E=Object.entries(conns),W=E.filter(([k,x])=>!x.adm),A=E.filter(([k,x])=>x.adm),
   row=(i,n,b)=>'<div class="m" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span>'+i+U(n)+'</span><span style="display:flex;gap:5px;flex-wrap:wrap">'+b+'</span></div>';
   return '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="cycleGm()">🚪 الدخول: '+['بموافقتي','تلقائي','مقفلة'][gm]+'</button>'+
   (W.length?'<div class="m s">⏳ في غرفة الانتظار ('+W.length+')</div><button class="m" '+B('#1a9486')+' onclick="admitAll()">قبول الجميع</button>'+W.map(([k,x])=>row('⏳ ',x.name,'<button '+B('#1a9486')+' onclick="admit(\''+k+'\')">قبول</button><button '+B('#d4605a')+' onclick="deny(\''+k+'\')">رفض</button>')).join(''):'')+
   '<button class="m" style="background:#1a9486;color:#fff;text-align:center" onclick="tMuteAll()">'+(allMuted?'🎤 إلغاء كتم الجميع':'🔇 كتم صوت جميع الطلاب')+'</button>'+
+  '<button class="m" style="background:#2a7fa6;color:#fff;text-align:center" onclick="resyncAll()">🔄 تحديث صوت كل الطلاب</button>'+
   '<button class="m" style="background:#27496b;color:#fff;text-align:center" onclick="tCamBan()">'+(camBanAll?'📷 السماح بكاميرات الطلاب':'🚫 منع كاميرات الطلاب')+'</button>'+
   (A.map(([k,x])=>x.dir?row('',x.name,'<small style="color:#e3c08d">للإشراف</small>'+ib('#1a9486','💬'+(pmU[k]?'<b class="bd">'+pmU[k]+'</b>':''),'رسايل Academic Supervisor','pmOpen(\''+k+'\')')):row(stIc(x)+(x.wk?'<span title="النت عند الطالب ده ضعيف — الصوت ممكن يتقطّع عنده">📶⚠️ </span>':''),x.name,
   ib(x.can?'#e3c08d':'#d4605a',x.can?'🔇':'🎙️',x.can?'كتم':'إلغاء الكتم','allow(\''+k+'\')')+
@@ -1894,11 +1911,12 @@ function stuHTML(){const B=c=>'style="background:'+c+';border-radius:10px;paddin
   ib(x.sp?'#1a9486':'#35607f','🖥️','مشاركة الشاشة','ssp(\''+k+'\')')+
   ib(st.sw&&st.swp===k?'#1a9486':'#35607f','✍️',st.sw&&st.swp===k?'قفل الكتابة':'هو بس اللي يكتب على السبورة','swOne(\''+k+'\')')+
   ib('#35607f','💬'+(pmU[k]?'<b class="bd">'+pmU[k]+'</b>':''),T('pm'),'pmOpen(\''+k+'\')')+
+  ib('#2a7fa6','🔄','تحديث صوت الطالب (لو مش سامع أو مش مسموع)','resync(\''+k+'\')')+
   ib('#e3c08d','🔔','تنبيه','nudge(\''+k+'\')')+
   ib('#1a9486','⭐','استيكر','stkPick(\''+k+'\')')+
   ib('#e5484d','🚪','طرد','deny(\''+k+'\',1)'))).join('')||'<div class="m s">لا يوجد طلاب متصلون</div>')}
 /* 👔 المدير بنفس صلاحيات المعلم: جهاز المعلم بيبعتله القايمة، وأي زرار المدير يدوسه بيتنفّذ على جهاز المعلم */
-const DIRF={admit:1,deny:1,allow:1,camAllow:1,ssp:1,swOne:1,nudge:1,admitAll:1,tMuteAll:1,tCamBan:1,cycleGm:1,tLock:1,tSw:1};
+const DIRF={admit:1,deny:1,allow:1,camAllow:1,ssp:1,swOne:1,nudge:1,resync:1,resyncAll:1,admitAll:1,tMuteAll:1,tCamBan:1,cycleGm:1,tLock:1,tSw:1};
 function dirHTML(){const h='<div class="m" style="display:flex;gap:6px;flex-wrap:wrap"><button class="m" style="flex:1;background:#27496b;color:#fff;text-align:center" onclick="tLock()">'+(st.lock?'💬 فتح رسايل الطلاب':'🔇 قفل رسايل الطلاب')+'</button><button class="m" style="flex:1;background:#27496b;color:#fff;text-align:center" onclick="tSw()">'+(st.sw&&!st.swp?'✍️ قفل الكتابة للطلاب':'✍️ السماح للطلاب بالكتابة')+'</button></div>'+stuHTML();
  return h.replace(/onclick="(\w+)\(([^)"]*)\)"/g,(m0,f,a)=>DIRF[f]?'onclick="dirCmd(\''+f+'\','+(a||'\'\'')+')"':'onclick=""')}
 let dirLast='';setInterval(()=>{try{if(role!='t')return;const D=Object.values(conns).filter(o=>o.dir&&o.adm&&o.c&&o.c.open);if(!D.length)return;const h=dirHTML();if(h===dirLast)return;dirLast=h;D.forEach(o=>{try{o.c.send({t:'dl',h})}catch(e){}})}catch(e){}},2500);
