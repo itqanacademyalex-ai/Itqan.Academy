@@ -229,7 +229,8 @@
          وده اللي بيخلّي البرنامج يطلب من المعلم يتصل تاني لوحده (زمان كانت بتبان «متوصل» والطالب فاضل مش سامع) */
       const st = () => {
         if (self._x || self._fail) return 'failed';
-        if (!self._out && self._answered && !self._ok && Date.now() - self._t0 > 15000) return 'failed';
+        /* لسه بيتجهّز (النت بطيء): نديله وقته لحد 60 ثانية — زمان كان بيتقفل بعد 15 ثانية ويبدأ من الأول فمايوصلش أبدًا */
+        if (!self._out && self._answered && !self._ok) return Date.now() - self._t0 > (self._pulling ? 60000 : 20000) ? 'failed' : 'connecting';
         const pc = hp._sfu && hp._sfu.pc; return pc ? pc.connectionState : 'new';
       };
       this.peerConnection = {
@@ -257,7 +258,8 @@
       this._publish(false).catch(e => { log('publish failed', e); this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); this._closed(true); });
     }
     answer() { if (this._out || this._answered) return; this._answered = 1; this._t0 = Date.now(); this.open = true; this._pull().catch(e => { log('pull failed', e); if (e && e.message === 'reset') return; /* الجلسة اتعادت والسحب بيتعمل من جديد لوحده */ this._fail = 1; this.emit('error', { type: 'webrtc', message: String(e) }); }); }
-    async _pull() {
+    async _pull() { this._pulling = 1; try { return await this._pull2(); } finally { this._pulling = 0; } }
+    async _pull2() {
       const sfu = this.hp.sfu(), sid = this._sid, tn = this._tn.slice();
       const ps = await sfu.pullTracks(sid, tn);
       if (this._x || sid !== this._sid) { sfu.unpull(sid, tn); return; }
