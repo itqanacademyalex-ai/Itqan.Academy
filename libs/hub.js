@@ -48,7 +48,7 @@
     try {
       const m = /a=rtpmap:(\d+) opus\/48000[^\r\n]*/i.exec(sdp); if (!m) return sdp;
       const pt = m[1], re = new RegExp('a=fmtp:' + pt + ' ([^\\r\\n]*)');
-      const add = p => { const has = k => new RegExp('(^|;)\\s*' + k + '=').test(p); if (!has('useinbandfec')) p += ';useinbandfec=1'; if (!has('usedtx')) p += ';usedtx=0'; return p.replace(/^;/, ''); };
+      const add = p => { const has = k => new RegExp('(^|;)\\s*' + k + '=').test(p); if (!has('useinbandfec')) p += ';useinbandfec=1'; if (!has('usedtx')) p += ';usedtx=0'; if (!has('maxaveragebitrate')) p += ';maxaveragebitrate=64000'; if (!has('stereo')) p += ';stereo=0'; return p.replace(/^;/, ''); };
       return re.test(sdp) ? sdp.replace(re, (x, p) => 'a=fmtp:' + pt + ' ' + add(p)) : sdp.replace(m[0], m[0] + '\r\na=fmtp:' + pt + ' ' + add(''));
     } catch (e) { return sdp; }
   }
