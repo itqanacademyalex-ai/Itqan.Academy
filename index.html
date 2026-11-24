@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.22-a';
+const VER='2026.12.23-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -631,7 +631,7 @@ function mbarUpd(){let b=document.getElementById('mbar');
  const tk=role=='t'?micT:micS,live=!!(tk&&tk.readyState=='live'&&!tk.muted);
  /* خلاط صوت المعلم متوقف (الآيفون) = الطلاب مش سامعين حتى لو المايك شغّال */
  const sus=role=='t'&&$('#join').hidden&&!final&&typeof MX!='undefined'&&MX.ac&&MX.ac.state!='running'&&MX.ac.state!='closed';
- if(sus&&!window._susOn){window._susOn=1;try{H.t.sus++;hEv('🔇 محرّك صوت المعلم اتوقف — الطلاب ماكانوش سامعين لحد ما لمس الشاشة')}catch(e){}}else if(!sus)window._susOn=0;
+ if(sus&&!window._susOn){window._susOn=1;try{if(window.DAMODE)hEv('🔇 محرّك الصوت عند المعلم وقف — الطلاب سامعين المعلم عادي، بس التسجيل وصوت الشاشة وقفوا لحد ما يلمس الشاشة');else{H.t.sus++;hEv('🔇 محرّك صوت المعلم اتوقف — الطلاب ماكانوش سامعين لحد ما لمس الشاشة')}}catch(e){}}else if(!sus)window._susOn=0;
  const inC=!final&&(role=='t'?$('#join').hidden:role=='s'&&admitted&&canTalk);
  const zero=inC&&live&&tk.enabled&&(window.MZ||0)>=5&&!(window.MICGATE&&window.MZR==='zero');
  if(zero&&!window._zLog){window._zLog=1;try{role=='t'?hEv('🎤 مايك المعلم كان مفتوح بس مش بيلقط صوت'):dg('mic','مفتوح بس مش بيلقط صوت')}catch(e){}}else if(!zero)window._zLog=0;
@@ -1334,7 +1334,7 @@ async function tReq(pin){
  /* لما المعلم يرجع للصفحة (بعد ما كان في تطبيق أو تبويب تاني) نعيد المحاولة فوراً */
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!got){if(c&&!c.open)c=null;later(300)}});
 }
-function tStart(){$('#gate').hidden=true;LOG.start=Date.now();try{liveOn()}catch(e){}try{wbResume();clearInterval(window.SST);window.SST=setInterval(()=>{ssTouch();wbPut();try{tSave()}catch(e){}},20000)}catch(e){}try{tabAnn()}catch(e){}{const back=tRestore();/* إيميل «المعلم فتح الحصة» بيتبعت دايماً أول ما المعلم يفتح (حتى لو الإيميلات الفورية مقفولة) */if(back){if(MAILLIVE)mailSend('↩️ عاد المعلم للغرفة '+fmtCode(roomName),'عاد المعلم ('+name+') إلى الغرفة: '+fmtCode(roomName)+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow())}else mailTeacherIn()}sys(window._selfOpen?'✓ فتحت الحصة بكودك — أنت الآن مسؤول عن الحصة، والطلاب هيستنوا في غرفة الانتظار لحد ما تدخّلهم':'✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
+function tStart(){$('#gate').hidden=true;LOG.start=Date.now();if((/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1))&&!sessionStorage.getItem('itqan_ios_tip')){try{sessionStorage.setItem('itqan_ios_tip','1')}catch(e){}setTimeout(()=>sys('📱 نصيحة: الآيفون/الآيباد بيوقف المايك وساعات بيقفل الصفحة لو خرجت منها أو جالك إشعار أو مكالمة. فعّل «عدم الإزعاج» (Do Not Disturb)، ماتخرجش من الصفحة طول الحصة، وخلّي الشاحن متوصل — والأفضل تشرح من كمبيوتر.'),1500)}try{liveOn()}catch(e){}try{wbResume();clearInterval(window.SST);window.SST=setInterval(()=>{ssTouch();wbPut();try{tSave()}catch(e){}},20000)}catch(e){}try{tabAnn()}catch(e){}{const back=tRestore();/* إيميل «المعلم فتح الحصة» بيتبعت دايماً أول ما المعلم يفتح (حتى لو الإيميلات الفورية مقفولة) */if(back){if(MAILLIVE)mailSend('↩️ عاد المعلم للغرفة '+fmtCode(roomName),'عاد المعلم ('+name+') إلى الغرفة: '+fmtCode(roomName)+' بعد إعادة تحميل الصفحة.\nالوقت: '+mailNow())}else mailTeacherIn()}sys(window._selfOpen?'✓ فتحت الحصة بكودك — أنت الآن مسؤول عن الحصة، والطلاب هيستنوا في غرفة الانتظار لحد ما تدخّلهم':'✓ اعتمدت السكرتارية دخولك — أنت الآن مسؤول عن الحصة');hubT0=Date.now();setTimeout(recPlan,12000);setTimeout(()=>{try{trBoot()||srBegin(0)}catch(e){}},2500);initT()}
 /* ---------- إثبات الهوية + المشرف المساعد (السكرتارية) ---------- */
 async function tProof(c,d){if(!TC||!TK||typeof d.n!=='string'||d.n.length>64)return;try{c.send({t:'proof',c:TC.c,s:TC.s,g:await sgn(TK.priv,'T|'+room+'|'+d.n)})}catch(e){}}
 const cohosts={};let coTm=0,coLast='';
@@ -1496,8 +1496,10 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   auJB(lo,rc,ji);
   if(b>=0&&b===auLast)bad=1;auLast=b}catch(e){}
  auBad=bad?auBad+bad:0;
- if(auBad>=3){auBad=0;auLast=-1;if(Date.now()-auAsk<9000)return;auAsk=Date.now();
+ if(auBad>=3){auBad=0;auLast=-1;if(Date.now()-auAsk<[9,20,40,60][Math.min(auTry,3)]*1000)return;auAsk=Date.now();
   if(++auTry>3){auTry=0;dg('full');sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync();return}
+  /* خادم إتقان: المرة التانية بنعمل جلسة جديدة مع Cloudflare (لو اتصال الجهاز نفسه هو اللي واقع) بدل ما نطلب من المعلم يتصل تاني */
+  if(auTry==2&&peer&&peer.rebuild){dg('reset');try{peer.rebuild()}catch(e){}return}
   try{conn.send({t:'recall'})}catch(e){}}
  else if(!bad)auTry=0;
  if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},3000);
@@ -1511,8 +1513,9 @@ setInterval(async()=>{if(role!='t'||!peer||peer.destroyed)return;
  for(const o of Object.values(conns)){if(!o.adm||!o.can||!o.mic||!o.c||!o.c.open){o.mb=0;continue}
   const pc=o.mc&&o.mc.peerConnection,q=pcSt(o.mc);let bad=!pc||q=='failed'||q=='closed';
   if(!bad)try{let b=-1;(await pc.getStats()).forEach(r=>{if(r.type=='inbound-rtp'&&(r.kind||r.mediaType)=='audio')b=r.bytesReceived});if(b>=0&&b===o.mbl)bad=1;o.mbl=b}catch(e){}
-  o.mb=bad?(o.mb||0)+1:0;{const au=o.mb>=2?0:1;if(o.au!==au){o.au=au;try{render()}catch(e){}}}
-  if(o.mb>=3&&Date.now()-(o.mrT||0)>12000){o.mb=0;o.mrT=Date.now();hS(o.name).remic++;hEv('🎤 صوت '+o.name+' مش واصل للمعلم — اتطلب منه يبعته تاني');try{o.c.send({t:'remic'})}catch(e){}}}},5000);
+  o.mb=bad?(o.mb||0)+1:0;{const au=o.mb>=2?0:1;if(o.auS!==au){o.auS=au;try{render()}catch(e){}}}
+  if(!bad&&o.mrN&&Date.now()-(o.mrT||0)>60000)o.mrN=0;
+  if(o.mb>=3&&Date.now()-(o.mrT||0)>[12,25,45,60][Math.min(o.mrN||0,3)]*1000){o.mb=0;o.mrT=Date.now();o.mrN=(o.mrN||0)+1;hS(o.name).remic++;hEv('🎤 صوت '+o.name+' مش واصل للمعلم — اتطلب منه يبعته تاني');try{o.c.send({t:'remic'})}catch(e){}}}},5000);
 setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)return;const q=pcSt(myCall);
  if(!myCall||q=='failed'||q=='closed'){if(Date.now()-(window._mrS||0)>8000){window._mrS=Date.now();micResend()}}},4000);
 /* الآيفون بيوقف الصوت لو جت مكالمة أو رسالة صوتية أو اتغيّرت السماعة: نشغّله تاني على طول، ولو اترفض يظهر زرار تشغيل الصوت */
@@ -2389,7 +2392,7 @@ Object.assign(I18.ar,{micOn:'الميكروفون مفتوح',micOff:'الميك
 Object.assign(I18.en,{micOn:'Microphone on',micOff:'Microphone off',micLock:'Muted by teacher',camOn:'Camera on',camOff:'Camera off',rec:'Record the lesson on your device',recWarn:'This records what you see of the teacher’s stream, the lesson audio and the whiteboard, saved only on your device. Your own microphone and camera are not recorded. The recording may include anyone speaking in the lesson. Start recording?',recNo:'Your browser does not support recording. Try Chrome or Edge on a computer.',desmos:'Desmos graphing calculator',dsmNoKey:'To enable Desmos: get a free API key from desmos.com/my-api and put it in the DESMOS_KEY variable at the top of the code.',dsmLoading:'Loading Desmos...',dsmFail:'Could not load Desmos — check your connection and API key.'});
 /* حالة مايك الطالب قدام المعلم: 🎤 صوته واصل · 📶 المايك شغّال بس الصوت مش واصل · 🎤🚫 المتصفح/الموبايل قافل المايك · 🔇 المعلم كاتمه · 🎤 باهتة = الطالب قافل المايك */
 function stIc(x){const mo=x.can&&x.mic,co=x.cp!==0&&x.cam;
- const ms=!x.can?['🔇','المعلم كاتمه',0]:x.mic&&x.au===0?['📶','المايك شغّال بس صوته مش واصل (النت/الاتصال عنده)',1]:x.mic?['🎤','صوته واصل',1]:x.me?['🎤🚫','المايك مقفول عند الطالب ('+({blocked:'إذن المتصفح أو الرقابة الأبوية',NotAllowedError:'رفض الإذن',ended:'تطبيق تاني ماسك المايك',NotFoundError:'مفيش مايك',NotReadableError:'المايك مشغول'}[x.me]||x.me)+')',1]:['🎤','الطالب قافل المايك',0];
+ const ms=!x.can?['🔇','المعلم كاتمه',0]:x.mic&&x.auS===0?['📶','المايك شغّال بس صوته مش واصل (النت/الاتصال عنده)',1]:x.mic?['🎤','صوته واصل',1]:x.me?['🎤🚫','المايك مقفول عند الطالب ('+({blocked:'إذن المتصفح أو الرقابة الأبوية',NotAllowedError:'رفض الإذن',ended:'تطبيق تاني ماسك المايك',NotFoundError:'مفيش مايك',NotReadableError:'المايك مشغول'}[x.me]||x.me)+')',1]:['🎤','الطالب قافل المايك',0];
  return '<span class="ic'+(ms[2]&&mo?' lt':'')+'" title="'+esc(ms[1])+'" style="'+(ms[0]!='🎤'?'filter:none;opacity:1':'')+'">'+ms[0]+'</span>'+(ms[0]=='📶'?'<small style="color:#fca5a5"> صوته مش واصل </small>':ms[0]=='🎤🚫'?'<small style="color:#fca5a5"> المايك مقفول عنده </small>':'')+'<span class="ic'+(co?' lt':'')+'" title="'+(co?T('camOn'):T('camOff'))+'">📷</span> '}
 let lastMs='',lastMsC=null;
 function sendMs(){if(role!='s'||!admitted||!conn||!conn.open)return;const m=(micS&&micS.enabled&&myCall&&canTalk)?1:0,c=camS?1:0,e=!(micS&&micS.readyState=='live')&&window.MERR?String(window.MERR).slice(0,20):'',k=m+''+c+e;if(k===lastMs&&conn===lastMsC)return;lastMs=k;lastMsC=conn;try{conn.send({t:'ms',m,c,e})}catch(x){}}
@@ -2457,6 +2460,7 @@ function hSelf(stats){try{const C=H.t.cf||(H.t.cf={relay:'',rtt:0,loss:0,pb:{}})
 /* 🔊 الطالب بيقول «مش سامع المعلم»: لو السبب نت المعلم نفسه (صوته بيضيع وهو طالع، أو أكتر من طالب اشتكى مع بعض)
    الاتصال من جديد مش بيحل حاجة وبيعمل فجوة صوت زيادة — بنسجّلها بس ومانعيدش الاتصال */
 const RCL={};function tUpBad(o){if(!window.HUBMODE)return false;const now=Date.now(),C=H.t.cf||{};RCL[o.c.peer]=now;
+ if(typeof micT=='undefined'||!micT||micT.readyState!='live'||micT.muted||!micT.enabled){if(now-(window.RCLm||0)>60000){window.RCLm=now;try{hEv('🎤 مايك المعلم موقوف من الجهاز — الطلاب مش هيسمعوا لحد ما يرجع (مش هنعيد الاتصال على الفاضي)')}catch(e){}}return true}
  const up=C.curT&&now-C.curT<15000&&(C.cur||0)>.08,many=Object.entries(RCL).filter(([k,t])=>k!==o.c.peer&&now-t<15000).length>0;
  if(!(up||many))return false;if(now-(window.RCLog||0)>60000){window.RCLog=now;try{hEv('🔊 الطلاب مش سامعين كويس بسبب نت المعلم ('+(up?'صوت المعلم بيضيع في الرفع '+Math.round(C.cur*100)+'%':'أكتر من طالب في نفس الوقت')+') — مش هنعيد الاتصال على الفاضي')}catch(e){}}return true}
 function hPc(o,stats,dir,pc){if(window.HUBMODE)return hSelf(stats);try{const S=hS(o.name);let pair=null;
@@ -3562,7 +3566,7 @@ function recUp(meta,onSt){
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
    /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
    /* رفع قديم مش هيكمل أبدًا: جلسة Drive انتهت (بتعيش أسبوع) أو الأجزاء مش متطابقة مع اللي على Drive — بيتلغى بدل ما يفضل يعيد كل حصة ويستهلك النت */
-   if((/^session/.test(U.err)&&U.fails>=3)||(/^chunk (400|404)/.test(U.err)&&U.fails>=4)){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
+   if((/^session/.test(U.err)&&U.fails>=3)||(/^(chunk|drive) (400|404)/.test(U.err)&&U.fails>=4)){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{rtx('meta','readwrite',s=>s.delete(meta.id))}catch(x){}try{hEv('⚠️ رفع «'+meta.name+'» وقف نهائيًا (جلسة الرفع انتهت)')}catch(x){}U.busy=0;onSt&&onSt();return}
    if(meta.u0&&!meta.fb&&meta.u===REG_URL&&meta.off===0&&U.fails>=3&&!UPNET(U.err)&&!/^chunk 4/.test(U.err)){meta.fb=1;meta.u=meta.u0;meta.sid='';U.fails=0;try{hEv('↪️ رفع «'+meta.name+'» رجع لسكربت التسجيل القديم ('+U.err+')')}catch(x){}}if(U.fails==3)try{hEv('⚠️ رفع التسجيل على Drive بيتعطّل ('+U.err+') — بيحاول تاني لوحده')}catch(x){}U.busy=0;onSt&&onSt();setTimeout(U.pump,Math.min(30000,2000*U.fails));return}
   U.busy=0;onSt&&onSt();if(U.q.length&&!U.fin)U.pump()};
  return U}
