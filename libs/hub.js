@@ -307,6 +307,8 @@
     }
     /* تجهيز الاتصال بـ Cloudflare من بدري (قبل أول مكالمة) — الصوت بيوصل أسرع لما الطالب أو المشرف يدخل */
     warm() { const f = this.sfu(); f.run(() => f.init()).catch(() => {}); }
+    /* جلسة جديدة مع Cloudflare (لو الجهاز مش سامع حاجة رغم إن الاتصال «متوصل») — المكالمات بتكمّل من غير ما تتقفل */
+    rebuild() { const f = this._sfu; if (f && f.sid) { f.rs = 0; f.heal(f.gen); } }
     _connect() {
       if (this.destroyed) return;
       let w; try { w = this.ws = new WebSocket(WS + '?id=' + encodeURIComponent(this.id) + '&token=' + this._tok + (this.room ? '&room=' + encodeURIComponent(this.room) : '')); } catch (e) { setTimeout(() => this._connect(), 3000); return; }
