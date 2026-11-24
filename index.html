@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.23-a';
+const VER='2026.12.24-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1501,7 +1501,7 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   /* خادم إتقان: المرة التانية بنعمل جلسة جديدة مع Cloudflare (لو اتصال الجهاز نفسه هو اللي واقع) بدل ما نطلب من المعلم يتصل تاني */
   if(auTry==2&&peer&&peer.rebuild){dg('reset');try{peer.rebuild()}catch(e){}return}
   try{conn.send({t:'recall'})}catch(e){}}
- else if(!bad)auTry=0;
+ if(bad)window.auOK0=0;else if(lastA>0&&auLast>0){if(!window.auOK0)window.auOK0=Date.now();else if(Date.now()-window.auOK0>30000)auTry=0}
  if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},3000);
 /* ===== المعلم مش سامع طالب: اتصال مايك الطالب (طالب ← معلم) منفصل عن اللي بيسمع منه، فممكن يقع لوحده =====
    المعلم: كل 5 ثواني — لو الطالب مايكه مفتوح ومسموح له يتكلم بس مفيش صوت بيوصل منه ~15 ثانية (أو الاتصال فشل) يطلب منه يبعت المايك تاني.
@@ -1521,7 +1521,7 @@ setInterval(()=>{if(role!='s'||!admitted||final||!micS||!micS.enabled||!canTalk)
 /* الآيفون بيوقف الصوت لو جت مكالمة أو رسالة صوتية أو اتغيّرت السماعة: نشغّله تاني على طول، ولو اترفض يظهر زرار تشغيل الصوت */
 A.addEventListener('pause',()=>{if(role=='s'&&A.srcObject)setTimeout(()=>{if(A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},300)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&role=='s'&&A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)});
-function callOne(o){try{o.call&&o.call.close()}catch(e){}o.call=peer.call(o.c.peer,new MediaStream([window.DAMODE?(micT&&micT.readyState=='live'?micT:null):mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
+function callOne(o){const old=o.call;o.call=peer.call(o.c.peer,new MediaStream([window.DAMODE?(micT&&micT.readyState=='live'?micT:null):mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));/* خادم إتقان: القديمة بتتقفل بعد ما الجديدة تاخد نفس التراك المرفوع (من غير رفع جديد) */setTimeout(()=>{try{old&&old.close()}catch(e){}},old&&old._out?5000:0);setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
 function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=new Audio();a.srcObject=s;a.play().catch(()=>{if(role=='t')$('#unm').hidden=false});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
 function dropMic(o){if(o.mt){mxSrcDel(o.c.peer);o.mt=null}if(o.au){o.au.srcObject=null;o.au=null}}
