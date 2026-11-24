@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.24-a';
+const VER='2026.12.25-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1405,7 +1405,7 @@ async function startTPeer(){
    c.on('close',()=>hideCam('s:'+c.peer));return}
   {const o=conns[c.peer];if(o)o.mc=c}
   c.on('stream',s=>{const o=conns[c.peer];if(!o||!o.adm||!o.can)return;o.mc=c;attachMic(o,s)});
-  c.on('close',()=>{const o=conns[c.peer];o&&dropMic(o)});
+  c.on('close',()=>{const o=conns[c.peer];if(o&&(o.mc===c||!o.mc))dropMic(o)});
  });
 }
 async function tData(c,d){
@@ -1500,6 +1500,8 @@ setInterval(async()=>{if(role!='s'||!admitted||final||!conn||!conn.open)return;
   if(++auTry>3){auTry=0;dg('full');sys('جارٍ إعادة الاتصال لرجوع الصوت...');sync();return}
   /* خادم إتقان: المرة التانية بنعمل جلسة جديدة مع Cloudflare (لو اتصال الجهاز نفسه هو اللي واقع) بدل ما نطلب من المعلم يتصل تاني */
   if(auTry==2&&peer&&peer.rebuild){dg('reset');try{peer.rebuild()}catch(e){}return}
+  /* خادم إتقان: بنسيب نسختنا القديمة من صوت المعلم (اللي واقفة) عشان المكالمة الجاية تتسحب جديدة فعلًا من Cloudflare */
+  if(window.HUBMODE&&tCall&&tCall._closed)try{tCall._closed()}catch(e){}
   try{conn.send({t:'recall'})}catch(e){}}
  if(bad)window.auOK0=0;else if(lastA>0&&auLast>0){if(!window.auOK0)window.auOK0=Date.now();else if(Date.now()-window.auOK0>30000)auTry=0}
  if(A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)},3000);

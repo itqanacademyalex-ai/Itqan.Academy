@@ -264,11 +264,10 @@
       const ps = await sfu.pullTracks(sid, tn);
       if (this._x || sid !== this._sid) { sfu.unpull(sid, tn); return; }
       this._mids = ps.map(p => p.mid); this._pulled = { sid, tn };
-      const rs = this.remoteStream || (this.remoteStream = new MediaStream());
       const tracks = (await Promise.all(this._mids.map(m => sfu.track(m)))).filter(Boolean);
       if (this._x) return;
-      rs.getTracks().forEach(t => { if (!tracks.includes(t)) rs.removeTrack(t); });
-      tracks.forEach(t => { if (!rs.getTracks().includes(t)) rs.addTrack(t); });
+      /* MediaStream جديد كل مرة (مش نفس القديم بتراكات متبدّلة): المتصفح — والآيفون بالذات — ساعات مابيلاحظش التبديل فيفضل ساكت */
+      const rs = this.remoteStream = new MediaStream(tracks);
       if (!tracks.length) { this._fail = 1; log('no tracks arrived'); return; }
       /* الصورة وصلت بس الصوت لأ: نعتبر المكالمة فشلت عشان المعلم يتصل تاني (بدل «ميكروفون المعلم مقفول» وهو مش مقفول) */
       if (tn.some(n => /^audio-/.test(n)) && !tracks.some(t => t.kind === 'audio')) { this._fail = 1; log('audio missing'); }
