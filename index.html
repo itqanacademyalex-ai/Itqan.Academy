@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.27-a';
+const VER='2026.12.28-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1024,6 +1024,14 @@ if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{r
 /* الرابط مفتوح داخل متصفح تطبيق (واتساب/فيسبوك...) — زر ينقل الطالب لـ Chrome (أندرويد) أو نسخ الرابط (آيفون) */
 /* شاشة البداية لما التطبيق يتفتح من أيقونة الشاشة الرئيسية: دخول المعلم / الطالب + لصق رابط الحصة */
 const homeUrl=()=>location.origin+location.pathname+'?source=app';
+/* 🏠 زرار ثابت للشاشة الرئيسية — في الركن فوق على الشمال، في كل الشاشات ماعدا جوه الحصة (عشان محدش يخرج من الحصة بالغلط) والرئيسية نفسها */
+(function(){const b=document.createElement('button');b.id='homebtn';b.title='الشاشة الرئيسية';b.setAttribute('aria-label','الشاشة الرئيسية');b.textContent='🏠';
+ b.style.cssText='position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;z-index:300;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(20,40,63,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-size:19px;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.3);display:none';
+ b.onclick=()=>{location.href=homeUrl()};
+ const home=()=>{const q=new URLSearchParams(location.search);return!q.get('s')&&!q.get('c')&&!q.get('tn')&&!q.get('k')&&!q.get('dirhome')};
+ const inClass=()=>{try{return typeof role!='undefined'&&(role=='t'||role=='s')&&$('#join').hidden&&(role=='t'||admitted||window.WASIN)&&!final}catch(e){return false}};
+ const upd=()=>{if(!document.body)return;if(!b.isConnected)document.body.append(b);{const lt=document.body.classList.contains('stj');b.style.background=lt?'rgba(255,255,255,.9)':'rgba(20,40,63,.82)';b.style.border=lt?'0':'1px solid rgba(255,255,255,.15)';b.style.boxShadow=lt?'4px 4px 12px rgba(120,100,80,.25)':'0 4px 14px rgba(0,0,0,.3)'}const busy=document.getElementById('dirm')&&!document.getElementById('dirm').hidden||document.getElementById('libv');b.style.display=(home()&&!document.getElementById('libm')&&!document.getElementById('hwp')&&!document.getElementById('hws'))||inClass()||busy?'none':'block'};
+ setInterval(upd,700);addEventListener('DOMContentLoaded',upd)})();
 /* ===== كود الحصة بدل الرابط: 4 حروف وأرقام = رقم الحصة نفسه (مثال K7M2) — حروف مش بتتلخبط (من غير O/0/I/1/L) =====
    الكود بيجيب مفتاح الحصة من السكرتارية أو المعلم، وبعدين نكمّل بنفس طريقة الرابط (الحصص القديمة كودها 6 حروف) */
 const CA='abcdefghjkmnpqrstuvwxyz23456789';
@@ -1166,7 +1174,8 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  go.onclick=enter;inp.addEventListener('keydown',e=>{if(e.key=='Enter')enter()});
  window.__ln={fill:(c,r)=>{pick(r,RB[r]);inp.value=fmtCode(c);enter()},open:()=>!f.hidden,reset:()=>{clearTimeout(wT);role='';f.hidden=true;f.style.display='none';er.textContent='';inp.value='';row.querySelectorAll('button').forEach(x=>x.style.borderColor='transparent')}};
  const sec=document.createElement('button');sec.className='w';sec.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';sec.textContent='🗂️ دخول السكرتارية';sec.onclick=()=>{sec.textContent='⏳ جارٍ فتح لوحة السكرتارية…';setTimeout(()=>{secOpen();setTimeout(()=>{sec.textContent='🗂️ دخول السكرتارية'},1500)},30)};
- const dir=document.createElement('button');dir.className='w';dir.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px';dir.textContent='Academic Supervisor';dir.onclick=()=>dirOpen();
+ /* زرار الإشراف: أيقونة صغيرة باهتة في الركن فوق على اليمين (مش ملفتة) — بتظهر في الشاشة الرئيسية بس */
+ const dir=document.createElement('button');dir.id='dirbtn';dir.title='Academic Supervisor';dir.setAttribute('aria-label','Academic Supervisor');dir.textContent='🔐';dir.style.cssText='position:fixed;top:calc(8px + env(safe-area-inset-top));right:8px;z-index:60;width:34px;height:34px;border-radius:50%;border:0;background:transparent;font-size:16px;opacity:.28;cursor:pointer;padding:0';dir.onclick=()=>dirOpen();
  if((!TM()&&dpwGet())||new URLSearchParams(location.search).get('dirhome')=='1')setTimeout(()=>{try{if(!$('#join').hidden)dirOpen()}catch(e){}},300);
  /* مفيش اختيار «معلم/طالب» ولا كتابة أكواد: اللينك هو اللي بيحدد كل حاجة. لو حد فتح التطبيق من غير لينك: يلصق اللينك */
  row.style.display='none';f.style.display='none';
@@ -1178,7 +1187,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
   try{const u=new URL(v);if(u.origin===location.origin&&u.pathname===location.pathname&&(u.searchParams.get('s')||u.searchParams.get('c')||u.searchParams.get('tn'))){location.href=u.href;return}}catch(e){}pe.textContent='ده مش لينك حصة من أكاديمية إتقان — انسخ اللينك كامل من الرسالة.'};
  hint.append(pl,pe);
  j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';if(TM()){j.append(row,f);if(!tsGet().length){const e=document.createElement('small');e.style.cssText='color:#a9bccd;line-height:1.8';e.textContent='⏳ جارٍ تحميل حصصك…';j.append(e);/* لحد ما السجل يرد فعلًا: «جارٍ التحميل» وبنحاول كل 5 ثواني — «مفيش حصص» بتظهر بس لو السجل رد إن مفيش */
- let tk=0;const iv=setInterval(()=>{if(tsGet().length){clearInterval(iv);return}if(window.TL_DONE){e.textContent='مفيش حصص متسجلة باسمك لسه — كلّم السكرتارية.';clearInterval(iv);return}if(++tk>2)e.textContent='⏳ النت بطيء — بنحاول نجيب حصصك…';try{window.tsRe&&tsRe()}catch(x){}},5000)}}else j.append(row,f,hint,sec,dir)}
+ let tk=0;const iv=setInterval(()=>{if(tsGet().length){clearInterval(iv);return}if(window.TL_DONE){e.textContent='مفيش حصص متسجلة باسمك لسه — كلّم السكرتارية.';clearInterval(iv);return}if(++tk>2)e.textContent='⏳ النت بطيء — بنحاول نجيب حصصك…';try{window.tsRe&&tsRe()}catch(x){}},5000)}}else{j.append(row,f,hint,sec);$('#join').append(dir)}}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
 var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;pwaInstall()});
 /* أندرويد من المتصفح: زرار ثابت فوق شاشة الدخول «تحميل التطبيق على الجهاز» — بيثبّت تطبيق إتقان من Chrome بضغطة،
