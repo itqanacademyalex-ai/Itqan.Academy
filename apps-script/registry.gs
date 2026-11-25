@@ -410,7 +410,10 @@ function gem_(parts, temp, again) {
 function tnN_(x) { return String(x || '').replace(/[\u064B-\u065F\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^\s*(ا|م|د|الاستاذ|الاستاذه|استاذ|استاذه|مس|مستر|Mr|Ms|Mrs|Miss)(\s*[\/.]\s*|\s+)/i, '').replace(/[\/.]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
 /* ▶ Run لو كلمة سر المدير اتغيّرت: بيمسح بصمتها، وأول دخول للمدير بعد كده بيسجّل الجديدة */
 function dirReset() { PropertiesService.getScriptProperties().deleteProperty('dir_h'); Logger.log('تمام'); }
-function hOk_(c, h) { const r = load_()[c]; return !!(r && r.h && h && r.h === String(h)); }
+/* صلاحية المعلم على حصة (الواجبات، النتايج، الملفات): بصمة كود المعلم — أو بصمة كلمة سر Academic Supervisor (نفس صلاحية المعلم على كل الحصص) */
+function hOk_(c, h) { if (!h) return false; const r = load_()[c]; if (!r) return false;
+  const d = PropertiesService.getScriptProperties().getProperty('dir_h'); if (d && String(h) === d) return true;
+  return !!(r.h && r.h === String(h)); }
 function cls_(c, d) { const id = PropertiesService.getScriptProperties().getProperty('gf_' + c); if (!id || !d) return null; const it = DriveApp.getFolderById(id).getFoldersByName(String(d)); return it.hasNext() ? it.next() : null; }
 function fileIn_(f, re) { const it = f.getFiles(); while (it.hasNext()) { const x = it.next(); if (re.test(x.getName())) return x; } return null; }
 function jget_(f, name) { const x = fileIn_(f, new RegExp('^' + name.replace('.', '\\.') + '$')); try { return x ? JSON.parse(x.getBlob().getDataAsString()) : null; } catch (e) { return null; } }
