@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.30-a';
+const VER='2026.12.31-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -733,6 +733,8 @@ async function dirH(pw){const b=await crypto.subtle.digest('SHA-256',new TextEnc
 /* بيتحسب مرة واحدة بس (حتى لو اتطلب من مكانين في نفس الوقت) */
 let DIRKP=null;function dirKey(){if(DIRK)return Promise.resolve(DIRK);const pw=dpwGet();if(!pw)return Promise.resolve(null);return DIRKP||(DIRKP=dirUnlock(pw).catch(()=>null).finally(()=>{DIRKP=null}))}
 const DIRM=new URLSearchParams(location.search).get('dir')=='1';
+/* 🗂 السكرتارية بتتابع الحصة (زي المشرف) — بإثبات من مفتاح الغرفة اللي على جهازها، من غير كلمة سر */
+const SVM=DIRM&&new URLSearchParams(location.search).get('sv')==='1';
 function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id='dirm';m.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:14px';document.body.append(m)}
  m.innerHTML='<div class="card" style="gap:10px"><h2>Academic Supervisor</h2><input id="dpw" type="password" placeholder="كلمة سر Academic Supervisor" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dlv" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto"></div><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" id="dhw" style="background:#5b4b8a;font-weight:700">📚 الواجبات والسبورات (زي المعلم)</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button><button class="w" id="dout" style="background:transparent;border:1px solid #27496b;font-size:13px">🚪 تسجيل الخروج من الجهاز ده</button></div>';
  m.hidden=false;{const pw=dpwGet();if(pw)$('#dpw').value=pw}
@@ -951,6 +953,8 @@ async function certOk(c,s,rm,key){try{return !!c&&typeof s==='string'&&c.r===rm&
 const LK=(()=>{const q=new URLSearchParams(location.search),s=q.get('s'),k=q.get('k'),r=q.get('r');
  return(s&&k&&(r=='t'||r=='s')&&/^[a-z0-9]{4,16}$/.test(s)&&/^[A-Za-z0-9_-]{86,88}$/.test(k))?{room:s,k,r}:null})();
 /* لينك معلم غرفة ثابتة فيه tk ← نحفظه على الجهاز عشان المعلم يقدر يفتح بالكود بس بعد كده (من التطبيق أو شاشة البداية) */
+/* 🗂 السكرتارية فاتحة الحصة مكان المعلم لحد ما ييجي (sh=1): مابتسجّلش، ومابتبعتش إيميلات، ومابتنهيش الحصة لحد — وأول ما المعلم يفتح بتسلّمه الحصة */
+const SHM=!!(LK&&LK.r=='t'&&new URLSearchParams(location.search).get('sh')==='1');
 {const tk=new URLSearchParams(location.search).get('tk');if(LK&&LK.r=='t'&&tk&&/^[A-Za-z0-9_-]{90,120}$/.test(tk))try{localStorage.setItem('itqan_tk_'+LK.room,JSON.stringify({tk,k:LK.k}))}catch(e){}}
 /* ===== الرجوع للحصة بضغطة: لو المعلم أو الطالب خرج أو النت فصل وقفل الصفحة، بنفتكر آخر حصة لمدة 3 ساعات من آخر تواجد —
    يرجع من غير ما يكتب كود الحصة، والمعلم من غير الكود السري (على نفس الجهاز بس). بتتمسح لما الحصة تخلص أو يخرج بنفسه ===== */
@@ -1023,8 +1027,8 @@ if(LK){if(LK.r=='s')setTimeout(()=>libBtn(LK.room),300);try{$('#nm').value=local
 if(LK.r=='s'&&!DIRM)document.body.classList.add('stj');
 if(LK.r=='s'&&!DIRM){try{if(sessionStorage.getItem('itqan_left')){sessionStorage.removeItem('itqan_left');setTimeout(()=>toast('👋','خرجت من الحصة — لو عايز ترجع اكتب اسمك ودوس دخول'),400)}}catch(e){}
  setTimeout(()=>{try{$('#jgo').textContent='▶ دخول الحصة';const n=$('#nm');if(n&&!n.value.trim())n.focus()}catch(e){}},50)}
-if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
- if(DIRM&&LK.r=='s'){$('#nm').value='Academic Supervisor';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent='دخول Academic Supervisor للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
+if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(SHM)$('#nm').value='🗂 السكرتارية';if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
+ if(DIRM&&LK.r=='s'){$('#nm').value=SVM?'🗂 السكرتارية':'Academic Supervisor';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent=SVM?'دخول السكرتارية لمتابعة الحصة':'دخول Academic Supervisor للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
   if(0){if(!$('#nm').value)try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}if($('#nm').value)setTimeout(()=>{if(!$('#join').hidden)join('t')},1200)}}}
@@ -1400,6 +1404,16 @@ function coCmd(d){const k=String(d.k||''),o=conns[k];
   case 'recst':if(d.v===1&&!recSelfEng){recOwner='sec';clearTimeout(recWait);recSet(1)}else if(d.v===2){clearTimeout(recWait);recOwner=null;recSelf()}else{clearTimeout(recWait);recOwner=null;recStopped=1;recSet(0)}break;
   case 'end':forceEnd();break}}
 function forceEnd(){lastDel();Object.values(conns).forEach(o=>{try{o.c.send({t:'denied',m:'أنهت السكرتارية الجلسة'})}catch(e){}});sys('أنهت السكرتارية الجلسة');endFlowT(1)}
+/* 🗂 الغرفة فاتحاها السكرتارية: نطلب منها تسلّمنا الحصة (مع إثبات إننا المعلم) — بتبعتلنا الطلاب اللي دخلوا والشات وبتخرج، والطلاب بيرجعوا لنا لوحدهم */
+let toT=0;async function tTakeover(){if(SHM||!TC||!TK||Date.now()-toT<8000)return;toT=Date.now();let q=null;
+ try{q=new (PC(room))(undefined,PSO({config:ICE}));q.on('error',()=>{});
+  await new Promise(ok=>{const t=setTimeout(ok,9000);q.on('open',()=>{const c=q.connect('itqan-'+room,{reliable:true});
+   c.on('open',async()=>{const ts=Date.now();try{c.send({t:'takeover',c:TC.c,s:TC.s,ts,g:await sgn(TK.priv,'TO|'+room+'|'+ts)})}catch(e){}});
+   c.on('data',d=>{if(!d||d.t!=='tookover')return;clearTimeout(t);
+    try{(Array.isArray(d.seen)?d.seen:[]).forEach(x=>{if(typeof x=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(x))SEEN.add(x)});
+     if(Array.isArray(d.chat))chat=d.chat.filter(m=>m&&typeof m.m=='string'&&typeof m.n=='string').slice(-300).map(m=>({n:m.n.slice(0,40),m:m.m.slice(0,500),ts:+m.ts||Date.now()})).concat(chat);
+     sys('🗂 السكرتارية سلّمتك الحصة — الطلاب اللي دخلوا هيرجعوا لك لوحدهم');tTries=0}catch(e){}ok()})})})}catch(e){}
+ try{q&&q.destroy()}catch(e){}}
 async function startTPeer(){
  const ice=await getIce();
  if(!hasTurn&&!tTries)sys('⚠️ لم يتم ضبط خادم TURN — طلاب الشبكات المختلفة (خصوصاً الموبايل) قد لا يتمكنون من الاتصال. راجع إعدادات ExpressTURN أعلى الكود.'+(iceWhy?' — السبب: '+iceWhy:''));
@@ -1413,7 +1427,7 @@ async function startTPeer(){
    setTimeout(()=>{try{if(!p.destroyed&&p.disconnected)p.reconnect()}catch(x){}},5000);return}
   if(e.type=='unavailable-id'){
    /* رقم الغرفة لسه محجوز من المرة اللي فاتت (التطبيق اتقفل فجأة، أو الحصة مفتوحة في تبويب/جهاز تاني) — الخادم بيفكّه لوحده خلال دقيقة */
-   tTries++;try{p.destroy()}catch(x){}
+   tTries++;try{p.destroy()}catch(x){}try{tTakeover()}catch(x){}
    if(tTries==1)sys('⏳ الغرفة لسه محجوزة من آخر مرة اتفتحت — بنحاول نفتحها تاني لوحدنا (ممكن تاخد لحد دقيقة). سيب الصفحة مفتوحة.');
    if(tTries==14)sys('⚠️ الغرفة لسه مفتوحة في مكان تاني — لو الحصة مفتوحة على جهاز أو تبويب تاني اقفلها، وهنا هتفتح لوحدها.');
    try{H.t.peer++}catch(x){}setTimeout(startTPeer,tTries<12?5000:10000);return}
@@ -1447,6 +1461,12 @@ async function tData(c,d){
  if(!d||typeof d!=='object')return;
  {const o=conns[c.peer];if(o){o.seen=Date.now();if(d.t=='hb'){o.hbOK=1;return}if(d.t=='bg'){o.bg=d.on?1:0;return}}}
  if(d.t=='pk?'){try{c.send({t:'pk',k:LK.k})}catch(e){}return}
+ if(d.t=='takeover'){if(!SHM||endDone)return;try{
+  /* إثبات إنه المعلم فعلًا: شهادة موقّعة بمفتاح الغرفة + توقيع جهازه */
+  if(!(Math.abs(Date.now()-(+d.ts||0))<120000&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'TO|'+room+'|'+d.ts,d.g)))return;
+  c.send({t:'tookover',seen:[...SEEN],chat:chat.filter(x=>!x.sys).slice(-300).map(x=>x.img?{n:x.n,m:(x.m?x.m+' ':'')+'🖼',ts:x.ts}:x)});
+  Object.values(conns).forEach(o=>{try{o.c.send({t:'hold'})}catch(e){}});sys('👩‍🏫 المعلم دخل — بنسلّمه الحصة…');try{hEv('👩‍🏫 المعلم دخل واستلم الحصة من السكرتارية')}catch(e){}
+  setTimeout(()=>{endDone=1;try{peer.destroy()}catch(e){}showGate('✅','المعلم دخل واستلم الحصة — الطلاب انتقلوا له لوحدهم.',0)},1500)}catch(e){}return}
  if(d.t=='chal'){tProof(c,d);return}
  if(d.t=='cohello'){coHello(c);return}
  if(d.t=='coproof'){coProof(c,d);return}
@@ -1455,6 +1475,8 @@ async function tData(c,d){
   if(conns[c.peer])return;
   if(d.dv&&typeof d.dv.g=='string'&&Math.abs(Date.now()-d.dv.ts)<10*60000){const ok=await vfy(DIR_PUB,'D|'+room+'|'+c.peer+'|'+d.dv.ts,d.dv.g);
    if(ok){const o=conns[c.peer]={c,name:'Academic Supervisor',can:0,cp:0,adm:0,sid:'',dir:1};admit(c.peer);sys('Academic Supervisor دخل الحصة للإشراف');try{hEv('Academic Supervisor دخل الحصة للإشراف')}catch(e){}return}}
+  /* 🗂 السكرتارية داخلة تتابع: توقيع بمفتاح الغرفة نفسه (اللي على جهازها) */
+  if(d.sv&&typeof d.sv.g=='string'&&Math.abs(Date.now()-d.sv.ts)<10*60000&&await vfy(LK.k,'S|'+room+'|'+c.peer+'|'+d.sv.ts,d.sv.g)){conns[c.peer]={c,name:'🗂 السكرتارية',can:0,cp:0,adm:0,sid:'',dir:1};admit(c.peer);sys('🗂 السكرتارية دخلت تتابع الحصة');try{hEv('🗂 السكرتارية دخلت تتابع الحصة')}catch(e){}return}
   const sd=typeof d.id=='string'&&/^[A-Za-z0-9_-]{16,32}$/.test(d.id)?d.id:'',back=!!sd&&SEEN.has(sd);
   if(gm==2&&!back){c.send({t:'denied',m:'الغرفة مقفلة حالياً'});setTimeout(()=>{try{c.close()}catch(e){}},300);return}
   /* نفس الطالب فتح الحصة في تبويب/جهاز تاني: القديم بيتقاله «اتفتحت في مكان تاني» ويقف (بدل ما الاتنين يفضلوا يطردوا بعض) */
@@ -1739,7 +1761,7 @@ function rcBar(i,t){let e=document.getElementById('rcbar');if(!t){if(e)e.remove(
  e.textContent=(i?i+' ':'')+t}
 const CLOSED='الغرفة مغلقة — لم يفتحها المعلم بعد. ستدخل تلقائياً بمجرد فتحها.';
 /* الطالب كان جوه الحصة والنت فصل لحظة: رسالة تطمّنه إنه هيرجع لوحده (بدل «الغرفة مغلقة» اللي بتخليه يقفل ويفتح اللينك) */
-function dropMsg(){if(LG.on)return lgMsg();if(window.WASIN)return Date.now()-window.WASIN<90000?['📶','الاتصال فصل لحظة — بنرجّعك للحصة تلقائياً…\nخليك مكانك ومتقفلش الصفحة']:['⏳','المعلم لسه مارجعش — خليك مكانك، أول ما يرجع هتكمّل الحصة معاه لوحدك'];return[window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED]}
+function dropMsg(){if(Date.now()-(window.HOLDT||0)<60000)return['👩‍🏫','المعلم دخل — بننقلك للحصة معاه…'];if(LG.on)return lgMsg();if(window.WASIN)return Date.now()-window.WASIN<90000?['📶','الاتصال فصل لحظة — بنرجّعك للحصة تلقائياً…\nخليك مكانك ومتقفلش الصفحة']:['⏳','المعلم لسه مارجعش — خليك مكانك، أول ما يرجع هتكمّل الحصة معاه لوحدك'];return[window.SCLOSED?'🕒':'🔒',window.SCLOSED||CLOSED]}
 /* الطالب خرج من التطبيق (واتساب/قفل الشاشة): بنقول للمعلم يصبر عليه، ولما يرجع نتأكد من الاتصال فوراً */
 document.addEventListener('visibilitychange',()=>{if(role!='s'||final)return;try{conn&&conn.open&&conn.send({t:'bg',on:document.hidden?1:0});if(!document.hidden&&conn&&conn.open)conn.send({t:'hb'})}catch(e){}
  if(!document.hidden&&!(conn&&conn.open)&&peer&&!peer.destroyed){clearTimeout(rt);rt=setTimeout(tryConn,300)}});
@@ -1751,11 +1773,11 @@ function tryConn(){clearTimeout(rt);if(!peer||peer.destroyed||final)return;
  const ct=setTimeout(()=>{if(ok||conn!==c||final)return;conn=null;try{c.close()}catch(e){}cFail++;if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳',cFail>=2?T('connHelp'):('الاتصال بالغرفة بطيء — جارٍ إعادة المحاولة...'+(hasTurn?'':' (لو تكرر الأمر جرّب شبكة أخرى)')));rt=setTimeout(tryConn,2500)},20000);
  c.on('open',()=>{ok=1;cFail=0;clearTimeout(ct);vOk=0;vNonce=rnd();c.send({t:'chal',n:vNonce})});
  c.on('data',sData);
- c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم');clearTimeout(LG.t);LG.t=setTimeout(()=>{if(!admitted&&!final)lgEnter()},1500)}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
+ c.on('close',()=>{clearTimeout(ct);if(conn!==c||final)return;const was=admitted;if(admitted){admitted=0;window.WASIN=Date.now();sys('انقطع الاتصال بالمعلم');clearTimeout(LG.t);LG.t=setTimeout(()=>{if(!admitted&&!final&&!(Date.now()-(window.HOLDT||0)<60000))lgEnter()},1500)}dropCall();showGate(...dropMsg());clearTimeout(rt);rt=setTimeout(tryConn,was?1200:4000)});
  c.on('open',()=>{if(window.WASIN)showGate(...dropMsg())});
  c.on('error',()=>{})}
 async function initS(){
- admitted=0;final=0;if(DIRM&&!DIRK)try{dirKey()}catch(e){}
+ admitted=0;final=0;if(DIRM&&!SVM&&!DIRK)try{dirKey()}catch(e){}
  if(!(window.RTCPeerConnection||window.webkitRTCPeerConnection)){showGate('⚠️',T('noRtc'),1);return}
  if(window.SCLOSED)showGate('🕒',window.SCLOSED);else showGate('⏳','جارٍ الاتصال بالغرفة...'+(sTries?' ('+(sTries+1)+')':''));
  /* في نفس الوقت بنسأل جدول الحصص: لو مش وقت الحصة بنقول على طول (بدل ما نستنى خادم الاتصال يرد) — والاتصال بيكمل في الخلفية وأول ما المعلم يفتح بيدخل */
@@ -1830,7 +1852,9 @@ function sid(){const k='itqan_sid_'+room;let v='';try{v=localStorage.getItem(k)|
 async function vProof(d){const c=conn;
  try{
   if(!(d&&d.c&&await certOk(d.c,d.s,room,LK.k)&&await vfy(d.c.p,'T|'+room+'|'+vNonce,d.g)))throw 0;
-  if(conn!==c)return;vOk=1;let dv=null;if(DIRM){const k=await dirKey();if(k&&peer&&peer.id){const ts=Date.now();dv={ts,g:await sgn(k,'D|'+room+'|'+peer.id+'|'+ts)}}}if(conn!==c)return;c.send({t:'hello',n:dv?'Academic Supervisor':name,id:sid(),dv})
+  if(conn!==c)return;vOk=1;let dv=null,sv=null;if(DIRM&&!SVM){const k=await dirKey();if(k&&peer&&peer.id){const ts=Date.now();dv={ts,g:await sgn(k,'D|'+room+'|'+peer.id+'|'+ts)}}}
+  if(SVM&&peer&&peer.id)try{const y=fxGet(room),j=y&&y.jwk;if(j&&j.d){const k=await crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:j.x,y:j.y,d:j.d,ext:true},ALG,false,['sign']),ts=Date.now();sv={ts,g:await sgn(k,'S|'+room+'|'+peer.id+'|'+ts)}}}catch(e){}
+  if(conn!==c)return;c.send({t:'hello',n:dv?'Academic Supervisor':sv?'🗂 السكرتارية':name,id:sid(),dv,sv})
  }catch(e){
   if(conn!==c)return;conn=null;try{c.close()}catch(x){}
   showGate('⛔','تعذر التحقق من هوية المعلم — تأكد أنك فتحت الرابط الأصلي من السكرتارية. جارٍ إعادة المحاولة...');
@@ -1845,6 +1869,7 @@ function sData(d){
  else if(d.t=='init'){admitted=1;window.WASIN=0;clearTimeout(LG.t);lgLeave();daClear();rcBar();if(window.MERR)setTimeout(()=>dg('mic',window.MERR),500);canTalk=d.can===0?0:1;$('#gate').hidden=true;chat=d.chat;st=d.st;tmFix();strokes=d.strokes;ins=d.ins||ins;dirty=1;ui();fit();if(canTalk)micReady().then(ok=>{if(ok)sendMic();else sys('اضغط 🎤 لتشغيل الميكروفون')});sSrStart()}
  else if(d.t=='chat'){if(d.img&&!(typeof d.img=='string'&&CIMG.test(d.img)))delete d.img;chat.push(d)}
  else if(d.t=='roster'){roster=d}
+ else if(d.t=='hold'){window.HOLDT=Date.now()}
  else if(d.t=='resync'){sResync(1)}
  else if(d.t=='dam'){daSync(d.L)}
  else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
@@ -1895,6 +1920,7 @@ function sync0(){
 }
 function endCall(){
  /* المعلم دايمًا بيقفل بالمسار الكامل: رفع السبورة والتفريغ والملفات ويستنى الفيديو يخلص رفع — وإلا الفولدر بيفضل فاضي */
+ if(role=='t'&&SHM){if(confirm('تسيبي الحصة؟ الطلاب هيفضلوا جوه مستنيين المعلم، ولما ييجي هيكمّلوا معاه.')){endDone=1;try{liveOff()}catch(e){}try{peer.destroy()}catch(e){}showGate('✅','سيبتي الحصة — الطلاب مستنيين المعلم.',0)}return}
  if(role=='t'){if(confirm('إنهاء الحصة للجميع؟'))endFlowT(0);return}
  if(role=='t'&&!aiAsked&&(chat.some(x=>!x.sys)||LOG.tr.length)){aiAsked=1;if(confirm('هل تريد إنشاء ملخص الحصة بالذكاء الاصطناعي قبل الإغلاق؟')){aiOpen();return}}
  if(!confirm(role=='t'?'إنهاء الحصة للجميع؟':'مغادرة الحصة؟'))return;lastDel();if(role=='s')try{sessionStorage.setItem('itqan_left','1')}catch(e){}
@@ -2488,7 +2514,7 @@ let MAILLIVE=0; /* إيميلات فورية أثناء الحصة — تتحك�
 let mailQ=[],mailTm=0,mailNames=new Set(),mailDone=0;
 function mailEJ(sub,msg,keep){if(!(MAIL.service&&MAIL.template&&MAIL.key))return;
  try{return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:!!keep,body:JSON.stringify({service_id:MAIL.service,template_id:MAIL.template,user_id:MAIL.key,template_params:{to_email:MAIL.to,subject:sub,message:msg,room:roomName}})}).catch(()=>{})}catch(e){}}
-function mailSend(sub,msg,keep){const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
+function mailSend(sub,msg,keep){if(SHM)return Promise.resolve();const c=(role=='c'&&RCFG&&RCFG.u)?RCFG:RC;
  if(c&&c.u){try{return fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},keepalive:!!keep,body:JSON.stringify({k:c.k||'',a:'mail',sub:String(sub).slice(0,200),msg:String(msg).slice(0,20000)})}).then(r=>r.json()).then(j=>{if(!j||!j.ok)return mailEJ(sub,msg,keep)}).catch(()=>mailEJ(sub,msg,keep))}catch(e){}}
  return mailEJ(sub,msg,keep)}
 const mailNow=()=>new Date().toLocaleString('ar-EG');
@@ -2565,7 +2591,7 @@ function hRep(){const L=[],stu=Object.entries(H.stu),pct=v=>Math.round(v*100)+'%
   done.forEach(d=>L.push('   ✅ اترفع: '+d.n));up.forEach(u=>L.push('   ⏳ '+u.meta.name+' — اترفع منه '+recMB(u.meta.off||0)+' ميجا'+(u.err?' (آخر مشكلة: '+u.err+')':'')+' — الباقي بيكمّل رفع لوحده'))}
  if(H.ev.length){L.push('');L.push('🕒 سجل الأحداث:');H.ev.slice(-50).forEach(e=>L.push(' '+e.t+'  '+e.m))}
  return L.join('\n')+'\n\n'}
-function mailEnd(keep,sum,why,closed){if(role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
+function mailEnd(keep,sum,why,closed){if(SHM||role!='t'||mailDone||!LOG.start)return;mailDone=1;try{Object.values(cohosts).forEach(c=>{try{c.send({t:'bye'})}catch(e){}})}catch(e){}mailFlush(keep);
  const en=!!sum&&aiLangOf(aiData())=='en',mn=Math.round((Date.now()-sessT0)/60000),dur=en?(mn?mn+' min':'< 1 min'):(mn?mn+' دقيقة':'أقل من دقيقة'),
  subj=(sum?(en?'✅ Class summary — ':'✅ ملخص الحصة — '):closed?'⚠️ أُغلقت صفحة المعلم بدون إنهاء الحصة — ':(en?'⏱ Class ended — ':'⏱ انتهت الحصة — '))+roomName+' — '+dur;
  let body=(closed?'أُغلقت صفحة المعلم أو أُعيد تحميلها بدون الضغط على «إنهاء». لو عاد خلال دقائق سيصلك إيميل «عاد المعلم».\n\n':'')+(en?'Room: ':'الغرفة: ')+roomName+'\n'+(en?'Duration: ':'المدة: ')+dur+'\n'+(en?'Ended at: ':'انتهت في: ')+mailNow()+'\n\n';
@@ -3433,6 +3459,11 @@ function qBox(list,ph){const i=document.createElement('input');i.type='search';i
  const nf=document.createElement('small');nf.style.cssText='color:#a9bccd';nf.hidden=true;nf.textContent='مفيش نتايج';
  i.oninput=()=>{const q=qN(i.value).split(' ').filter(Boolean);let n=0;list.querySelectorAll(':scope>.sxr').forEach(r=>{const ok=q.every(w=>(r.dataset.q||'').includes(w));r.style.display=ok?'':'none';if(ok)n++});nf.hidden=!!n};
  list.before(i);list.after(nf);setTimeout(()=>{try{i.focus()}catch(e){}},50);return i}
+/* 🚪 السكرتارية بتفتح الحصة مكان المعلم (لحد ما ييجي) — بمفتاح الغرفة وكود المعلم اللي على جهازها */
+async function shOpen(x){try{let tk=x.tk;if(!tk&&x.jwk&&x.pin)tk=await tkMake(x.room,String(x.pin),x.jwk);if(!x.pub||!tk||!x.pin)return alert('بيانات الغرفة دي ناقصة على الجهاز ده — افتحيها من جهاز السكرتارية الأساسي.');
+ tpSet(x.room,String(x.pin));window.open(linkOf(x.room,x.pub,'t')+'&tk='+encodeURIComponent(tk)+'&sh=1'+(x.title?'&n='+encodeURIComponent(x.title):''),'_blank')}catch(e){alert('تعذّر فتح الحصة: '+(e&&e.message||e))}}
+/* 👁 السكرتارية بتدخل تتابع الحصة في أي وقت (من غير ما المعلم يقبلها) */
+function svOpen(x){if(!x.pub||!x.jwk)return alert('بيانات الغرفة دي ناقصة على الجهاز ده — افتحيها من جهاز السكرتارية الأساسي.');window.open(linkOf(x.room,x.pub,'s')+'&dir=1&sv=1'+(x.title?'&n='+encodeURIComponent(x.title):''),'_blank')}
 function sPanel(){let m=$('#spn');if(m)m.remove();m=document.createElement('div');m.id='spn';m.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(10,20,34,.9);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl';
  const L=fxList().slice().sort((p,q)=>String(p.tn||'').localeCompare(String(q.tn||''))||String(p.title||'').localeCompare(String(q.title||'')));
  m.innerHTML='<div class="sxc" style="width:min(560px,100%);max-height:90vh;overflow:auto;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>🎓 لينكات الطلاب</h3><button class="sxb d" id="spx">✕</button></div><small style="color:#a9bccd;line-height:1.8">لكل مجموعة لينك ثابت مايتغيّرش — ابعتيه في جروب المجموعة مرة واحدة. الطالب يضغط عليه ويكتب اسمه أول مرة بس، ويستنى المعلم يقبله.</small><div id="spl" style="display:flex;flex-direction:column;gap:8px"></div></div>';
@@ -3442,6 +3473,7 @@ function sPanel(){let m=$('#spn');if(m)m.remove();m=document.createElement('div'
  L.forEach(x=>{const r=document.createElement('div');r.className='sxr';r.style.cssText='flex-wrap:wrap;gap:8px';
   r.dataset.q=qN([x.title,x.tn,x.room,fmtCode(x.room)].join(' '));r.innerHTML='<span style="flex:1;min-width:180px;line-height:1.7"><b translate="no">'+esc(x.title||fmtCode(x.room))+'</b><br><small style="color:#a9bccd">'+(x.tn?esc(x.tn)+' · ':'')+esc(slotTxt((x.sch||[]).filter(q=>!q.date))||'—')+'</small></span>';
   const bt=document.createElement('span');bt.className='bt';const mk=(t,c,f)=>{const b=document.createElement('button');b.className='sxb '+c;b.textContent=t;b.onclick=f;bt.append(b)};
+  mk('🚪 افتحي الحصة','g',()=>shOpen(x));mk('👁 تابعي الحصة','d',()=>svOpen(x));
   mk('📲 واتساب','g',()=>window.open('https://wa.me/?text='+encodeURIComponent(fxMsg(x,'s')),'_blank'));
   mk('🔗 نسخ اللينك','d',async()=>{const u=fxUrl(x.room,'s');try{await copyTxt(u);toast('✅','اتنسخ لينك '+(x.title||''))}catch(e){prompt('انسخ اللينك:',u)}});
   r.append(bt);box.append(r)})}
@@ -3666,7 +3698,7 @@ function hubCamEl(){if(!camT){_hcT=null;return null}
  if(_hcT!==camT){_hcT=camT;if(!_hc){_hc=document.createElement('video');_hc.muted=true;_hc.playsInline=true;_hc.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none';document.body.appendChild(_hc)}_hc.srcObject=new MediaStream([camT]);_hc.play().catch(()=>{})}
  return _hc}
 function recSet(on){recOn=on;$('#recb').hidden=!on;Object.values(conns).forEach(o=>{try{o.c.send({t:'recon',on})}catch(e){}});}
-function recPlan(){if(!RC||recStopped||recOwner||recSelfEng)return;
+function recPlan(){if(SHM||!RC||recStopped||recOwner||recSelfEng)return;
  /* التسجيل دايماً على جهاز المعلم في ملف واحد (من غير تسليم للسكرتارية وتقسيم الملف لما تدخل أو تخرج) */
  recSelf()}
 /* رفع ملف على نفس فولدر Drive بتاع التسجيل (أجزاء 1.5 ميجا زي التسجيل) */
@@ -3942,7 +3974,7 @@ async function boardToDrive(sum){if(role!='t'||!RC)return;const base=recBase();
    try{const lb=await pgPdf(1,1);if(lb)driveUp(lb,base+'_مصدر-الواجب.pdf','application/pdf')}catch(e){}
    const b=await pgPdf(1);if(b)driveUp(b,base+'_السبورة.pdf','application/pdf')}}catch(e){try{hEv('⚠️ تعذّر تجهيز PDF السبورة للرفع')}catch(x){}}
  [].forEach(f=>{try{SHU.add(f);driveUp(f,base+'_'+String(f.name||'ملف').replace(/[\\/:*?"<>|]/g,'_').slice(0,80),f.type||'application/octet-stream')}catch(e){}})}
-function recSelf(suf){if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
+function recSelf(suf){if(SHM)return;if(!RC){try{hEv('❌ التسجيل مااشتغلش — مفيش إعداد Drive')}catch(e){}return}if(recSelfEng||recStopped)return;try{hEv('🎥 التسجيل بدأ على جهاز المعلم'+(suf||''))}catch(e){}
  try{recOwner='t';recSelfEng=recStart({name:recBase()+'_فيديو'+(window.RPART>1?' - الجزء '+window.RPART:'')+(suf||''),f:window.RF,c:room},{draw:progDraw,main:()=>null,cam:()=>null,audio:()=>[],audio:()=>{const t=mxRecTrack();return t?[t]:[]}},RC.u,RC.k,recRefresh);recSet(1)}
  catch(e){recOwner=null;recSelfEng=null;sys('⚠️ تعذر بدء تسجيل الحصة: المتصفح لا يدعم ذلك');try{hEv('❌ التسجيل مااشتغلش — المتصفح مابيدعمش التسجيل')}catch(x){}}}
 function coMedia(){
