@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.29-a';
+const VER='2026.12.30-a';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -736,6 +736,13 @@ const DIRM=new URLSearchParams(location.search).get('dir')=='1';
 function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id='dirm';m.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,34,.94);display:flex;align-items:center;justify-content:center;padding:14px';document.body.append(m)}
  m.innerHTML='<div class="card" style="gap:10px"><h2>Academic Supervisor</h2><input id="dpw" type="password" placeholder="كلمة سر Academic Supervisor" autocomplete="current-password"><input id="dcd" placeholder="كود الحصة — مثال: K7M2" autocomplete="off" style="text-align:center;font-weight:700;direction:ltr"><small id="der" style="color:#fca5a5;min-height:18px;line-height:1.7"></small><div id="dlv" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto"></div><div id="dfx" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto"></div><button class="w" id="dgo" style="background:#1a9486;font-weight:700">👁 دخول الحصة للإشراف</button><button class="w" id="dhw" style="background:#5b4b8a;font-weight:700">📚 الواجبات والسبورات (زي المعلم)</button><button class="w" onclick="$(\'#dirm\').hidden=true">رجوع</button><button class="w" id="dout" style="background:transparent;border:1px solid #27496b;font-size:13px">🚪 تسجيل الخروج من الجهاز ده</button></div>';
  m.hidden=false;{const pw=dpwGet();if(pw)$('#dpw').value=pw}
+ /* 🔒 مفيش أي بيانات (غرف، حصص، أكواد) بتظهر ولا بتتحمّل قبل ما كلمة السر تتكتب وتتأكد — بعد ما تتفتح مرة بتفضل مفتوحة طول ما الصفحة مفتوحة */
+ if(window.DIROK!==1){['#dcd','#dlv','#dfx','#dgo','#dhw','#dout'].forEach(q=>{const e=$(q);if(e)e.style.display='none'});
+  const ub=document.createElement('button');ub.className='w';ub.style.cssText='background:#1a9486;font-weight:700';ub.textContent='🔓 فتح';$('#der').before(ub);
+  const tryOpen=async()=>{const pw=$('#dpw').value,e=$('#der');if(!pw){e.style.color='#fca5a5';e.textContent='اكتب كلمة سر Academic Supervisor';return}
+   ub.disabled=true;e.style.color='#e3c08d';e.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(x){ub.disabled=false;e.style.color='#fca5a5';e.textContent='كلمة السر غير صحيحة';return}
+   window.DIROK=1;dirOpen()};
+  ub.onclick=tryOpen;$('#dpw').addEventListener('keydown',x=>{if(x.key=='Enter')tryOpen()});setTimeout(()=>$('#dpw').focus(),50);return}
  const er=$('#der'),go=async(code)=>{const pw=$('#dpw').value;if(!pw){er.textContent='اكتب كلمة سر Academic Supervisor';return}const c=parseCode(code||$('#dcd').value);if(!c){er.textContent='اكتب كود الحصة (4 حروف وأرقام)';return}
   er.style.color='#e3c08d';er.textContent='⏳ جارٍ التحقق…';try{await dirUnlock(pw)}catch(e){er.style.color='#fca5a5';er.textContent='كلمة السر غير صحيحة';return}
   er.textContent='⏳ جارٍ البحث عن الحصة '+fmtCode(c)+'…';/* لو المعلم لسه بيعيد الاتصال بالخادم (بيحصل ثواني) بنحاول تاني لحد 45 ثانية بدل ما نقول «مش مفتوحة» على طول */
@@ -761,7 +768,7 @@ function dirOpen(){let m=$('#dirm');if(!m){m=document.createElement('div');m.id=
  /* لو المدير استرجع ملف الغرف الثابتة على جهازه: أزرار دخول سريعة لكل غرفة */
  const L=fxList();if(L.length)$('#dfx').innerHTML='<small style="color:#a9bccd">الغرف الثابتة:</small>'+L.map(x=>'<button class="w" style="background:#27496b;text-align:start" data-c="'+x.room+'">👁 '+esc(x.title||'غرفة')+(x.tn?' — '+esc(x.tn):'')+' <small style="direction:ltr">('+fmtCode(x.room)+')</small></button>').join('');
  $('#dfx').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>go(b.dataset.c));setTimeout(()=>$('#dpw').value?$('#dcd').focus():$('#dpw').focus(),50);
- $('#dout').onclick=()=>{if(!confirm('تمسح كلمة سر Academic Supervisor من الجهاز ده؟'))return;dirOut();$('#dpw').value='';$('#dlv').innerHTML='';toast('🚪','اتمسحت من الجهاز ده')};
+ $('#dout').onclick=()=>{if(!confirm('تمسح كلمة سر Academic Supervisor من الجهاز ده؟'))return;dirOut();window.DIROK=0;m.hidden=true;$('#dpw').value='';$('#dlv').innerHTML='';toast('🚪','اتمسحت من الجهاز ده')};
  /* 🟢 الحصص المفتوحة دلوقتي — بتتحدّث كل 15 ثانية وانت فاتح الشاشة، ودوسة واحدة تدخلك أي حصة */
  const lv=$('#dlv');let busy=0;
  /* ⚡ طريقة سريعة (من غير جوجل سكربت): بنسأل كل غرف الأكاديمية مباشرة عن طريق نفس اتصال الحصص — الغرفة المفتوحة بترد في ثانيتين
