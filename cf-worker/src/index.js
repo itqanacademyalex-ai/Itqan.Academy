@@ -6,6 +6,8 @@
 
 const ORIGINS = ['https://itqanacademyalex-ai.github.io', 'http://localhost:8765'];
 const SFU = 'https://rtc.live.cloudflare.com/v1/apps/';
+/* سجل جوجل (نفس الرابط اللي في الموقع) — للنسخة السريعة من «حصصي» */
+const REG = 'https://script.google.com/macros/s/AKfycbxhgZRvumyMQNCnM-ILPktMdO9sPkB5F28XFxg1dwIavRN6oGnPQFsSCYLRI0rENZdoaQ/exec';
 const ID_RE = /^[A-Za-z0-9_-]{4,64}$/;
 let TURN_C = null;
 const GRACE = 12000;
@@ -21,12 +23,12 @@ function cors(origin) {
 const json = (o, s, origin) => new Response(JSON.stringify(o), { status: s || 200, headers: { 'Content-Type': 'application/json', ...cors(origin) } });
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     if (url.pathname === '/health' || url.pathname === '/usage') {
       let gb = 0; try { const r = await env.HUB.get(env.HUB.idFromName('hub')).fetch('https://hub/usage'); gb = (await r.json()).gb || 0; } catch (e) {}
-      return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), turn: !!(env.CF_TURN_KEY_ID && env.CF_TURN_KEY_TOKEN), rb: 1, v: 4, month: month(), gb: Math.round(gb * 100) / 100, capGb: CAP_GB, cap: gb >= CAP_GB }, 200, origin);
+      return json({ ok: true, sfu: !!(env.CF_SFU_APP_ID && env.CF_SFU_TOKEN), turn: !!(env.CF_TURN_KEY_ID && env.CF_TURN_KEY_TOKEN), rb: 1, tl: 1, v: 5, month: month(), gb: Math.round(gb * 100) / 100, capGb: CAP_GB, cap: gb >= CAP_GB }, 200, origin);
     }
 
     if (url.pathname === '/ws') {
@@ -63,6 +65,30 @@ export default {
       });
       return new Response(await r.text(), { status: r.status, headers: { 'Content-Type': 'application/json', ...cors(origin) } });
     }
+    /* 🗓 «حصصي» بسرعة: نسخة محفوظة هنا من رد سجل جوجل (اللي بياخد ثواني) — بترجع على طول، وبتتحدّث من جوجل في الخلفية */
+    if (url.pathname === '/tl') {
+      if (!ORIGINS.includes(origin)) return json({ ok: false, e: 'origin' }, 403, origin);
+      const n = String(url.searchParams.get('n') || '').trim().slice(0, 60), c = String(url.searchParams.get('c') || '').toLowerCase();
+      if (!n && !/^[a-z0-9]{4,6}$/.test(c)) return json({ ok: false, e: 'n' }, 400, origin);
+      const key = 'tl:' + n.toLowerCase() + '|' + (/^[a-z0-9]{4,6}$/.test(c) ? c : '');
+      const C = env.HUB.get(env.HUB.idFromName('cache'));
+      const pull = async () => {
+        const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
+        try {
+          const r = await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c) + '&t=' + Date.now(), { signal: ac.signal, redirect: 'follow' });
+          const j = await r.json(); if (!j || !j.ok || !j.rooms) return null;
+          await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
+        } catch (e) { return null; } finally { clearTimeout(t); }
+      };
+      let hit = null; try { hit = await (await C.fetch('https://hub/cache?k=' + encodeURIComponent(key))).json(); } catch (e) {}
+      if (hit && hit.j) {
+        const age = Date.now() - hit.at;
+        if (age > 15000) ctx.waitUntil(pull());
+        return json({ ...hit.j, cached: 1, age: Math.round(age / 1000) }, 200, origin);
+      }
+      const j = await pull();
+      return j ? json({ ...j, cached: 0 }, 200, origin) : json({ ok: false, e: 'reg' }, 200, origin);
+    }
     return json({ ok: false, e: 'notfound' }, 404, origin);
   }
 };
@@ -78,6 +104,10 @@ export class Hub {
   send(ws, o) { try { ws.send(typeof o === 'string' ? o : JSON.stringify(o)); } catch (e) {} }
 
   async fetch(req) {
+    if (new URL(req.url).pathname === '/cache') {
+      if (req.method === 'PUT') { const b = await req.json(); if (b && typeof b.k === 'string' && b.k.length < 120) await this.state.storage.put(b.k, b.v); return new Response('{}'); }
+      return new Response(JSON.stringify((await this.state.storage.get(new URL(req.url).searchParams.get('k') || '')) || null));
+    }
     if (new URL(req.url).pathname === '/usage') { const b = (await this.state.storage.get('use:' + month())) || 0; return new Response(JSON.stringify({ gb: b / 1073741824 })); }
     const url = new URL(req.url), id = url.searchParams.get('id'), token = String(url.searchParams.get('token') || '').slice(0, 64);
     /* الغرفة (اختياري): الأجهزة اللي في نفس الغرفة تقدر تبعت رسالة لكلهم مرة واحدة (استراحة الطلاب لما المعلم يخرج) */
