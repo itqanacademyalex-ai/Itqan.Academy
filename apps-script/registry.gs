@@ -617,16 +617,20 @@ function hwGradeJob() {
   } finally { C.remove('hg_run'); }
 }
 function hwList_(b) {
-  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const id = PropertiesService.getScriptProperties().getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
-  const out = [], it = DriveApp.getFolderById(id).getFolders();
-  while (it.hasNext()) { const f = it.next(), hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [], has = !!fileIn_(f, /(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/) || f.getFoldersByName(MATF).hasNext();
-    let S = null; try { S = JSON.parse(PropertiesService.getScriptProperties().getProperty('hws_' + b.c + '|' + f.getName()) || 'null'); } catch (z) {}
+  if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const P = PropertiesService.getScriptProperties(), id = P.getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
+  /* ⚡ أسرع: بنرتّب فولدرات الحصص بالتاريخ ونقرا أحدث 40 بس، وكل فولدر بنلف على ملفاته مرة واحدة (بدل 3 مرات) */
+  const F = [], it = DriveApp.getFolderById(id).getFolders(); while (it.hasNext()) { const f = it.next(); F.push({ f: f, d: f.getName() }); }
+  F.sort((a, b) => a.d < b.d ? 1 : -1);
+  const all = P.getProperties(), out = [];
+  for (const x of F) { if (out.length >= 40) break; const f = x.f, fs = {}; let has = false; const fi = f.getFiles();
+    while (fi.hasNext()) { const y = fi.next(), n = y.getName(); if (n === 'hw.json' || n === 'hw_sub.json') fs[n] = y; else if (/(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/.test(n)) has = true; }
+    const rd = n => { try { return fs[n] ? JSON.parse(fs[n].getBlob().getDataAsString()) : null; } catch (e) { return null; } };
+    const hw = rd('hw.json'), subs = rd('hw_sub.json') || []; if (!has && !hw) has = f.getFoldersByName(MATF).hasNext();
+    let S = null; try { S = JSON.parse(all['hws_' + b.c + '|' + x.d] || 'null'); } catch (z) {}
     /* حالة الطابور: بيتعمل (لو من أقل من 10 دقايق) أو فشل وسببه */
     const run = S && S.s == 'run' && Date.now() - S.t < 600000, err = S && (S.s == 'err' || S.s == 'run' && !run) ? (S.e || 'الذكاء الاصطناعي اتأخر — جرّب تاني') : '';
-    /* الحصص الجديدة اللي مالهاش واجب: صفحة المعلم بتطلب عملها على طول أول ما يفتح «الواجبات» (من غير طابور) */
-    const run2 = S && S.s == 'run' && Date.now() - S.t < 600000;
-    if (has || hw) out.push({ d: f.getName(), st: run2 ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
-  out.sort((a, b) => a.d < b.d ? 1 : -1); return out_({ ok: true, items: out.slice(0, 40), key: AIK_() });
+    if (has || hw) out.push({ d: x.d, st: run ? 'run' : hw ? hw.st : err ? 'err' : '', e: err, hw: hw, subs: subs.map(s => ({ n: s.n, at: s.at, score: s.score, total: s.total })) }); }
+  return out_({ ok: true, items: out, key: AIK_() });
 }
 
 /* ===== 📚 ربط الحصص القديمة بالمكتبة =====
