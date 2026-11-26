@@ -70,10 +70,11 @@ export default {
       if (!ORIGINS.includes(origin)) return json({ ok: false, e: 'origin' }, 403, origin);
       const n = String(url.searchParams.get('n') || '').trim().slice(0, 60), c = String(url.searchParams.get('c') || '').toLowerCase();
       /* a=tr: كود المعلم الموحّد ← كود الغرفة (بالبصمة h بس) */
-      const tr = url.searchParams.get('a') === 'tr', h = String(url.searchParams.get('h') || '');
-      if (tr ? !/^[a-f0-9]{64}$/.test(h) : (!n && !/^[a-z0-9]{4,6}$/.test(c))) return json({ ok: false, e: 'n' }, 400, origin);
-      const key = tr ? 'tr:' + h : 'tl:' + n.toLowerCase() + '|' + (/^[a-z0-9]{4,6}$/.test(c) ? c : '');
-      const Q = tr ? { a: 'tr', h } : { a: 'tl', n, c }, good = j => j && j.ok && (tr ? /^\d{4,6}$/.test(String(j.p || '')) : !!j.rooms);
+      const A = url.searchParams.get('a') || 'tl', tr = A === 'tr', hw = A === 'hwlist', h = String(url.searchParams.get('h') || '');
+      /* a=hwlist: قايمة الواجبات — محتاجة بصمة كود المعلم h، والنسخة المحفوظة بتترجع بس لنفس البصمة اللي جوجل قبلها */
+      if (tr ? !/^[a-f0-9]{64}$/.test(h) : hw ? !(/^[a-z0-9]{4,6}$/.test(c) && /^[A-Za-z0-9_-]{8,128}$/.test(h)) : (!n && !/^[a-z0-9]{4,6}$/.test(c))) return json({ ok: false, e: 'n' }, 400, origin);
+      const key = tr ? 'tr:' + h : hw ? 'hw:' + c + '|' + h : 'tl:' + n.toLowerCase() + '|' + (/^[a-z0-9]{4,6}$/.test(c) ? c : '');
+      const Q = tr ? { a: 'tr', h } : hw ? { a: 'hwlist', c, h } : { a: 'tl', n, c }, good = j => j && j.ok && (tr ? /^\d{4,6}$/.test(String(j.p || '')) : hw ? Array.isArray(j.items) : !!j.rooms);
       const C = env.HUB.get(env.HUB.idFromName('cache'));
       const pull = async () => {
         const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
@@ -86,10 +87,12 @@ export default {
           if (!r.ok) { const s1 = r.status; r = await hop(await fetch(REG + '?' + new URLSearchParams(Q), { signal: ac.signal, redirect: 'manual', headers: H })); if (!r.ok) LASTE = 'post ' + s1 + ' get ' + r.status; }
           const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch (e) { LASTE = 'http ' + r.status + ' ' + tx.slice(0, 120); return null; }
           if (!good(j)) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
-          await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
+          const body = JSON.stringify({ k: key, v: { at: Date.now(), j } }); if (body.length < 120000) await C.fetch('https://hub/cache', { method: 'PUT', body }); return j;
         } catch (e) { LASTE = 'fetch ' + (e && e.message || e); return null; } finally { clearTimeout(t); }
       };
       let hit = null; try { hit = await (await C.fetch('https://hub/cache?k=' + encodeURIComponent(key))).json(); } catch (e) {}
+      /* الواجبات: لو النسخة أقدم من 10 دقايق نستنى الجديدة (ولو جوجل ماردّش نرجّع القديمة) */
+      if (hit && hit.j && hw && Date.now() - hit.at > 600000) { const j = await pull(); if (j) return json({ ...j, cached: 0 }, 200, origin); }
       if (hit && hit.j) {
         const age = Date.now() - hit.at;
         if (age > 15000) ctx.waitUntil(pull());

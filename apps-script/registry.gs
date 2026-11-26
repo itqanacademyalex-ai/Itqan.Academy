@@ -618,11 +618,11 @@ function hwGradeJob() {
 }
 function hwList_(b) {
   if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const P = PropertiesService.getScriptProperties(), id = P.getProperty('gf_' + b.c); if (!id) return out_({ ok: true, items: [], key: AIK_() });
-  /* ⚡ أسرع: بنرتّب فولدرات الحصص بالتاريخ ونقرا أحدث 40 بس، وكل فولدر بنلف على ملفاته مرة واحدة (بدل 3 مرات) */
+  /* ⚡ أسرع: بنرتّب فولدرات الحصص بالتاريخ ونقرا أحدث 20 بس، وكل فولدر بنلف على ملفاته مرة واحدة (بدل 3 مرات) */
   const F = [], it = DriveApp.getFolderById(id).getFolders(); while (it.hasNext()) { const f = it.next(); F.push({ f: f, d: f.getName() }); }
   F.sort((a, b) => a.d < b.d ? 1 : -1);
   const all = P.getProperties(), out = [];
-  for (const x of F) { if (out.length >= 40) break; const f = x.f, fs = {}; let has = false; const fi = f.getFiles();
+  for (const x of F) { if (out.length >= 20) break; const f = x.f, fs = {}; let has = false; const fi = f.getFiles();
     while (fi.hasNext()) { const y = fi.next(), n = y.getName(); if (n === 'hw.json' || n === 'hw_sub.json') fs[n] = y; else if (/(السبورة\.pdf|مصدر-الواجب\.pdf|التفريغ\.txt)$/.test(n)) has = true; }
     const rd = n => { try { return fs[n] ? JSON.parse(fs[n].getBlob().getDataAsString()) : null; } catch (e) { return null; } };
     const hw = rd('hw.json'), subs = rd('hw_sub.json') || []; if (!has && !hw) has = f.getFoldersByName(MATF).hasNext();
