@@ -9,7 +9,7 @@ const SFU = 'https://rtc.live.cloudflare.com/v1/apps/';
 /* سجل جوجل (نفس الرابط اللي في الموقع) — للنسخة السريعة من «حصصي» */
 const REG = 'https://script.google.com/macros/s/AKfycbxhgZRvumyMQNCnM-ILPktMdO9sPkB5F28XFxg1dwIavRN6oGnPQFsSCYLRI0rENZdoaQ/exec';
 const ID_RE = /^[A-Za-z0-9_-]{4,64}$/;
-let TURN_C = null;
+let TURN_C = null, LASTE = '';
 const GRACE = 12000;
 /* 📊 عدّاد استهلاك Cloudflare (الصوت والصورة اللي الأجهزة استقبلتها) — لو قرّب من الحد المجاني (1000 جيجا في الشهر) الحصص بترجع للطريقة القديمة لوحدها */
 const CAP_GB = 850;
@@ -76,9 +76,10 @@ export default {
         const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
         try {
           const r = await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c) + '&t=' + Date.now(), { signal: ac.signal, redirect: 'follow' });
-          const j = await r.json(); if (!j || !j.ok || !j.rooms) return null;
+          const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch (e) { LASTE = 'http ' + r.status + ' ' + tx.slice(0, 120); return null; }
+          if (!j || !j.ok || !j.rooms) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
           await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
-        } catch (e) { return null; } finally { clearTimeout(t); }
+        } catch (e) { LASTE = 'fetch ' + (e && e.message || e); return null; } finally { clearTimeout(t); }
       };
       let hit = null; try { hit = await (await C.fetch('https://hub/cache?k=' + encodeURIComponent(key))).json(); } catch (e) {}
       if (hit && hit.j) {
@@ -87,7 +88,7 @@ export default {
         return json({ ...hit.j, cached: 1, age: Math.round(age / 1000) }, 200, origin);
       }
       const j = await pull();
-      return j ? json({ ...j, cached: 0 }, 200, origin) : json({ ok: false, e: 'reg' }, 200, origin);
+      return j ? json({ ...j, cached: 0 }, 200, origin) : json({ ok: false, e: 'reg', d: LASTE }, 200, origin);
     }
     return json({ ok: false, e: 'notfound' }, 404, origin);
   }
