@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-b';
+const VER='2027.01.01-c';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1000,10 +1000,13 @@ async function regRace(o,ms){const u=regUrl(),A=[];const go=(f)=>{const ac=new A
  const q=Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
  try{const j=await Promise.any([go(sg=>fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:sg}).then(r=>r.text()).then(t=>JSON.parse(t))),
   go(sg=>fetch(u+(u.includes('?')?'&':'?')+q+'&t='+Date.now(),{signal:sg}).then(r=>r.json()))]);A.forEach(a=>{try{a.abort()}catch(e){}});return j}catch(e){return null}}
+/* 🗓 «حصصي» بسرعة: نسخة خادم إتقان (Cloudflare) بترد في أقل من ثانية، ومعاها طلب سجل جوجل نفسه — أول رد سليم بيكسب */
+async function tlFast(n,c){const hub=(async()=>{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),8000);try{const j=await (await fetch('https://itqan-hub.itqanacademy-alex.workers.dev/tl?n='+encodeURIComponent(n||'')+'&c='+encodeURIComponent(c||''),{signal:ac.signal,cache:'no-store'})).json();if(j&&j.ok&&j.rooms)return j}catch(e){}finally{clearTimeout(t)}throw 0})();
+ const reg=regQ({a:'tl',n,c},20000).then(j=>{if(j&&j.ok&&j.rooms)return j;throw 0});try{return await Promise.any([hub,reg])}catch(e){return null}}
 async function tschSync(code){let R={},srv=0;
  /* جدول المعلم من سجل جوجل (اللي السكرتارية بتعدّله). لو السجل ماردّش (نت بطيء) مابنمسحش الحصص المحفوظة — بنستنى المحاولة الجاية */
  try{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}const u=regUrl();if(u&&(n||code)){
-  const j=await regQ({a:'tl',n,c:code||''},20000);if(j&&j.ok&&j.rooms){R=j.rooms;srv=1;window.TL_DONE=1}}}catch(e){}
+  const j=await tlFast(n,code||'');if(j&&j.ok&&j.rooms){R=j.rooms;srv=1;window.TL_DONE=1}}}catch(e){}
  if(!srv){if(tsGet().length)return false;try{const J=await (await fetch('schedule.json?t='+Date.now(),{cache:'no-store'})).json();R=J.rooms||{}}catch(e){return false}}
  /* لو اسم المعلم معروف (من لينكه) بناخد حصصه هو بس — مانخمّنش المعلم من كود غرفة قديمة على الجهاز */
  let me=null;{let n='';try{n=localStorage.getItem('itqan_tname')||''}catch(e){}if(n)me={t:n}}if(!me){me=code&&R[code];if(!me){const k=tsGet().map(x=>x.c).find(c=>R[c]);me=k&&R[k]}}if(!me||!me.t)return false;
