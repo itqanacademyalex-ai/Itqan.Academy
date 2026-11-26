@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-d';
+const VER='2027.01.01-e';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3901,8 +3901,13 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
   B.innerHTML='<small style="line-height:1.8">اكتب كود المعلم (6 أرقام) — مرة واحدة بس على الجهاز ده:</small><input id="hwpc" inputmode="numeric" maxlength="6" style="background:#1c2631;border:1px solid #33475a;border-radius:10px;padding:10px;color:#fff;font:inherit;text-align:center;letter-spacing:4px"><small id="hwpe" style="color:#e8a3a3"></small>';
   B.append(hwBtn('فتح الواجبات','#468f85',async function(){this.disabled=true;const n=await tbUnlock($('#hwpc').value).catch(()=>0);this.disabled=false;if(n){toast('✅','اتحفظ — '+n+' حصة');hwPanel()}else $('#hwpe').textContent='الكود غلط — راجع رسالة السكرتارية.'}));return}
  B.innerHTML='';
- for(const x of rooms){const h=x.h||await hwH(x.c,x.p||tpGet(x.c));const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#d8bf96">📚 '+esc(x.t||fmtCode(x.c))+'</b><small>⏳</small>';B.append(sec);
-  let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}sec.lastChild.remove();
+ /* كل الحصص بتتطلب مع بعض (مش واحدة ورا التانية)، وآخر نسخة محفوظة على الجهاز بتظهر على طول لحد ما الجديدة توصل */
+ const jobs=rooms.map(x=>(async()=>{const h=x.h||await hwH(x.c,x.p||tpGet(x.c));let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}
+  if(j&&j.ok)try{localStorage.setItem('itqan_hwl_'+x.c,JSON.stringify((j.items||[]).map(it=>({d:it.d,st:it.st,n:(it.subs||[]).length}))))}catch(e){}return{h,j}})());
+ for(const [xi,x] of rooms.entries()){const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#d8bf96">📚 '+esc(x.t||fmtCode(x.c))+'</b>';B.append(sec);
+  const pv=document.createElement('div');pv.style.cssText='display:flex;flex-direction:column;gap:6px;opacity:.6';{let L=[];try{L=JSON.parse(localStorage.getItem('itqan_hwl_'+x.c)||'[]')}catch(e){}
+   pv.innerHTML='<small>⏳ بيتحدّث…</small>'+L.slice(0,12).map(it=>'<div style="background:#2b3846;border-radius:12px;padding:8px 10px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#8f9cab">'+(it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة':it.st=='run'?'⏳ بيتعمل…':'—')+(it.n?' · '+it.n+' حلّ':'')+'</small></div>').join('')}sec.append(pv);
+  const {h,j}=await jobs[xi];pv.remove();
   if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+(x.dir&&j.e=='auth'?'السجل لسه مايعرفش كلمة سر Academic Supervisor — اتأكد إن registry الجديد متنشر (New version)، وافتح «الحصص المفتوحة دلوقتي» مرة بكلمة السر':hwErr(j))}));continue}
   if(j.key===false){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+HWE.nokey}))}
   if(!j.items.length){sec.append(Object.assign(document.createElement('small'),{textContent:'لسه مفيش حصص متسجّلة.'}));continue}
