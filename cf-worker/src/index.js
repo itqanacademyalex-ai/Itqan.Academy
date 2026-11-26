@@ -69,20 +69,23 @@ export default {
     if (url.pathname === '/tl') {
       if (!ORIGINS.includes(origin)) return json({ ok: false, e: 'origin' }, 403, origin);
       const n = String(url.searchParams.get('n') || '').trim().slice(0, 60), c = String(url.searchParams.get('c') || '').toLowerCase();
-      if (!n && !/^[a-z0-9]{4,6}$/.test(c)) return json({ ok: false, e: 'n' }, 400, origin);
-      const key = 'tl:' + n.toLowerCase() + '|' + (/^[a-z0-9]{4,6}$/.test(c) ? c : '');
+      /* a=tr: كود المعلم الموحّد ← كود الغرفة (بالبصمة h بس) */
+      const tr = url.searchParams.get('a') === 'tr', h = String(url.searchParams.get('h') || '');
+      if (tr ? !/^[a-f0-9]{64}$/.test(h) : (!n && !/^[a-z0-9]{4,6}$/.test(c))) return json({ ok: false, e: 'n' }, 400, origin);
+      const key = tr ? 'tr:' + h : 'tl:' + n.toLowerCase() + '|' + (/^[a-z0-9]{4,6}$/.test(c) ? c : '');
+      const Q = tr ? { a: 'tr', h } : { a: 'tl', n, c }, good = j => j && j.ok && (tr ? /^\d{4,6}$/.test(String(j.p || '')) : !!j.rooms);
       const C = env.HUB.get(env.HUB.idFromName('cache'));
       const pull = async () => {
         const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
         try {
           /* جوجل بيحوّل الطلب لرابط تاني (googleusercontent) — بنمشي ورا التحويل بنفسنا */
           const H = { 'User-Agent': 'Mozilla/5.0 (compatible; ItqanHub/1.0)', Accept: 'application/json,text/plain,*/*' };
-          /* GET الأول، ولو جوجل رفضه (400) نجرّب POST (السجل بيقبل الاتنين) */
           const hop = async r => { for (let i = 0; i < 3 && r.status >= 300 && r.status < 400 && r.headers.get('Location'); i++) r = await fetch(r.headers.get('Location'), { signal: ac.signal, redirect: 'manual', headers: H }); return r; };
-          let r = await hop(await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c), { signal: ac.signal, redirect: 'manual', headers: H }));
-          if (!r.ok) { const s1 = r.status; r = await hop(await fetch(REG, { method: 'POST', signal: ac.signal, redirect: 'manual', headers: { ...H, 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ a: 'tl', n, c }) })); if (!r.ok) LASTE = 'get ' + s1 + ' post ' + r.status; }
+          /* POST الأول (جوجل بيرفض الـ GET اللي جاي من Cloudflare بـ 400)، والـ GET احتياطي */
+          let r = await hop(await fetch(REG, { method: 'POST', signal: ac.signal, redirect: 'manual', headers: { ...H, 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Q) }));
+          if (!r.ok) { const s1 = r.status; r = await hop(await fetch(REG + '?' + new URLSearchParams(Q), { signal: ac.signal, redirect: 'manual', headers: H })); if (!r.ok) LASTE = 'post ' + s1 + ' get ' + r.status; }
           const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch (e) { LASTE = 'http ' + r.status + ' ' + tx.slice(0, 120); return null; }
-          if (!j || !j.ok || !j.rooms) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
+          if (!good(j)) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
           await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
         } catch (e) { LASTE = 'fetch ' + (e && e.message || e); return null; } finally { clearTimeout(t); }
       };
