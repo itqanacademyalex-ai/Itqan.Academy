@@ -75,7 +75,10 @@ export default {
       const pull = async () => {
         const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
         try {
-          const r = await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c) + '&t=' + Date.now(), { signal: ac.signal, redirect: 'follow' });
+          /* جوجل بيحوّل الطلب لرابط تاني (googleusercontent) — بنمشي ورا التحويل بنفسنا */
+          const H = { 'User-Agent': 'Mozilla/5.0 (compatible; ItqanHub/1.0)', Accept: 'application/json,text/plain,*/*' };
+          let r = await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c), { signal: ac.signal, redirect: 'manual', headers: H });
+          for (let i = 0; i < 3 && r.status >= 300 && r.status < 400 && r.headers.get('Location'); i++) r = await fetch(r.headers.get('Location'), { signal: ac.signal, redirect: 'manual', headers: H });
           const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch (e) { LASTE = 'http ' + r.status + ' ' + tx.slice(0, 120); return null; }
           if (!j || !j.ok || !j.rooms) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
           await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
