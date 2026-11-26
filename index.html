@@ -534,7 +534,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2026.12.31-a';
+const VER='2026.12.31-b';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1202,7 +1202,14 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
  pl.onclick=async()=>{let v='';try{v=(await navigator.clipboard.readText()||'').trim()}catch(e){v=(prompt('الصق لينك الحصة هنا:')||'').trim()}if(!v)return;
   try{const u=new URL(v);if(u.origin===location.origin&&u.pathname===location.pathname&&(u.searchParams.get('s')||u.searchParams.get('c')||u.searchParams.get('tn'))){location.href=u.href;return}}catch(e){}pe.textContent='ده مش لينك حصة من أكاديمية إتقان — انسخ اللينك كامل من الرسالة.'};
  hint.append(pl,pe);
- j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';if(TM()){j.append(row,f);if(!tsGet().length){const e=document.createElement('small');e.style.cssText='color:#a9bccd;line-height:1.8';e.textContent='⏳ جارٍ تحميل حصصك…';j.append(e);/* لحد ما السجل يرد فعلًا: «جارٍ التحميل» وبنحاول كل 5 ثواني — «مفيش حصص» بتظهر بس لو السجل رد إن مفيش */
+ /* المعلم برضه يقدر يلصق لينك تاني (لينك حصة، أو لينك معلم تاني على نفس الجهاز) */
+ const pt=document.createElement('button');pt.className='w';pt.style.cssText='background:transparent;border:1px solid #27496b;font-size:13px;margin-top:4px';pt.textContent='📋 الصق لينك تاني (حصة أو معلم تاني)';
+ const pte=document.createElement('small');pte.style.cssText='color:#fca5a5;min-height:0';
+ pt.onclick=async()=>{let v='';try{v=(await navigator.clipboard.readText()||'').trim()}catch(e){}if(!/^https?:/i.test(v))v=(prompt('الصق اللينك هنا:',v)||'').trim();if(!v)return;
+  try{const u=new URL(v),tn=u.searchParams.get('tn');if(u.origin===location.origin&&u.pathname===location.pathname&&(u.searchParams.get('s')||u.searchParams.get('c')||tn)){
+   const cur=tnGet();if(tn&&cur&&tn.slice(0,40)!==cur&&!confirm('اللينك ده لمعلم تاني: «'+tn.slice(0,40)+'».\nالجهاز هيتحوّل له، وحصص «'+cur+'» هتختفي من هنا لحد ما تفتح لينكه تاني. نكمّل؟'))return;
+   location.href=u.href;return}}catch(e){}pte.textContent='ده مش لينك من أكاديمية إتقان — انسخ اللينك كامل من الرسالة.'};
+ j.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';if(TM()){j.append(row,f,pt,pte);if(!tsGet().length){const e=document.createElement('small');e.style.cssText='color:#a9bccd;line-height:1.8';e.textContent='⏳ جارٍ تحميل حصصك…';j.append(e);/* لحد ما السجل يرد فعلًا: «جارٍ التحميل» وبنحاول كل 5 ثواني — «مفيش حصص» بتظهر بس لو السجل رد إن مفيش */
  let tk=0;const iv=setInterval(()=>{if(tsGet().length){clearInterval(iv);return}if(window.TL_DONE){e.textContent='مفيش حصص متسجلة باسمك لسه — كلّم السكرتارية.';clearInterval(iv);return}if(++tk>2)e.textContent='⏳ النت بطيء — بنحاول نجيب حصصك…';try{window.tsRe&&tsRe()}catch(x){}},5000)}}else j.append(row,f,hint,sec)}
 /* رسالة «ثبّت التطبيق» في المتصفح: آيفون/آيباد بالخطوات، وأندرويد بزر تثبيت */
 var instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;pwaInstall()});
