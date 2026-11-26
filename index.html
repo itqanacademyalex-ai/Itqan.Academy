@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-e';
+const VER='2027.01.01-f';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3902,15 +3902,17 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
   B.append(hwBtn('فتح الواجبات','#468f85',async function(){this.disabled=true;const n=await tbUnlock($('#hwpc').value).catch(()=>0);this.disabled=false;if(n){toast('✅','اتحفظ — '+n+' حصة');hwPanel()}else $('#hwpe').textContent='الكود غلط — راجع رسالة السكرتارية.'}));return}
  B.innerHTML='';
  /* كل الحصص بتتطلب مع بعض (مش واحدة ورا التانية)، وآخر نسخة محفوظة على الجهاز بتظهر على طول لحد ما الجديدة توصل */
- const jobs=rooms.map(x=>(async()=>{const h=x.h||await hwH(x.c,x.p||tpGet(x.c));let j;try{j=await hwApi({a:'hwlist',c:x.c,h})}catch(e){j={ok:false}}
+ const jobs=rooms.map(x=>(async()=>{const h=x.h||await hwH(x.c,x.p||tpGet(x.c));/* نسخة Cloudflare السريعة والسجل نفسه مع بعض — أول رد سليم */const di=hwApi({a:'hwlist',c:x.c,h}).catch(()=>({ok:false}));
+  const j=await Promise.any([hubQ({a:'hwlist',c:x.c,h}).then(z=>{if(Array.isArray(z.items))return z;throw 0}),di.then(z=>{if(z&&z.ok)return z;throw 0})]).catch(()=>di);
   if(j&&j.ok)try{localStorage.setItem('itqan_hwl_'+x.c,JSON.stringify((j.items||[]).map(it=>({d:it.d,st:it.st,n:(it.subs||[]).length}))))}catch(e){}return{h,j}})());
- for(const [xi,x] of rooms.entries()){const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#d8bf96">📚 '+esc(x.t||fmtCode(x.c))+'</b>';B.append(sec);
+ /* كل مجموعة ليها مكانها من الأول، وبتتملي لوحدها أول ما ردها يوصل (مجموعة بطيئة ماتأخرش الباقي) */
+ rooms.forEach((x,xi)=>{const sec=document.createElement('div');sec.style.cssText='display:flex;flex-direction:column;gap:6px';sec.innerHTML='<b style="color:#d8bf96">📚 '+esc(x.t||fmtCode(x.c))+'</b>';B.append(sec);
   const pv=document.createElement('div');pv.style.cssText='display:flex;flex-direction:column;gap:6px;opacity:.6';{let L=[];try{L=JSON.parse(localStorage.getItem('itqan_hwl_'+x.c)||'[]')}catch(e){}
    pv.innerHTML='<small>⏳ بيتحدّث…</small>'+L.slice(0,12).map(it=>'<div style="background:#2b3846;border-radius:12px;padding:8px 10px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#8f9cab">'+(it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة':it.st=='run'?'⏳ بيتعمل…':'—')+(it.n?' · '+it.n+' حلّ':'')+'</small></div>').join('')}sec.append(pv);
-  const {h,j}=await jobs[xi];pv.remove();
-  if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+(x.dir&&j.e=='auth'?'السجل لسه مايعرفش كلمة سر Academic Supervisor — اتأكد إن registry الجديد متنشر (New version)، وافتح «الحصص المفتوحة دلوقتي» مرة بكلمة السر':hwErr(j))}));continue}
+  jobs[xi].then(({h,j})=>{pv.remove();
+  if(!j.ok){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+(x.dir&&j.e=='auth'?'السجل لسه مايعرفش كلمة سر Academic Supervisor — اتأكد إن registry الجديد متنشر (New version)، وافتح «الحصص المفتوحة دلوقتي» مرة بكلمة السر':hwErr(j))}));return}
   if(j.key===false){sec.append(Object.assign(document.createElement('small'),{textContent:'⚠️ '+HWE.nokey}))}
-  if(!j.items.length){sec.append(Object.assign(document.createElement('small'),{textContent:'لسه مفيش حصص متسجّلة.'}));continue}
+  if(!j.items.length){sec.append(Object.assign(document.createElement('small'),{textContent:'لسه مفيش حصص متسجّلة.'}));return}
   j.items.forEach(it=>{const r=document.createElement('div');r.style.cssText='background:#2b3846;border-radius:12px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center';
    const st=it.st=='pub'?'✅ منشور':it.st=='draft'?'✏️ مسودة — محتاج مراجعة':it.st=='run'?'⏳ بيتعمل في الخلفية…':it.st=='err'?'⚠️ '+esc(it.e||'فشل'):'—';r.innerHTML='<span style="flex:1;min-width:150px;line-height:1.6"><b>🗓 '+esc(hwNice(it.d))+'</b><br><small style="color:#8f9cab">'+st+(it.subs.length?' · '+it.subs.length+' حلّ':'')+'</small></span>';
    if(!it.st||it.st=='err'||it.st=='run')r.append(hwBtn('✨ اعمل الواجب','#468f85',async function(){this.disabled=true;const btn=this,t0=Date.now(),tk=()=>{const q=Math.round((Date.now()-t0)/1000);btn.textContent='⏳ بيتعمل… '+Math.floor(q/60)+':'+String(q%60).padStart(2,'0')};tk();const iv=setInterval(tk,1000);
@@ -3926,7 +3928,7 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
    if(it.st=='run'&&gb){r.dataset.poll=1;setTimeout(()=>gb.click(),50)}
    /* أحدث حصة (من آخر 3 أيام) لسه مالهاش واجب: بيبدأ يتعمل لوحده أول ما تفتح «الواجبات» */
    else if(!it.st&&gb&&!sec.dataset.auto&&!x.dir){const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(it.d);if(m&&Date.now()-new Date(+m[1],+m[2]-1,+m[3]).getTime()<3*864e5){sec.dataset.auto=1;setTimeout(()=>gb.click(),300)}}
-   sec.append(r)})}}
+   sec.append(r)})})})}
 /* 📊 نتايج الواجب: كل طالب ودرجته — دوسة على الاسم بتفتح إجاباته سؤال سؤال، والمعلم يقدر يعدّل درجة أي سؤال (✔ / ½ / ✖) */
 async function hwRes(x,d,h){const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(d)));R.innerHTML='<small>⏳</small>';
  const j=await hwApi({a:'hwsubs',c:x.c,d,h});if(!j||!j.ok){R.innerHTML='<small style="color:#e8a3a3">⚠️ '+esc(hwErr(j))+' — لو السكربت قديم: الصق registry.gs الجديد واعمل New version.</small>';return}
