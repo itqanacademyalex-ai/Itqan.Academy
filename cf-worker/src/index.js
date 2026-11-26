@@ -77,8 +77,10 @@ export default {
         try {
           /* جوجل بيحوّل الطلب لرابط تاني (googleusercontent) — بنمشي ورا التحويل بنفسنا */
           const H = { 'User-Agent': 'Mozilla/5.0 (compatible; ItqanHub/1.0)', Accept: 'application/json,text/plain,*/*' };
-          let r = await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c), { signal: ac.signal, redirect: 'manual', headers: H });
-          for (let i = 0; i < 3 && r.status >= 300 && r.status < 400 && r.headers.get('Location'); i++) r = await fetch(r.headers.get('Location'), { signal: ac.signal, redirect: 'manual', headers: H });
+          /* GET الأول، ولو جوجل رفضه (400) نجرّب POST (السجل بيقبل الاتنين) */
+          const hop = async r => { for (let i = 0; i < 3 && r.status >= 300 && r.status < 400 && r.headers.get('Location'); i++) r = await fetch(r.headers.get('Location'), { signal: ac.signal, redirect: 'manual', headers: H }); return r; };
+          let r = await hop(await fetch(REG + '?a=tl&n=' + encodeURIComponent(n) + '&c=' + encodeURIComponent(c), { signal: ac.signal, redirect: 'manual', headers: H }));
+          if (!r.ok) { const s1 = r.status; r = await hop(await fetch(REG, { method: 'POST', signal: ac.signal, redirect: 'manual', headers: { ...H, 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ a: 'tl', n, c }) })); if (!r.ok) LASTE = 'get ' + s1 + ' post ' + r.status; }
           const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch (e) { LASTE = 'http ' + r.status + ' ' + tx.slice(0, 120); return null; }
           if (!j || !j.ok || !j.rooms) { LASTE = 'reg ' + JSON.stringify(j).slice(0, 120); return null; }
           await C.fetch('https://hub/cache', { method: 'PUT', body: JSON.stringify({ k: key, v: { at: Date.now(), j } }) }); return j;
