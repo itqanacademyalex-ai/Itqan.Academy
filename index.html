@@ -453,7 +453,7 @@ body.stj #hws input[type=radio]{accent-color:var(--cl-pu);width:20px!important;h
    <video id="cv" autoplay playsinline muted style="display:none"></video>
    <button id="cvb" hidden onclick="camMode('T')" title="تصغير الكاميرا">⤡</button>
    <button id="fs" onclick="fsToggle()" title="ملء الشاشة">⛶</button>
-   <div id="tag">Itqan Academy 🎤</div>
+   <div id="tag" hidden></div>
    <div id="tmx" hidden></div>
    <button id="unm" hidden onclick="A.play().catch(()=>{});$('#v').play().catch(()=>{});if(role=='t')Object.values(conns).forEach(o=>{o.au&&o.au.play().catch(()=>{})});this.hidden=true" style="position:absolute;z-index:6;top:60px;left:50%;transform:translateX(-50%);background:#468f85;border-radius:12px;padding:10px 18px">🔊 اضغط لتفعيل الصوت</button>
    <div id="poll" hidden></div>
@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-i';
+const VER='2027.01.01-j';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1609,7 +1609,7 @@ A.addEventListener('pause',()=>{if(role=='s'&&A.srcObject)setTimeout(()=>{if(A.p
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&role=='s'&&A.srcObject&&A.paused)A.play().then(()=>$('#unm').hidden=true).catch(()=>$('#unm').hidden=false)});
 function callOne(o){const old=o.call;o.call=peer.call(o.c.peer,new MediaStream([window.DAMODE?(micT&&micT.readyState=='live'?micT:null):mxBus(o.c.peer),...stream.getVideoTracks()].filter(Boolean)));/* خادم إتقان: القديمة بتتقفل بعد ما الجديدة تاخد نفس التراك المرفوع (من غير رفع جديد) */setTimeout(()=>{try{old&&old.close()}catch(e){}},old&&old._out?5000:0);setTimeout(()=>tune(o),900);setTimeout(()=>tune(o),3500)}
 function refreshSoon(){clearTimeout(rfT);rfT=setTimeout(refresh,500)}
-function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=new Audio();a.srcObject=s;a.play().catch(()=>{if(role=='t')$('#unm').hidden=false});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
+function attachMic(o,s){const t=s.getAudioTracks()[0];if(!t)return;if(o.au)o.au.srcObject=null;const a=auNew();a.srcObject=s;a.play().catch(()=>{if(role=='t')$('#unm').hidden=false});o.au=a;o.mt=t;mxSrc(o.c.peer,t)}
 function dropMic(o){if(o.mt){mxSrcDel(o.c.peer);o.mt=null}if(o.au){o.au.srcObject=null;o.au=null}}
 function allow(k){const o=conns[k];if(!o)return;o.can=o.can?0:1;o.c.send({t:'mic',on:o.can});if(!o.can)dropMic(o);render()}
 function tMuteAll(){allMuted=allMuted?0:1;Object.values(conns).filter(o=>o.adm).forEach(o=>{o.can=allMuted?0:1;o.c.send({t:'mic',on:o.can});if(!o.can)dropMic(o)});ui();render();sys(allMuted?'تم كتم صوت جميع الطلاب':'تم إلغاء كتم الطلاب')}
@@ -1848,8 +1848,13 @@ function daSync(L){if(!peer||!peer.pullStream||!Array.isArray(L))return;const ke
  L.slice(0,30).forEach(x=>{if(!x||x.k===peer.id||x.k==='SS:'+peer.id||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
   if(DAP[x.k]&&DAP[x.k].key===key)return;daDrop(x.k);const o=DAP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,2)};
   peer.pullStream(o.sid,o.tn).then(ms=>{if(DAP[x.k]!==o){try{peer.unpullStream(o.sid,o.tn)}catch(e){}return}
-   o.a=document.createElement('audio');o.a.autoplay=true;o.a.hidden=true;document.body.append(o.a);o.a.srcObject=ms;o.a.play().catch(()=>{$('#unm').hidden=false})}).catch(()=>{if(DAP[x.k]===o)delete DAP[x.k]})});
+   o.a=auNew();document.body.append(o.a);o.a.srcObject=ms;o.a.play().catch(()=>{$('#unm').hidden=false})}).catch(()=>{if(DAP[x.k]===o)delete DAP[x.k]})});
  Object.keys(DAP).forEach(k=>{if(!keep[k])daDrop(k)})}
+/* 📱 آيفون: كل مشغّل صوت جديد كان محتاج لمسة من المستخدم عشان يشتغل (خصوصًا للي داخل يسمع بس من غير مايك — زي المشرف)،
+   فالطالب/المعلم اللي صوته وصل بعد آخر لمسة كان مابيتسمعش. دلوقتي كل لمسة بتجهّز مشغّلات «مفتوحة» مسبقًا، وأي صوت جديد بيستخدم واحد منهم */
+const AUP=[];function auPool(){try{while(AUP.length<10){const a=new Audio();a.src=SIL;a.play().catch(()=>{});AUP.push(a)}}catch(e){}}
+function auNew(){const a=AUP.shift()||document.createElement('audio');try{a.pause()}catch(e){}a.autoplay=true;a.playsInline=true;a.hidden=true;return a}
+['pointerdown','touchend','click','keydown'].forEach(ev=>addEventListener(ev,auPool,{passive:true,capture:true}));
 ['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,()=>{Object.values(DAP).forEach(o=>{if(o.a&&o.a.paused)o.a.play().catch(()=>{})})},{passive:true,capture:true}));
 const LG={on:0,pub:null,peers:{},t:0,was:1};
 function lgMsg(){return['🫂','المعلم خرج لحظة — تقدروا تكلّموا بعض (اضغط 🎤) وتكتبوا في الشات لحد ما يرجع.\nخليك مكانك، والحصة هترجع لوحدها أول ما المعلم يرجع']}
@@ -1865,7 +1870,7 @@ function lgLeave(){if(!LG.on)return;LG.on=0;try{peer&&peer.broadcast&&peer.broad
 async function lgHear(k,p){const o=LG.peers[k]||(LG.peers[k]={n:String(p.n||'').slice(0,40)});o.n=String(p.n||o.n).slice(0,40);
  if(!p.sid||!Array.isArray(p.tn)||!p.tn.length||(o.sid===p.sid&&String(o.tn)===String(p.tn)))return;
  if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}o.sid=p.sid;o.tn=p.tn.slice(0,2);
- try{const ms=await peer.pullStream(o.sid,o.tn);if(!LG.on||LG.peers[k]!==o)return;if(!o.a){o.a=document.createElement('audio');o.a.autoplay=true;o.a.hidden=true;document.body.append(o.a)}o.a.srcObject=ms;o.a.play().catch(()=>{})}catch(e){}}
+ try{const ms=await peer.pullStream(o.sid,o.tn);if(!LG.on||LG.peers[k]!==o)return;if(!o.a){o.a=auNew();document.body.append(o.a)}o.a.srcObject=ms;o.a.play().catch(()=>{})}catch(e){}}
 function lgSetup(p){if(!p||!p.on||p._lg)return;p._lg=1;
  p.on('rb',async(k,d,direct)=>{if(!d||typeof d!='object'||!LG.on)return;
   if(d.t=='lj'){const isNew=!LG.peers[k];lgHear(k,d);if(isNew&&!direct)p.tell(k,await lgMe());if(isNew)sys('🫂 '+String(d.n||'طالب').slice(0,40)+' معاك في الاستراحة')}
@@ -2050,7 +2055,7 @@ function ui(){
  $('#v').style.visibility=st.scr?'visible':'hidden';
  const w=$('#wb');w.hidden=!st.wb;w.classList.toggle('bg',!!st.bg);if(st.wb)fit();
  {const tv=!!st.wb,tb=$('#tb');tb.hidden=!tv;if(tv){if(!FP.tb){const q=$('#stage').getBoundingClientRect();FP.tb={fx:(q.left+58)/innerWidth,fy:(q.top+10)/innerHeight};FE.tb=tb}place(tb,'tb')}}
- layoutCams();tmPaint();try{qChip()}catch(e){}if(!st.wb){try{tbPopX();const bm=$('#bgm');if(bm)bm.hidden=true}catch(e){}}{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(24,33,43,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!(st.wb&&st.pn>1);l.textContent='📄 '+((st.pg|0)+1)+' / '+(st.pn|0)}
+ layoutCams();tmPaint();try{qChip()}catch(e){}if(!st.wb){try{tbPopX();const bm=$('#bgm');if(bm)bm.hidden=true}catch(e){}}{let l=$('#pgx');if(!l){l=document.createElement('div');l.id='pgx';l.style.cssText='position:absolute;z-index:5;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(24,33,43,.82);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px;pointer-events:none;direction:ltr';$('#stage').appendChild(l)}l.hidden=!st.wb;l.textContent=((st.pg|0)+1)+' / '+Math.max(1,st.pn|0)}
  $('#bm').classList.toggle('lt',role=='t'?!!st.mic:!!(micS&&micS.enabled));$('#bm').style.opacity=(role=='s'&&!canTalk)?.35:1;$('#bc').classList.toggle('lt',role=='t'?!!st.cam:!!camS);$('#bc').style.opacity=(role=='s'&&!canCam)?.35:1;
  $('#bs').classList.toggle('lt',!!st.scr);$('#bt').classList.toggle('lt',role=='t'&&!!st.wb);$('#bh').classList.toggle('on',!!myHand);
  $('#tl').classList.toggle('on',!!allMuted);$('#tr').classList.toggle('on',!!rec);
