@@ -540,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-l';
+const VER='2027.01.01-m';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1843,6 +1843,16 @@ setInterval(async()=>{if(role!='t'||!window.DAMODE||!peer)return;try{
  const fx=Object.keys(conns).length?await daFx():null;if(fx&&fx.sid)L.push({k:'#fx',sid:fx.sid,tn:fx.tn});
  const sig=JSON.stringify(L),now=Date.now();if(sig===window.DASIG&&now-(window.DAT||0)<20000)return;window.DASIG=sig;window.DAT=now;
  Object.values(conns).forEach(o=>{if(o.adm&&o.c&&o.c.open)try{o.c.send({t:'dam',L})}catch(e){}})}catch(e){}},2000);
+/* 👁 المشرف بيشوف كاميرات الطلاب: المعلم بيبعتله أماكن كاميراتهم على خادم إتقان، وجهاز المشرف بيسحبها مباشرة (من غير ما المعلم يرفع حاجة زيادة) */
+setInterval(()=>{if(role!='t'||!peer||!peer.pullStream)return;try{const D=Object.values(conns).filter(o=>o.dir&&o.adm&&o.c&&o.c.open);if(!D.length)return;
+ const L=Object.values(conns).filter(o=>o.adm&&!o.dir&&o.cp&&o.sc&&o.sc.open!==false&&!o.sc._x&&o.sc._sid&&Array.isArray(o.sc._tn)).map(o=>({k:o.c.peer,n:o.name,sid:o.sc._sid,tn:o.sc._tn.filter(x=>/^video-/.test(x))})).filter(x=>x.tn.length);
+ const sig=JSON.stringify(L),now=Date.now();if(sig===window.DCSIG&&now-(window.DCT||0)<20000)return;window.DCSIG=sig;window.DCT=now;D.forEach(o=>{try{o.c.send({t:'dcam',L})}catch(e){}})}catch(e){}},2000);
+const DCP={};function dcDrop(k){const o=DCP[k];if(!o)return;delete DCP[k];try{hideCam('s:'+k)}catch(e){}if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}}
+function dcSync(L){if(!DIRM||!peer||!peer.pullStream||!Array.isArray(L))return;const keep={};
+ L.slice(0,30).forEach(x=>{if(!x||typeof x.k!='string'||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
+  if(DCP[x.k]&&DCP[x.k].key===key)return;dcDrop(x.k);const o=DCP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,1)};
+  peer.pullStream(o.sid,o.tn).then(ms=>{if(DCP[x.k]!==o){try{peer.unpullStream(o.sid,o.tn)}catch(e){}return}showCam('s:'+x.k,ms,String(x.n||'').slice(0,40))}).catch(()=>{if(DCP[x.k]===o)delete DCP[x.k]})});
+ Object.keys(DCP).forEach(k=>{if(!keep[k])dcDrop(k)})}
 const DAP={};
 function daDrop(k){const o=DAP[k];if(!o)return;delete DAP[k];if(o.a){o.a.srcObject=null;o.a.remove()}if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}}
 function daClear(){Object.keys(DAP).forEach(daDrop)}
@@ -1906,6 +1916,7 @@ function sData(d){
  else if(d.t=='hold'){window.HOLDT=Date.now()}
  else if(d.t=='resync'){sResync(1)}
  else if(d.t=='dam'){daSync(d.L)}
+ else if(d.t=='dcam'){dcSync(d.L)}
  else if(d.t=='st'){if(role=='s'&&(d.st.pg|0)!==(st.pg|0))spSave();st=d.st;tmFix();ui()}
  else if(d.t=='mic'){canTalk=d.on;if(d.on)prepMic(0).then(ok=>ok&&sendMic());else dropCall();sys(d.on?'يمكنك الآن التحدث':'كتم المعلم ميكروفونك');ui()}
  else if(d.t=='pm'&&typeof d.m=='string'){pmGotS(d)}else if(d.t=='pma'){pmAck(pmS,d.ts);pmRender()}else if(d.t=='remic'){micResend()}else if(d.t=='att'){attn()}else if(d.t=='stk'){showStk(d)}else if(d.t=='poll'){showPoll(d.q)}
