@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <style>html,body{background:#1f2a36}</style>
 <style>/* بالإنجليزي: كل سطر بيتكتب من الشمال لليمين جوه مكانه، من غير ما أي عنصر يتحرك */html[lang=en] body :where(p,small,span,b,i,em,strong,label,h1,h2,h3,h4,li,td,th,button,a,div,summary,option,input,textarea){unicode-bidi:plaintext}html[lang=en] body :where(input,textarea){direction:ltr}</style>
+<style>/* المشرف والسكرتارية (متابعة): من غير زرار مشاركة الشاشة */body.dirv #bs{display:none!important}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Itqan Academy – الفصل الافتراضي</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -539,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-k';
+const VER='2027.01.01-l';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1047,7 +1048,7 @@ if(LK.r=='s'&&!DIRM)document.body.classList.add('stj');
 if(LK.r=='s'&&!DIRM){try{if(sessionStorage.getItem('itqan_left')){sessionStorage.removeItem('itqan_left');setTimeout(()=>toast('👋','خرجت من الحصة — لو عايز ترجع اكتب اسمك ودوس دخول'),400)}}catch(e){}
  setTimeout(()=>{try{$('#jgo').textContent='▶ دخول الحصة';const n=$('#nm');if(n&&!n.value.trim())n.focus()}catch(e){}},50)}
 if(LK.r=='t'){$('#tpin').hidden=false;{const sp=tpGet(LK.room),ended=(()=>{try{return Date.now()-(+localStorage.getItem('itqan_end_'+LK.room)||0)<30*60000}catch(e){return false}})();if(sp&&tkGet(LK.room)){$('#tpin').value=sp;$('#tpin').hidden=true;if(SHM)$('#nm').value='🗂 السكرتارية';if(!$('#nm').value.trim()){try{$('#nm').value=localStorage.getItem('itqan_tname')||''}catch(e){}}if(!ended&&$('#nm').value.trim()){showGate('⏳','جارٍ فتح الحصة…');setTimeout(()=>{try{$('#gate').hidden=true;join('t')}catch(e){}},300)}}}try{const pp=sessionStorage.getItem('itqan_pinpre');if(pp){$('#tpin').value=pp;sessionStorage.removeItem('itqan_pinpre')}}catch(e){}}else $('#jrecn').hidden=false;
- if(DIRM&&LK.r=='s'){$('#nm').value=SVM?'🗂 السكرتارية':'Academic Supervisor';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent=SVM?'دخول السكرتارية لمتابعة الحصة':'دخول Academic Supervisor للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
+ if(DIRM&&LK.r=='s'){document.body.classList.add('dirv');$('#nm').value=SVM?'🗂 السكرتارية':'Academic Supervisor';$('#nm').readOnly=true;$('#jrecn').hidden=true;$('#jrole').textContent=SVM?'دخول السكرتارية لمتابعة الحصة':'دخول Academic Supervisor للإشراف';$('#jgo').textContent='👁 دخول الحصة'}
  if(RS){const o=lastGet()||{};if(o.n)$('#nm').value=o.n;if(LK.r=='t'&&tHasCert(LK.room)&&!tkGet(LK.room))$('#tpin').hidden=true;$('#jgo').textContent=LK.r=='t'&&tkGet(LK.room)?'▶ ابدأ الحصة':'↩️ رجوع للحصة';$('#jgo').style.fontSize='17px';
   /* جاي من الفتح التلقائي: الحصة بتبدأ لوحدها (لو الاسم معروف) */
   if(0){if(!$('#nm').value)try{$('#nm').value=localStorage.getItem('itqan_nm')||''}catch(e){}if($('#nm').value)setTimeout(()=>{if(!$('#join').hidden)join('t')},1200)}}}
