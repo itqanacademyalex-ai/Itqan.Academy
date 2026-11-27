@@ -270,7 +270,30 @@ function upStart_(b) {
   if (!loc) return out_({ ok: false, e: 'start ' + r.getResponseCode() });
   const s = Utilities.getUuid(); CacheService.getScriptCache().put('up_' + s, loc, 21600); PropertiesService.getScriptProperties().setProperty('up_' + s, loc); // بيفضل محفوظ لو المعلم قفل والرفع كمّل بعد ساعات
   if (/^[a-z0-9]{4,6}$/.test(c)) { CacheService.getScriptCache().put('upc_' + s, c, 21600); PropertiesService.getScriptProperties().setProperty('upc_' + s, c); CacheService.getScriptCache().remove('lb2_' + c); }
+  /* 🎥 تسجيل فيديو: بنسجّل وقت آخر جزء وصل — لو المعلم قفل والرفع وقف، upSweep بيقفل الملف على اللي وصل (فالفيديو يبقى موجود ولو ناقص آخره) */
+  if (/^video\//.test(meta.mimeType)) { try { PropertiesService.getScriptProperties().setProperty('upt_' + s, String(Date.now())); upSweepOn_(); } catch (x) {} }
   return out_({ ok: true, s: s });
+}
+function upSweepOn_() { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'upSweep')) ScriptApp.newTrigger('upSweep').timeBased().everyMinutes(15).create(); }
+/* كل ربع ساعة: أي تسجيل وقف رفعه من 45 دقيقة (والحصة مش شغالة) بيتقفل على اللي وصل Drive فعلًا */
+function upSweep() {
+  const P = PropertiesService.getScriptProperties(), all = P.getProperties(), now = Date.now();
+  Object.keys(all).filter(k => /^upt_/.test(k)).forEach(k => {
+    const s = k.slice(4), t = +all[k] || 0, loc = all['up_' + s], c = all['upc_' + s] || '';
+    if (!loc) { P.deleteProperty(k); return; }
+    if (now - t < 45 * 60000) return;
+    if (c && now - (+all['lv_' + c] || 0) < 180000) return;
+    try {
+      const st = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */*' }, muteHttpExceptions: true }), code = st.getResponseCode();
+      if (code == 200 || code == 201) { let id = ''; try { id = JSON.parse(st.getContentText()).id; } catch (x) {} upDone_(s, id); P.deleteProperty(k); return; }
+      const rg = String(st.getHeaders()['Range'] || st.getHeaders()['range'] || ''), m = /bytes=0-(\d+)/.exec(rg), got = m ? +m[1] + 1 : 0;
+      if (code == 308 && got > 0) {
+        const f = UrlFetchApp.fetch(loc, { method: 'put', payload: '', headers: { 'Content-Range': 'bytes */' + got }, muteHttpExceptions: true }), fc = f.getResponseCode();
+        if (fc == 200 || fc == 201) { let id = ''; try { id = JSON.parse(f.getContentText()).id; } catch (x) {} upDone_(s, id); }
+      } else if (code == 404 || code == 410 || (code == 308 && !got)) { upDone_(s, ''); }
+    } catch (x) {}
+    P.deleteProperty(k);
+  });
 }
 /* الملف خلص رفع: يتفتح باللينك (الفيديو والسبورة بس — الملخص والتفريغ خاصين بالإدارة) + تتمسح نسخة المكتبة القديمة عشان يظهر للطلاب على طول */
 function upDone_(s, id) {
@@ -289,8 +312,8 @@ function upChunk_(b) {
   const range = bytes && bytes.length ? 'bytes ' + b.st + '-' + b.en + '/' + b.tot : 'bytes */' + b.tot;
   const r = UrlFetchApp.fetch(loc, { method: 'put', contentType: String(b.m || 'application/octet-stream').split(';')[0], payload: bytes || '', headers: { 'Content-Range': range }, muteHttpExceptions: true });
   const c = r.getResponseCode();
-  if (c == 308) return out_({ ok: true, done: 0 });
-  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} upDone_(b.s, id); return out_({ ok: true, done: 1, id: id }); }
+  if (c == 308) { try { const P = PropertiesService.getScriptProperties(); if (P.getProperty('upt_' + b.s)) P.setProperty('upt_' + b.s, String(Date.now())); } catch (x) {} return out_({ ok: true, done: 0 }); }
+  if (c == 200 || c == 201) { let id = ''; try { id = JSON.parse(r.getContentText()).id; } catch (x) {} upDone_(b.s, id); try { PropertiesService.getScriptProperties().deleteProperty('upt_' + b.s); } catch (x) {} return out_({ ok: true, done: 1, id: id }); }
   return out_({ ok: false, e: 'chunk ' + c + ' ' + r.getContentText().slice(0, 80) });
 }
 function upStatus_(b) {
