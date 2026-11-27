@@ -597,7 +597,11 @@ function hwSub_(b) {
     ai.push(i); res[i] = { s: 0, fb: AIK_() ? 'بيتصحح…' : 'هيتصحح من المعلم', p: 1 }; });
   const score = res.reduce((a, x) => a + (x ? x.s : 0), 0), total = hw.qs.length, id = Utilities.getUuid().slice(0, 12);
   const L = LockService.getUserLock(); let got = false; try { got = L.tryLock(10000); } catch (x) {}
-  try { const subs = jget_(f, 'hw_sub.json') || []; subs.push({ id: id, n: String(b.n || 'طالب').slice(0, 40), at: Date.now(), score: score, total: total, ans: ans, res: res, pend: ai.length && AIK_() ? ai : undefined }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { if (got) L.releaseLock(); }
+  /* 🔒 فرصة واحدة: نفس الجهاز (dv) أو نفس الاسم سلّم قبل كده ← بنرفض */
+  const dv = /^[A-Za-z0-9_-]{16,32}$/.test(String(b.dv || '')) ? String(b.dv) : '', nn = nrm_(String(b.n || '').slice(0, 40));
+  try { const subs = jget_(f, 'hw_sub.json') || [];
+    if (subs.some(x => (dv && x.dv === dv) || (nn && nrm_(x.n) === nn))) return out_({ ok: false, e: 'done' });
+    subs.push({ id: id, n: String(b.n || 'طالب').slice(0, 40), dv: dv || undefined, at: Date.now(), score: score, total: total, ans: ans, res: res, pend: ai.length && AIK_() ? ai : undefined }); jput_(f, 'hw_sub.json', subs.slice(-300)); } finally { if (got) L.releaseLock(); }
   if (ai.length && AIK_()) { try { const P = PropertiesService.getScriptProperties(); let q = []; try { q = JSON.parse(P.getProperty('hgq') || '[]'); } catch (x) {}
     q.push({ c: String(b.c || '').toLowerCase(), d: String(b.d), id: id }); P.setProperty('hgq', JSON.stringify(q.slice(-100)));
     if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() == 'hwGradeJob')) ScriptApp.newTrigger('hwGradeJob').timeBased().after(1000).create(); } catch (x) {} }
