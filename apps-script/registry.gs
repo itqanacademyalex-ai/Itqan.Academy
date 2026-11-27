@@ -612,7 +612,7 @@ function hwMyOld_(b) { const f = cls_(String(b.c || '').toLowerCase(), b.d); if 
 /* 👀 المعلم: إجابات كل طالب في واجب حصة (بكود المعلم) */
 function hwSubs_(b) { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
   const hw = jget_(f, 'hw.json'), subs = jget_(f, 'hw_sub.json') || [];
-  return out_({ ok: true, qs: hw ? hw.qs.map(q => ({ type: q.type, q: q.q, options: q.options || null, answer: q.answer, fig: q.fig || '' })) : [],
+  return out_({ ok: true, qs: hw && Array.isArray(hw.qs) ? hw.qs.map(q => ({ type: q.type, q: q.q, options: q.options || null, answer: q.answer, fig: q.fig || '' })) : [],
     subs: subs.map((x, i) => ({ id: x.id || ('i' + i), n: x.n, at: x.at, score: x.score, total: x.total, ans: x.ans || [], res: x.res || [], pend: x.pend ? x.pend.length : 0 })) }); }
 /* ✍️ المعلم بيعدّل درجة سؤال لطالب (صح / نص / غلط) — والمجموع بيتحسب تاني */
 function hwGrade_(b) { if (!hOk_(b.c, b.h)) return out_({ ok: false, e: 'auth' }); const f = cls_(b.c, b.d); if (!f) return out_({ ok: false, e: 'class' });
