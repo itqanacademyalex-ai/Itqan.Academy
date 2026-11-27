@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>html,body{background:#1f2a36}</style>
+<style>/* بالإنجليزي: كل سطر بيتكتب من الشمال لليمين جوه مكانه، من غير ما أي عنصر يتحرك */html[lang=en] body :where(p,small,span,b,i,em,strong,label,h1,h2,h3,h4,li,td,th,button,a,div,summary,option,input,textarea){unicode-bidi:plaintext}html[lang=en] body :where(input,textarea){direction:ltr}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Itqan Academy – الفصل الافتراضي</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -538,7 +539,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-j';
+const VER='2027.01.01-k';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -2389,7 +2390,8 @@ en:{name:'Full name (first and last)',room:'Room code (teacher: leave empty to c
 const STK=[['🌟','Excellent!','ممتاز!'],['👏','Great Job!','أحسنت!'],['✅','Well Done!','برافو!'],['🤩','Amazing!','رائع!'],['💪','Keep Going!','واصل!'],['💯','Perfect!','مثالي!'],['🧠','Brilliant!','عبقري!'],['👍','Good Effort!','مجهود جيد!']];
 let LANG='ar';const T=k=>(I18[LANG]&&I18[LANG][k])||I18.ar[k]||k;
 function setLang(l){LANG=I18[l]?l:'ar';try{localStorage.setItem('itqan_lang',LANG)}catch(e){}
- const h=document.documentElement;h.lang=LANG;h.dir=LANG=='ar'?'rtl':'ltr';
+ /* 🌐 اللغة بتغيّر الكلام بس — ترتيب الصفحة (السبورة، شريط الأدوات، الأزرار) بيفضل زي ما هو في الوضعين */
+ const h=document.documentElement;h.lang=LANG;h.dir='rtl';
  document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));
  document.querySelectorAll('[data-i18n-t]').forEach(e=>{e.title=T(e.dataset.i18nT);e.setAttribute('aria-label',e.title)});
  document.querySelectorAll('[data-i18n-p]').forEach(e=>e.placeholder=T(e.dataset.i18nP));
@@ -2694,7 +2696,7 @@ const ENM=[
 ["الميكروفون مطلوب","Microphone required"],
 ["تشغيل الميكروفون الآن","Turn on the microphone now"],
 ["المتابعة بدون ميكروفون (استماع فقط)","Continue without microphone (listen only)"],
-["رجوع","Back"],
+["رجوع","Back"],["〰 صوت","〰 Audio"],
 ["تم","Done"],
 ["مدة الحصة","Lesson duration"],
 ["ملخص الحصة بالذكاء الاصطناعي","AI lesson summary"],
