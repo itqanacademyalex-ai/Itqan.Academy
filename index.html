@@ -540,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-n';
+const VER='2027.01.01-o';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3903,7 +3903,7 @@ async function hwApi(o,again){const u=regUrl();if(!u)throw new Error('مفيش �
   try{return JSON.parse(t)}catch(e){return{ok:false,e:'السجل رد بخطأ ('+r.status+') — جرّب تاني بعد دقيقة'}}}
  catch(e){if(!again&&!ac.signal.aborted){await new Promise(z=>setTimeout(z,2500));return hwApi(o,1)}return{ok:false,e:ac.signal.aborted?'السجل ماردّش في دقيقتين — جرّب تاني':'النت قطع — اتأكد من الاتصال وجرّب تاني'}}
  finally{clearTimeout(tm)}}
-const HWE={auth:'كود المعلم مش متسجّل في السجل لسه — السكرتارية تفتح اللوحة مرة عشان يترفع',nokey:'مفتاح Gemini مش متحط في السكربت (Script Properties ← GEMINI_KEY)',class:'الحصة دي مش لاقيها على Drive',empty:'الحصة دي مفيهاش سبورة ولا تفريغ',gen:'الذكاء الاصطناعي مارجّعش أسئلة — جرّب تاني',nohw:'الواجب لسه مااتنشرش'};
+const HWE={done:'الطالب ده سلّم الواجب قبل كده — مسموح بمحاولة واحدة',auth:'كود المعلم مش متسجّل في السجل لسه — السكرتارية تفتح اللوحة مرة عشان يترفع',nokey:'مفتاح Gemini مش متحط في السكربت (Script Properties ← GEMINI_KEY)',class:'الحصة دي مش لاقيها على Drive',empty:'الحصة دي مفيهاش سبورة ولا تفريغ',gen:'الذكاء الاصطناعي مارجّعش أسئلة — جرّب تاني',nohw:'الواجب لسه مااتنشرش'};
 const hwErr=j=>HWE[j&&j.e]||String(j&&j.e||'تعذّر الاتصال');
 const hwTy={mcq:'اختيار من متعدد',tf:'صح وغلط',fill:'أكمل',short:'سؤال مقالي'};
 const hwNice=d=>{const m=/^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(d||'');if(!m)return d;let h=+m[4];const pm=h>=12;h=h%12||12;return(+m[3])+'/'+(+m[2])+' — '+h+':'+m[5]+(pm?' م':' ص')};
@@ -4013,7 +4013,11 @@ function hwFig(svg){if(!svg||!/^<svg[\s>]/i.test(svg))return null;const im=docum
 function fracH(t){return esc(String(t==null?'':t)).replace(/(^|[^\w\/٠-٩.])([0-9٠-٩]+(?:\.[0-9]+)?|[a-zA-Z])\s*\/\s*([0-9٠-٩]+(?:\.[0-9]+)?|[a-zA-Z])(?![\w\/٠-٩])/g,'$1<span class="fr"><span>$2</span><span>$3</span></span>')}
 /* واجب مادة إنجليزي: العناوين والأزرار بالإنجليزي واتجاه الكتابة من الشمال */
 const hwEn=hw=>{const t=(hw.title||'')+' '+(hw.qs||[]).map(q=>q.q+' '+(q.options||[]).join(' ')).join(' ');return (t.match(/[A-Za-z]/g)||[]).length>(t.match(/[\u0600-\u06FF]/g)||[]).length};
+/* 🔒 فرصة واحدة: كل جهاز ليه بصمة ثابتة، والسجل بيرفض تسليم تاني من نفس الجهاز أو بنفس الاسم */
+function hwDev(){let v='';try{v=localStorage.getItem('itqan_dev')||''}catch(e){}if(!/^[A-Za-z0-9_-]{16,32}$/.test(v)){v=rnd();try{localStorage.setItem('itqan_dev',v)}catch(e){}}return v}
+function hwDone(c,d,set){const k='itqan_hwdone_'+c+'_'+d;try{if(set)localStorage.setItem(k,'1');return localStorage.getItem(k)==='1'}catch(e){return false}}
 function hwSolve(c,d,hw){const EN=hwEn(hw),L=(a,e)=>EN?e:a;const B=hwModal('hws','📝 '+esc(hw.title||L('الواجب','Homework')));B.innerHTML='';if(EN){B.style.direction='ltr';B.parentNode.style.direction='ltr'}
+ if(hwDone(c,d)){B.innerHTML='<div style="text-align:center;font-size:19px;font-weight:800;color:#9ee6c4;padding:16px;line-height:1.8">'+L('✅ سلّمت الواجب ده قبل كده','✅ You already submitted this homework')+'<small style="display:block;font-size:14px;font-weight:600;color:#b5c1cc">'+L('مسموح بمحاولة واحدة بس — إجاباتك وصلت للمعلم.','Only one attempt is allowed — your answers reached your teacher.')+'</small></div>';return}
  const HD={mcq:L('اختر الإجابة الصحيحة','Choose the correct answer'),tf:L('صح أم خطأ','True or False'),fill:L('أكمل','Complete'),short:L('أجب','Answer the question')};const ip='background:#1c2631;border:1px solid #33475a;border-radius:10px;padding:9px;color:#fff;font:inherit;width:100%;text-align:start';
  let nm='';try{nm=localStorage.getItem('itqan_nm')||''}catch(e){}const ni=document.createElement('input');ni.className='hin';ni.style.cssText=ip;ni.placeholder=L('اسمك','Your name');ni.value=nm;B.append(ni);
  const get=hw.qs.map((q,i)=>{const c=document.createElement('div');c.className='hq';c.style.cssText='background:#2b3846;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px';
@@ -4026,9 +4030,9 @@ function hwSolve(c,d,hw){const EN=hwEn(hw),L=(a,e)=>EN?e:a;const B=hwModal('hws'
   const fb=document.createElement('small');c.append(fb);B.append(c);return{fn,fb,c}});
  const go=hwBtn(L('📤 سلّم الواجب','📤 Submit'),'#468f85',async function(){const n=ni.value.trim();if(!n)return alert(L('اكتب اسمك','Write your name'));const ans=get.map(g=>g.fn());if(ans.filter(a=>String(a).trim()).length<ans.length&&!confirm(L('فيه أسئلة ماحلّيتهاش — تسلّم كده؟','Some questions are unanswered — submit anyway?')))return;
   this.disabled=true;this.textContent=L('⏳ بيتصحح…','⏳ Grading…');try{localStorage.setItem('itqan_nm',n)}catch(e){}
-  const j=await hwApi({a:'hwsub',c,d,n,ans}).catch(()=>({ok:false}));if(!j.ok){this.disabled=false;this.textContent=L('📤 سلّم الواجب','📤 Submit');return alert('❌ '+hwErr(j)+'\n\n'+L('إجاباتك لسه موجودة — دوس «سلّم الواجب» تاني.','Your answers are still here — tap Submit again.'))}
+  const j=await hwApi({a:'hwsub',c,d,n,ans,dv:hwDev()}).catch(()=>({ok:false}));if(!j.ok&&j.e==='done'){hwDone(c,d,1);return hwSolve(c,d,hw)}if(!j.ok){this.disabled=false;this.textContent=L('📤 سلّم الواجب','📤 Submit');return alert('❌ '+hwErr(j)+'\n\n'+L('إجاباتك لسه موجودة — دوس «سلّم الواجب» تاني.','Your answers are still here — tap Submit again.'))}
   /* 🔒 الدرجة والتصحيح مش بيظهروا للطالب — الواجب بيتسلّم بس، والدرجة بتوصل للمعلم */
-  this.remove();get.forEach(g=>{g.c.style.borderRight='4px solid #468f85';g.c.querySelectorAll('input,textarea').forEach(e=>e.disabled=true)});
+  hwDone(c,d,1);this.remove();get.forEach(g=>{g.c.style.borderRight='4px solid #468f85';g.c.querySelectorAll('input,textarea').forEach(e=>e.disabled=true)});
   const sc=document.createElement('div');sc.style.cssText='text-align:center;font-size:21px;font-weight:800;color:#9ee6c4;padding:10px;line-height:1.7';
   sc.innerHTML='';const t=document.createElement('div');t.textContent=L('✅ اتسلّم الواجب بنجاح','✅ Homework submitted');const n2=document.createElement('small');n2.style.cssText='display:block;font-size:14px;font-weight:600;color:#b5c1cc';n2.textContent=L('إجاباتك وصلت للمعلم — تقدر تقفل الصفحة','Your answers were sent to your teacher — you can close this page');sc.append(t,n2);
   B.prepend(sc);B.parentNode.scrollTop=0});
