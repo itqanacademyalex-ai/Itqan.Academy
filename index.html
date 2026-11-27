@@ -540,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-m';
+const VER='2027.01.01-n';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3951,7 +3951,7 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
     /* لو بيتعمل أصلًا في الخلفية: بنتابع بس (مانبدأش طلب تاني يصرف من حصة الذكاء الاصطناعي المجانية) */
     const g=r.dataset.poll?await hwWait(x,it.d,h):await hwGenRun(x,it.d,h,0);delete r.dataset.poll;clearInterval(iv);if(!g.ok){this.disabled=false;this.textContent='✨ اعمل الواجب';return alert('❌ '+hwErr(g))}hwEdit(x,it.d,h,g.hw)}));
    else r.append(hwBtn(it.st=='pub'?'✏️ عدّل':'✏️ راجع وانشر',it.st=='pub'?'#33475a':'#468f85',()=>hwEdit(x,it.d,h,it.hw)));
-   if(it.subs.length)r.append(hwBtn('📊 النتايج','#33475a',()=>hwRes(x,it.d,h)));
+   if(it.subs.length)r.append(hwBtn('📊 النتايج','#33475a',()=>hwRes(x,it.d,h,it)));
    r.append(hwBtn('📎 ملفات','#5b4b8a',()=>matPanel(x,it.d,h)));
    /* لو الواجب بيتعمل في الخلفية: نكمّل المتابعة لوحدنا */
    const gb=[...r.querySelectorAll('button')].find(b=>/اعمل الواجب/.test(b.textContent));
@@ -3960,16 +3960,22 @@ async function hwPanel(src){const B=hwModal('hwp','📝 الواجبات');
    else if(!it.st&&gb&&!sec.dataset.auto&&!x.dir){const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(it.d);if(m&&Date.now()-new Date(+m[1],+m[2]-1,+m[3]).getTime()<3*864e5){sec.dataset.auto=1;setTimeout(()=>gb.click(),300)}}
    sec.append(r)})})})}
 /* 📊 نتايج الواجب: كل طالب ودرجته — دوسة على الاسم بتفتح إجاباته سؤال سؤال، والمعلم يقدر يعدّل درجة أي سؤال (✔ / ½ / ✖) */
-async function hwRes(x,d,h){const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(d)));R.innerHTML='<small>⏳</small>';
- const j=await hwApi({a:'hwsubs',c:x.c,d,h});if(!j||!j.ok){R.innerHTML='<small style="color:#e8a3a3">⚠️ '+esc(hwErr(j))+' — لو السكربت قديم: الصق registry.gs الجديد واعمل New version.</small>';return}
- const fmt=v=>(+v).toFixed(1).replace('.0',''),qs=j.qs||[];R.innerHTML='';
+/* 📊 النتايج بتظهر على طول من قايمة الواجبات (الأسماء والدرجات)، والإجابات بالتفصيل بتتحمّل في الخلفية */
+async function hwRes(x,d,h,it){const R=hwModal('hwr','📊 نتايج الواجب — '+esc(hwNice(d)));R.innerHTML='<small>⏳</small>';
+ const pre=it&&Array.isArray(it.subs)&&it.subs.length?{ok:true,pre:1,qs:[],subs:it.subs.map((z,i)=>({...z,id:'i'+i,ans:[],res:[]}))}:null;
+ if(pre)hwResDraw(R,x,d,h,pre);
+ const j=await hwApi({a:'hwsubs',c:x.c,d,h});if(!R.isConnected)return;
+ if(!j||!j.ok){const m='⚠️ '+esc(hwErr(j))+' — لو السكربت قديم: الصق registry.gs الجديد واعمل New version.';if(pre){const e=R.querySelector('.hwpre');if(e){e.style.color='#e8a3a3';e.innerHTML=m}}else R.innerHTML='<small style="color:#e8a3a3">'+m+'</small>';return}
+ hwResDraw(R,x,d,h,j)}
+function hwResDraw(R,x,d,h,j){
+ const fmt=v=>(+v).toFixed(1).replace('.0',''),qs=j.qs||[];R.innerHTML=j.pre?'<small class="hwpre" style="color:#8f9cab">⏳ جارٍ تحميل الإجابات بالتفصيل…</small>':'';
  if(!j.subs.length){R.innerHTML='<small>لسه محدش سلّم.</small>';return}
  j.subs.slice().sort((a,b)=>b.score-a.score).forEach(sb=>{const row=document.createElement('div');row.style.cssText='background:#2b3846;border-radius:12px;overflow:hidden';
   const hd=document.createElement('button');hd.style.cssText='width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:transparent;color:#fff;font:inherit;text-align:start';
   const sc=document.createElement('span');const upd=()=>{sc.innerHTML='<b>'+fmt(sb.score)+' / '+sb.total+'</b>'+(sb.pend?' <small style="color:#a9c4f5">⏳ بيتصحح</small>':'')};upd();
   hd.innerHTML='<span style="display:flex;flex-direction:column"><b translate="no">'+esc(sb.n)+'</b><small style="color:#8f9cab">'+new Date(sb.at).toLocaleString('ar-EG',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})+' · اضغط لعرض الإجابات</small></span>';hd.append(sc);
   const body=document.createElement('div');body.hidden=true;body.style.cssText='padding:4px 10px 12px;display:flex;flex-direction:column;gap:8px';
-  hd.onclick=()=>{body.hidden=!body.hidden;if(body.dataset.ok)return;body.dataset.ok=1;
+  hd.onclick=()=>{body.hidden=!body.hidden;if(j.pre){body.innerHTML='<small style="color:#8f9cab">⏳ الإجابات لسه بتتحمّل — ثواني وتظهر.</small>';return}if(body.dataset.ok)return;body.dataset.ok=1;
    qs.forEach((q,i)=>{const r=(sb.res||[])[i]||{s:0},a=(sb.ans||[])[i]||'';const c=document.createElement('div');c.style.cssText='background:#1c2631;border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;border-right:4px solid '+(r.p?'#6c8cd5':r.s>=1?'#1f8f5f':r.s>0?'#d8bf96':'#c0605a');
     if(hwEn({qs})){c.style.direction='ltr';c.style.textAlign='left'}
     c.innerHTML='<small style="color:#d8bf96">سؤال '+(i+1)+'</small><b style="line-height:1.8">'+fracH(q.q)+'</b>'+
