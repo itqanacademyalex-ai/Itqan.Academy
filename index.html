@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-h';
+const VER='2027.01.01-i';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -3644,10 +3644,15 @@ async function rtx(st,mode,fn){const d=await rdb();return new Promise((res,rej)=
 const UPNET=e=>/^(timeout|net|http 5|http 429|Failed to fetch|Load failed|NetworkError)/i.test(String(e&&e.message||e));
 /* الرفع شغال مع الحصة في نفس الوقت (المعلم بيرفع نسخة واحدة بس لـ Cloudflare فالنت بيكفي).
    بيقف مؤقتًا بس لو نت المعلم اتخنق فعلًا (البرنامج نزّل الجودة) أو الحصة على الطريقة القديمة — ويكمّل لوحده لما النت يرتاح */
-function recHold(){try{if(!(role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)))return false;
- if(!window.HUBMODE||(window.BWF||1)<1||(window.LITE&&window.LITE()))window.RECHOLD=LOG.start;
- /* نت المعلم اتخنق مرة في الحصة دي ← الرفع بيستنى لآخر الحصة (مايرجعش يزاحم الصوت كل ما النت يرتاح شوية) */
- return window.RECHOLD===LOG.start}catch(e){return false}}
+function recLive(){return role=='t'&&!!LOG.start&&!endBusy&&!endDone&&Object.values(conns).some(o=>o.adm&&!o.dir)}
+function recHold(){try{if(!recLive())return false;
+ /* الطريقة القديمة (المعلم بيرفع نسخة لكل طالب): الرفع بيستنى لآخر الحصة زي ما هو */
+ if(!window.HUBMODE)return true;
+ /* 🎙 خادم إتقان: الرفع شغال طول الحصة بهدوء (أجزاء صغيرة وسرعة محدودة)، وبيقف بس وقت ما نت المعلم مخنوق فعلًا + دقيقة بعدها */
+ if((window.BWF||1)<1||(window.LITE&&window.LITE()))window.RCHK=Date.now();
+ return Date.now()-(window.RCHK||0)<60000}catch(e){return false}}
+/* أثناء الحصة: الرفع بأجزاء 512 كيلو وبحد أقصى ~1.6 ميجابت/ثانية عشان مايزاحمش الصوت */
+const RPIECE=524288,RCAP=200000;
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -3668,7 +3673,10 @@ function recUp(meta,onSt){
    if(!meta.sid){if(!meta.fb&&REG_URL&&meta.u!==REG_URL){meta.u0=meta.u;meta.u=REG_URL}
     let j;try{j=await api({a:'start',name:meta.name,mime:meta.mime,f:meta.f||'',c:meta.c||''})}catch(e){/* مشكلة نت ← نعيد على نفس السجل (عشان الملف يروح لفولدر الحصة ويظهر في المكتبة). نرجع للسكربت القديم بس لو السجل رفض فعلًا */if(meta.u0&&!meta.fb&&!UPNET(e)){meta.fb=1;meta.u=meta.u0;j=await api({a:'start',name:meta.name,mime:meta.mime})}else throw e}
     meta.sid=j.s;await sv()}
-   while(U.q.length){const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
+   while(U.q.length){if(recHold()){clearTimeout(U.ht);U.ht=setTimeout(U.pump,15000);break}
+    const live=recLive()&&window.HUBMODE,t0=Date.now();
+    if(live&&!U.q[0].last&&U.q[0].blob.size>RPIECE){const c0=U.q[0];U.q.splice(0,1,{idx:c0.idx,blob:c0.blob.slice(0,RPIECE,meta.mime),last:0,part:1},{idx:c0.idx,blob:c0.blob.slice(RPIECE,c0.blob.size,meta.mime),last:0})}
+    const c=U.q[0],st=meta.off,sz=c.blob.size,en=st+sz-1;let j;
     try{j=await api({a:'chunk',s:meta.sid,st,en,tot:c.last?String(st+sz):'*',d:sz?await b64(c.blob):'',m:meta.mime})}
     catch(e){let r=-1,sd=null;try{sd=await api({a:'status',s:meta.sid});r=sd.r}catch(x){}
      /* الجزء وصل فعلًا والرد بس اللي ضاع: نكمّل — ولو الملف كله خلص (آخر جزء) نعتبره اترفع */
@@ -3677,9 +3685,12 @@ function recUp(meta,onSt){
      else if(r>st&&r<st+sz){c.blob=c.blob.slice(r-st,sz,meta.mime);meta.off=r;await sv();try{hEv('🔧 رفع «'+meta.name+'» اتظبط على اللي وصل Drive فعلًا')}catch(x){}continue}
      else if(r>st+sz&&!c.last){meta.off=st+sz;U.q.shift();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});continue}
      else throw e}
-    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
+    meta.off=st+sz;U.q.shift();U.fails=0;U.err='';U.ok=Date.now();
+    /* جزء من قطعة (part): القطعة كاملة بتفضل محفوظة على الجهاز لحد ما آخر جزء منها يوصل */
+    if(!c.part)rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
-    meta.n=c.idx+1;await sv();onSt&&onSt()}
+    if(!c.part){meta.n=c.idx+1;await sv()}onSt&&onSt();
+    if(live){const w=sz/RCAP*1000-(Date.now()-t0);if(w>0)await new Promise(z=>setTimeout(z,w))}}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
    /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
