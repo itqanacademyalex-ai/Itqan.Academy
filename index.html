@@ -538,7 +538,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-f';
+const VER='2027.01.01-g';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1161,7 +1161,7 @@ function pwaHome(){if(window.itqanApp&&!(new URLSearchParams(location.search).ge
    Object.values(G).sort((p,q)=>p.k-q.k).forEach(g=>{const x=g.x,a=hm2(x.h),when=x.d<0?'من غير ميعاد ثابت':(x.d===D&&g.k<1440?'النهارده':'يوم '+DN2[x.d])+' '+t12b(x.h),soon=!g.live&&g.k<=60;
     const r=document.createElement('button');r.className='w tsr';r.style.cssText='display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:14px;padding:11px 12px;line-height:1.6;background:'+(g.live?'linear-gradient(135deg,#4e9a8f,#3f8279)':soon?'#22405f':'#2b3846')+';border:1px solid '+(g.live?'#5fd3c3':'rgba(255,255,255,.06)');
     const xp=xpGet(g.c),st=g.live&&x.ex?'⚡ حصة استثنائية — اضغط وادخل':xp&&!(x.d===D&&n>=a-10&&n<a+x.m)?'⚡ حصة استثنائية — متاحة لحد '+t12b(String(new Date(xp.e).getHours()).padStart(2,'0')+':'+String(new Date(xp.e).getMinutes()).padStart(2,'0')):g.live?'🔴 وقتها دلوقتي — اضغط وادخل':soon?'⏰ بعد '+g.k+' دقيقة — تقدر تدخل قبلها بـ 10 دقايق':'🗓 '+when;
-    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#8f9cab')+'">'+st+'</small></div><b style="flex:none;font-size:14px;'+(g.live?'':'color:#9fd8cf')+'">'+(g.live?'▶ ادخل':'▶ افتح')+'</b>';
+    r.innerHTML='<div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(x.t||fmtCode(x.c))+'</b><br><small style="color:'+(g.live?'#e8fffb':'#8f9cab')+'">'+st+'</small></div><b style="flex:none;font-size:14px;'+(g.live?'':'color:#9fd8cf')+'">'+('<svg viewBox="0 0 24 24" style="width:1.15em;height:1.15em;vertical-align:-.22em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round"><path d="M8 5.5l10.5 6.5L8 18.5z"/></svg> '+(g.live?'ادخل الحصة':'بدء الحصة'))+'</b>';
     r.onclick=()=>start(g.c);w.append(r)})};
   /* فتح تلقائي قبل الميعاد بـ 10 دقايق — على جهاز المعلم نفسه (لو التطبيق مفتوح ودخل قبل كده، فمش محتاج كود) */
   const autoOn=()=>{try{return localStorage.getItem('itqan_tauto')!=='0'}catch(e){return true}};
