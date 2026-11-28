@@ -540,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-p';
+const VER='2027.01.01-q';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -674,11 +674,11 @@ async function audioReset(){if(role!='t'&&role!='s')return;window.auInt=0;
 setInterval(()=>{if(window.auInt&&!document.hidden&&(role=='t'||role=='s'&&admitted))audioReset()},3000);
 /* 🎤 المايك منوّر بس مش بيلقط (برنامج تاني ماسكه — زووم/تيمز/واتساب — أو الجهاز اتغيّر): لو المايك مفتوح وبيسجّل صمت تام 4 ثواني
    أو مكتوم من النظام، بنشغّله من جديد لوحدنا — ولو لسه برضه بنقول للمستخدم يقفل البرنامج التاني */
-let mzFix=0,mzT=0;setInterval(()=>{try{if(document.hidden)return;const t=role=='t'?(typeof micT!='undefined'?micT:null):role=='s'&&admitted?micS:null;if(!t||t.readyState!='live'||!t.enabled)return;
+let mzFix=0,mzT=0,mzTot=0;setInterval(()=>{try{if(document.hidden)return;const t=role=='t'?(typeof micT!='undefined'?micT:null):role=='s'&&admitted?micS:null;if(!t||t.readyState!='live'||!t.enabled)return;
  const gz=window.MICGATE&&window.MZR==='zero',dead=t.muted||((window.MZ||0)>=4&&!gz);if(!dead){if(mzFix&&Date.now()-mzT>20000)mzFix=0;return}if(Date.now()-mzT<15000)return;mzT=Date.now();window.mzLast=mzT;
  const why=(t.muted?'مكتوم من النظام':window.MZR==='ctx'?'محرّك الصوت وقف':'صفر تام')+(t.label?' — '+String(t.label).slice(0,40):'');
- if(mzFix<2){mzFix++;window._quietReset=1;toast('🎤','المايك مكانش بيلقط صوت — بنشغّله من جديد…');try{role=='t'?hEv('🎤 مايك المعلم كان صامت تمامًا ('+why+') — اتشغّل من جديد'):dg('mic','silent')}catch(e){}audioReset().finally(()=>{window._quietReset=0})}
- else if(!window._mzAlert){window._mzAlert=1;mzFix=0;alert('🎤 المايك مش بيلقط صوت.\n\nغالبًا برنامج تاني ماسك المايك (زووم، تيمز، واتساب، مسجّل صوت، مكالمة).\nاقفل البرنامج ده خالص، وبعدين دوس 🎤 مرتين (اقفله وافتحه).\n\nلو بتستخدم سماعة بلوتوث أو مايك خارجي: اتأكد إنه متوصّل.')}}catch(e){}},3000);
+ if(mzFix<2&&mzTot<4&&(mzTot<2||Date.now()-(window.mzR||0)>180000)){mzFix++;mzTot++;window.mzR=Date.now();window._quietReset=1;toast('🎤','المايك مكانش بيلقط صوت — بنشغّله من جديد…');try{role=='t'?hEv('🎤 مايك المعلم كان صامت تمامًا ('+why+') — اتشغّل من جديد'):dg('mic','silent')}catch(e){}audioReset().finally(()=>{window._quietReset=0})}
+ else if(mzFix>=2&&!window._mzAlert){window._mzAlert=1;mzFix=0;alert('🎤 المايك مش بيلقط صوت.\n\nغالبًا برنامج تاني ماسك المايك (زووم، تيمز، واتساب، مسجّل صوت، مكالمة).\nاقفل البرنامج ده خالص، وبعدين دوس 🎤 مرتين (اقفله وافتحه).\n\nلو بتستخدم سماعة بلوتوث أو مايك خارجي: اتأكد إنه متوصّل.')}}catch(e){}},3000);
 /* الآيفون بيقفل المايك خالص لما المعلم/الطالب يخرج من التطبيق (مفيش مايك في الخلفية لتطبيقات الويب) —
    لو كان فاتح المايك قبل ما يخرج، نرجّعه لوحده أول ما يرجع، من غير ما يدوس 🎤 */
 let mwT=0;
@@ -3675,10 +3675,12 @@ function recHold(){try{if(!recLive())return false;
  /* الطريقة القديمة (المعلم بيرفع نسخة لكل طالب): الرفع بيستنى لآخر الحصة زي ما هو */
  if(!window.HUBMODE)return true;
  /* 🎙 خادم إتقان: الرفع شغال طول الحصة بهدوء (أجزاء صغيرة وسرعة محدودة)، وبيقف بس وقت ما نت المعلم مخنوق فعلًا + دقيقة بعدها */
- if((window.BWF||1)<1||(window.LITE&&window.LITE()))window.RCHK=Date.now();
- return Date.now()-(window.RCHK||0)<60000}catch(e){return false}}
-/* أثناء الحصة: الرفع بأجزاء 512 كيلو وبحد أقصى ~1.6 ميجابت/ثانية عشان مايزاحمش الصوت */
-const RPIECE=524288,RCAP=200000;
+ /* كل مرة النت يتخنق: سرعة الرفع بتقل للنص، ومدة الوقفة بتطول (دقيقة ← 2 ← 4 ← 8) — نت المعلم الضعيف مايفضلش يتخنق كل كام دقيقة */
+ const now=Date.now(),cool=Math.min(480000,60000*Math.pow(2,Math.max(0,(window.RN||1)-1)));
+ if((window.BWF||1)<1||(window.LITE&&window.LITE())){if(now-(window.RCHK||0)>=cool){window.RN=(window.RN||0)+1;window.RCAPV=Math.max(40000,(window.RCAPV||RCAP)/2)}window.RCHK=now}
+ return now-(window.RCHK||0)<Math.min(480000,60000*Math.pow(2,Math.max(0,(window.RN||1)-1)))}catch(e){return false}}
+/* أثناء الحصة: الرفع بأجزاء 512 كيلو وبحد أقصى ~1.2 ميجابت/ثانية في الأول (وبيقل لوحده لو النت اتخنق) عشان مايزاحمش الصوت */
+const RPIECE=524288,RCAP=150000;
 function recUp(meta,onSt){
  const U={meta,q:[],busy:0,err:'',fails:0,fin:0,ok:Date.now()};
  const sv=()=>rtx('meta','readwrite',s=>s.put(meta)).catch(()=>{});
@@ -3716,7 +3718,7 @@ function recUp(meta,onSt){
     if(!c.part)rtx('chunks','readwrite',s=>s.delete(meta.id+':'+c.idx)).catch(()=>{});
     if(c.last||j.done){meta.fid=j.id||'';U.fin=1;break}
     if(!c.part){meta.n=c.idx+1;await sv()}onSt&&onSt();
-    if(live){const w=sz/RCAP*1000-(Date.now()-t0);if(w>0)await new Promise(z=>setTimeout(z,w))}}
+    if(live){const w=sz/(window.RCAPV||RCAP)*1000-(Date.now()-t0);if(w>0)await new Promise(z=>setTimeout(z,w))}}
    if(U.fin){const i=RUPS.indexOf(U);if(i>-1)RUPS.splice(i,1);try{hEv('✅ التسجيل اترفع على Drive: '+meta.name)}catch(e){}RDONE.unshift({n:meta.name,id:meta.fid});RDONE.length=Math.min(RDONE.length,3);rtx('meta','readwrite',s=>s.delete(meta.id)).catch(()=>{})}
   }catch(e){U.err=String(e.message||e).slice(0,100);U.fails++;
    /* جلسة الرفع ضاعت من السيرفر (رفع قديم قبل التحديث): مفيش طريقة نكمّل نفس الملف — نوقف بدل ما نعيد للأبد */
