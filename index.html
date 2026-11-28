@@ -540,7 +540,7 @@ const $=s=>document.querySelector(s);
 const PWA=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.itqanApp&&window.itqanApp.prompt){window.prompt=(m,d)=>window.itqanApp.prompt(m,d);const b=document.querySelector('#jnone button');if(b)b.remove()}
-const VER='2027.01.01-o';
+const VER='2027.01.01-p';
 /* 🔄 فيه نسخة أحدث من الموقع؟ برّه الحصة: الصفحة بتتحدّث لوحدها لما تبقى في الخلفية (أو بزرار). جوه الحصة: تنبيه بس */
 setInterval(async()=>{try{const t=await (await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'})).text(),m=/const VER='([^']+)'/.exec(t);if(!m||m[1]===VER)return;
  const inClass=typeof role!='undefined'&&role&&(role=='t'||admitted||window.WASIN);
@@ -1848,17 +1848,24 @@ setInterval(()=>{if(role!='t'||!peer||!peer.pullStream)return;try{const D=Object
  const L=Object.values(conns).filter(o=>o.adm&&!o.dir&&o.cp&&o.sc&&o.sc.open!==false&&!o.sc._x&&o.sc._sid&&Array.isArray(o.sc._tn)).map(o=>({k:o.c.peer,n:o.name,sid:o.sc._sid,tn:o.sc._tn.filter(x=>/^video-/.test(x))})).filter(x=>x.tn.length);
  const sig=JSON.stringify(L),now=Date.now();if(sig===window.DCSIG&&now-(window.DCT||0)<20000)return;window.DCSIG=sig;window.DCT=now;D.forEach(o=>{try{o.c.send({t:'dcam',L})}catch(e){}})}catch(e){}},2000);
 const DCP={};function dcDrop(k){const o=DCP[k];if(!o)return;delete DCP[k];try{hideCam('s:'+k)}catch(e){}if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}}
-function dcSync(L){if(!DIRM||!peer||!peer.pullStream||!Array.isArray(L))return;const keep={};
+function dcSync(L){if(!DIRM||!peer||!peer.pullStream||!Array.isArray(L))return;window.DCL=L;const keep={};
  L.slice(0,30).forEach(x=>{if(!x||typeof x.k!='string'||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
-  if(DCP[x.k]&&DCP[x.k].key===key)return;dcDrop(x.k);const o=DCP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,1)};
+  if(DCP[x.k]&&DCP[x.k].key===key)return;dcDrop(x.k);const o=DCP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,1),t0:Date.now(),g:peer._sfu&&peer._sfu.gen};
   peer.pullStream(o.sid,o.tn).then(ms=>{if(DCP[x.k]!==o){try{peer.unpullStream(o.sid,o.tn)}catch(e){}return}showCam('s:'+x.k,ms,String(x.n||'').slice(0,40))}).catch(()=>{if(DCP[x.k]===o)delete DCP[x.k]})});
  Object.keys(DCP).forEach(k=>{if(!keep[k])dcDrop(k)})}
+/* 🩺 حارس أصوات الزملاء: لو النت فصل لحظة عند الطالب، اتصاله بـ Cloudflare بيتعمل من جديد وأصوات زملائه اللي كان ساحبها بتموت في صمت
+   (والقايمة فاكرة إنها شغالة فمابتتسحبش تاني) — أو صوت ماوصلش خالص من الأول. كل 3 ثواني بنشيّك ونسحب أي صوت ميّت من جديد */
+setInterval(()=>{try{if(!peer||!peer.pullStream)return;const g=peer._sfu&&peer._sfu.gen,now=Date.now();
+ const dead=(o,el,kind)=>{if(o.g!==g&&o.g!=null)return true;if(!el)return now-o.t0>25000;const ms=el.srcObject,ts=ms&&(kind=='v'?ms.getVideoTracks():ms.getAudioTracks());return !ts||!ts.length||ts.every(t=>t.readyState==='ended')};
+ let a=0,c=0;Object.entries(DAP).forEach(([k,o])=>{if(dead(o,o.a,'a')){daDrop(k);a=1}});
+ Object.entries(DCP).forEach(([k,o])=>{const b=boxes['s:'+k];if(dead(o,b&&b.v,'v')){dcDrop(k);c=1}});
+ if(a&&window.DAL)daSync(window.DAL);if(c&&window.DCL)dcSync(window.DCL)}catch(e){}},3000);
 const DAP={};
 function daDrop(k){const o=DAP[k];if(!o)return;delete DAP[k];if(o.a){o.a.srcObject=null;o.a.remove()}if(o.sid)try{peer.unpullStream(o.sid,o.tn)}catch(e){}}
 function daClear(){Object.keys(DAP).forEach(daDrop)}
-function daSync(L){if(!peer||!peer.pullStream||!Array.isArray(L))return;const keep={};
+function daSync(L){if(!peer||!peer.pullStream||!Array.isArray(L))return;window.DAL=L;const keep={};
  L.slice(0,30).forEach(x=>{if(!x||x.k===peer.id||x.k==='SS:'+peer.id||typeof x.sid!='string'||!Array.isArray(x.tn)||!x.tn.length)return;keep[x.k]=1;const key=x.sid+'|'+x.tn.join(',');
-  if(DAP[x.k]&&DAP[x.k].key===key)return;daDrop(x.k);const o=DAP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,2)};
+  if(DAP[x.k]&&DAP[x.k].key===key)return;daDrop(x.k);const o=DAP[x.k]={key,sid:x.sid,tn:x.tn.slice(0,2),t0:Date.now(),g:peer._sfu&&peer._sfu.gen};
   peer.pullStream(o.sid,o.tn).then(ms=>{if(DAP[x.k]!==o){try{peer.unpullStream(o.sid,o.tn)}catch(e){}return}
    o.a=auNew();document.body.append(o.a);o.a.srcObject=ms;o.a.play().catch(()=>{$('#unm').hidden=false})}).catch(()=>{if(DAP[x.k]===o)delete DAP[x.k]})});
  Object.keys(DAP).forEach(k=>{if(!keep[k])daDrop(k)})}
